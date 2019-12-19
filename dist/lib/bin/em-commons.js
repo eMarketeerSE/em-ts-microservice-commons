@@ -19,7 +19,9 @@ var args = process.argv.slice(2);
 var scriptIndex = args.findIndex(function (x) { return x === 'lint' || x === 'deploy' || x === 'tsc'; });
 console.log('args: ', JSON.stringify(args));
 var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
+console.log('script index: ', scriptIndex);
 var scriptArgs = scriptIndex > 0 ? args.slice(scriptIndex) : [];
+console.log('script args: ', scriptArgs);
 var result;
 if (script === 'lint') {
     console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs).join(' '));
