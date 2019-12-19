@@ -14,7 +14,7 @@ const scriptIndex = args.findIndex(
 console.log('args: ', JSON.stringify(args))
 
 const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
-const scriptArgs = scriptIndex > 0 ? args.slice(scriptIndex + 1) : []
+const scriptArgs = scriptIndex > 0 ? args.slice(scriptIndex) : []
 
 let result
 if (script === 'lint') {
