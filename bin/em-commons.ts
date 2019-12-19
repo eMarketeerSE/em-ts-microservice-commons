@@ -22,7 +22,7 @@ if (script === 'lint') {
   );
 }
 
-if (result.signal) {
+if (result && result.signal) {
   if (result.signal === 'SIGKILL') {
     console.log(
       'The build failed because the process exited too early. ' +
@@ -36,6 +36,8 @@ if (result.signal) {
       'be shutting down.'
     );
   }
-  process.exit(1);
+
+  process.exit(result.status!);
 }
-process.exit(result.status);
+
+process.exit(1);
