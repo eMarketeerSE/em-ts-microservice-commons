@@ -43,4 +43,4 @@ if (result && result.signal) {
   process.exit(result.status!);
 }
 
-process.exit(1);
+process.exit(0);
