@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import spawn from 'cross-spawn'
 
 process.on('unhandledRejection', err => {
