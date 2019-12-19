@@ -17,12 +17,13 @@ process.on('unhandledRejection', function (err) {
 });
 var args = process.argv.slice(2);
 var scriptIndex = args.findIndex(function (x) { return x === 'lint' || x === 'deploy' || x === 'tsc'; });
+console.log('args: ', JSON.stringify(args));
 var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
-var nodeArgs = scriptIndex > 0 ? args.slice(0, scriptIndex) : [];
+var scriptArgs = scriptIndex > 0 ? args.slice(scriptIndex + 1) : [];
 var result;
 if (script === 'lint') {
-    console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], nodeArgs).join(' '));
-    result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], nodeArgs), { stdio: 'inherit' });
+    console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs).join(' '));
+    result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], scriptArgs), { stdio: 'inherit' });
 }
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {

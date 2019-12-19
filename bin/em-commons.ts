@@ -11,15 +11,17 @@ const scriptIndex = args.findIndex(
   x => x === 'lint' || x === 'deploy' || x === 'tsc'
 )
 
+console.log('args: ', JSON.stringify(args))
+
 const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
-const nodeArgs = scriptIndex > 0 ? args.slice(0, scriptIndex) : []
+const scriptArgs = scriptIndex > 0 ? args.slice(scriptIndex + 1) : []
 
 let result
 if (script === 'lint') {
-  console.log('running npx', ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...nodeArgs].join(' '))
+  console.log('running npx', ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs].join(' '))
   result = spawn.sync(
     'npx',
-    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...nodeArgs],
+    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...scriptArgs],
     { stdio: 'inherit' }
   );
 }
