@@ -3,8 +3,7 @@ import commonjs from 'rollup-plugin-commonjs'
 import sourceMaps from 'rollup-plugin-sourcemaps'
 import typescript from 'rollup-plugin-typescript2'
 import json from 'rollup-plugin-json'
-
-const pkg = require('./package.json')
+import copy from 'rollup-plugin-copy'
 
 export default {
   input: `src/webpack.config.ts`,
@@ -17,10 +16,15 @@ export default {
     include: 'src/**',
   },
   plugins: [
+    copy({
+      targets: [
+        { src: 'src/.eslintrc', dest: 'dist/' },
+      ]
+    }),
     // Allow json resolution
     json(),
     // Compile TypeScript files
-    typescript({ useTsconfigDeclarationDir: true }),
+    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     commonjs(),
     // Allow node_modules resolution, so you can use 'external' to control
@@ -29,6 +33,6 @@ export default {
     resolve(),
 
     // Resolve source maps to the original source
-    sourceMaps(),
+    sourceMaps()
   ],
 }
