@@ -20,7 +20,7 @@ if (script === 'lint') {
   console.log('running npx', ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs].join(' '))
   result = spawn.sync(
     'npx',
-    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...scriptArgs],
+    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs],
     { stdio: 'inherit' }
   );
 }

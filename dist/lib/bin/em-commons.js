@@ -22,7 +22,7 @@ var scriptArgs = args.slice(scriptIndex + 1);
 var result;
 if (script === 'lint') {
     console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs).join(' '));
-    result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], scriptArgs), { stdio: 'inherit' });
+    result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs), { stdio: 'inherit' });
 }
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {
