@@ -6,13 +6,10 @@ import json from 'rollup-plugin-json'
 
 const pkg = require('./package.json')
 
-const libraryName = 'em-ts-microservice-commons'
-
 export default {
   input: `src/webpack.config.ts`,
   output: [
-    { file: pkg.main, name: 'webpack.config.js', format: 'umd', sourcemap: true },
-    { file: pkg.module, format: 'es', sourcemap: true },
+    { name: 'webpack.config.js', format: 'umd' },
   ],
   // Indicate here external modules you don't wanna include in your bundle (i.e.: 'lodash')
   external: [],

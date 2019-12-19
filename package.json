@@ -3,8 +3,6 @@
   "version": "0.0.0",
   "description": "",
   "keywords": [],
-  "main": "dist/em-ts-microservice-commons.umd.js",
-  "module": "dist/em-ts-microservice-commons.es5.js",
   "typings": "dist/types/em-ts-microservice-commons.d.ts",
   "files": [
     "dist"
