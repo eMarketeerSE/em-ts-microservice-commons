@@ -5,7 +5,7 @@
   "keywords": [],
   "bin": {
     "em-commons": "./dist/lib/em-commons.js"
-  }
+  },
   "typings": "dist/types/em-ts-microservice-commons.d.ts",
   "files": [
     "dist"
