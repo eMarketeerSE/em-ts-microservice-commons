@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 "use strict";
 var __spreadArrays = (this && this.__spreadArrays) || function () {
     for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
@@ -21,6 +20,7 @@ var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
 var nodeArgs = scriptIndex > 0 ? args.slice(0, scriptIndex) : [];
 var result;
 if (script === 'lint') {
+    console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], nodeArgs).join(' '));
     result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc'], nodeArgs), { stdio: 'inherit' });
 }
 if (result && result.signal) {

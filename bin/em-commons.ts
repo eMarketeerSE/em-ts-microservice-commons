@@ -15,6 +15,7 @@ const nodeArgs = scriptIndex > 0 ? args.slice(0, scriptIndex) : []
 
 let result
 if (script === 'lint') {
+  console.log('running npx', ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...nodeArgs].join(' '))
   result = spawn.sync(
     'npx',
     ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/lib/.eslintrc', ...nodeArgs],
