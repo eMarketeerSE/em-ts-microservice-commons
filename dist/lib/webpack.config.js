@@ -3,24 +3,16 @@ var path = require('path');
 var slsw = require('serverless-webpack');
 module.exports = {
     entry: slsw.lib.entries,
-    externals: [
-        /aws-sdk/,
-    ],
+    externals: [/aws-sdk/],
     mode: 'development',
     target: 'node',
     resolve: {
-        extensions: [
-            '.js',
-            '.json',
-            '.ts',
-            '.tsx',
-            '.mjs',
-        ],
+        extensions: ['.js', '.json', '.ts', '.tsx', '.mjs']
     },
     output: {
         libraryTarget: 'commonjs',
         path: path.join(__dirname, '.webpack'),
-        filename: '[name].js',
+        filename: '[name].js'
     },
     module: {
         rules: [
@@ -32,15 +24,15 @@ module.exports = {
                         options: {
                             configFile: './node_modules/em-ts-microservice-commons/dist/tsconfig.json'
                         }
-                    },
-                ],
+                    }
+                ]
             },
             {
                 type: 'javascript/auto',
                 test: /\.mjs$/,
-                use: [],
-            },
-        ],
-    },
+                use: []
+            }
+        ]
+    }
 };
 //# sourceMappingURL=webpack.config.js.map

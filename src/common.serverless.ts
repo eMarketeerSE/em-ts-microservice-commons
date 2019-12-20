@@ -23,7 +23,7 @@ plugins:
 
 custom:
   epsagon:
-    token: "{{resolve:ssm:epsagon-token}}"
+    token: \${ssm:epsagon-token}
     appName: \${self:custom.name}
   webpack:
     webpackConfig: 'node_modules/em-ts-microservice-commons/dist/lib/webpack.config.js'
