@@ -55,6 +55,13 @@ if (script === 'deploy') {
   cleanup()
 }
 
+if (script === 'tsc') {
+  console.log('running npx tsc --noEmit')
+  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
+  result = spawn.sync('npx', ['tsc', '--noEmit', ...scriptArgs], { stdio: 'inherit' })
+  fs.unlinkSync('./tsconfig.json')
+}
+
 if (result && result.signal) {
   if (result.signal === 'SIGKILL') {
     console.log(

@@ -49,6 +49,15 @@ if (script === 'deploy') {
     fs.unlinkSync('./tsconfig.json');
     serverless_utils_1.cleanup();
 }
+if (script === 'tsc') {
+    console.log('running npx tsc --noEmit');
+    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
+    result = cross_spawn_1.default.sync('npx', __spreadArrays([
+        'tsc',
+        '--noEmit'
+    ], scriptArgs), { stdio: 'inherit' });
+    fs.unlinkSync('./tsconfig.json');
+}
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {
         console.log('The build failed because the process exited too early. ' +
