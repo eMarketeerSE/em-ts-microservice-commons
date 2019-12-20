@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import spawn from 'cross-spawn'
+import {cleanup, generateConfig} from "../src/serverless.utils"
 
 process.on('unhandledRejection', err => {
   throw err;
@@ -24,6 +25,17 @@ if (script === 'lint') {
     ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs],
     { stdio: 'inherit' }
   );
+}
+
+if (script === 'deploy') {
+  generateConfig()
+  console.log('running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml')
+  result = spawn.sync(
+    'npx',
+    ['cross-env', 'NODE_OPTIONS=--max_old_space_size=4096', 'npx', 'serverless', 'deploy', '--config', 'generated.serverless.yml', ...scriptArgs],
+    { stdio: 'inherit' }
+  )
+  // cleanup()
 }
 
 if (result && result.signal) {

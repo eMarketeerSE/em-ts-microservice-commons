@@ -12,6 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var cross_spawn_1 = __importDefault(require("cross-spawn"));
+var serverless_utils_1 = require("../src/serverless.utils");
 process.on('unhandledRejection', function (err) {
     throw err;
 });
@@ -23,6 +24,12 @@ var result;
 if (script === 'lint') {
     console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs).join(' '));
     result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs), { stdio: 'inherit' });
+}
+if (script === 'deploy') {
+    serverless_utils_1.generateConfig();
+    console.log('running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml');
+    result = cross_spawn_1.default.sync('npx', __spreadArrays(['cross-env', 'NODE_OPTIONS=--max_old_space_size=4096', 'npx', 'serverless', 'deploy', '--config', 'generated.serverless.yml'], scriptArgs), { stdio: 'inherit' });
+    // cleanup()
 }
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {
