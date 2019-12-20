@@ -37,7 +37,7 @@ if (script === 'deploy') {
         '--config',
         'generated.serverless.yml'
     ], scriptArgs), { stdio: 'inherit' });
-    // cleanup()
+    serverless_utils_1.cleanup();
 }
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {

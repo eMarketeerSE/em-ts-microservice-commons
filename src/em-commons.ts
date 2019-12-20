@@ -49,7 +49,7 @@ if (script === 'deploy') {
     ],
     { stdio: 'inherit' }
   )
-  // cleanup()
+  cleanup()
 }
 
 if (result && result.signal) {
