@@ -30,8 +30,10 @@ var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
 var scriptArgs = args.slice(scriptIndex + 1);
 var result;
 if (script === 'lint') {
+    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
     console.log('running npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs).join(' '));
     result = cross_spawn_1.default.sync('npx', __spreadArrays(['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc'], scriptArgs), { stdio: 'inherit' });
+    fs.unlinkSync('./tsconfig.json');
 }
 if (script === 'deploy') {
     serverless_utils_1.generateConfig();

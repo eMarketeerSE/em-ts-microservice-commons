@@ -18,6 +18,7 @@ const scriptArgs = args.slice(scriptIndex + 1)
 let result
 
 if (script === 'lint') {
+  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
   console.log(
     'running npx',
     ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs].join(
@@ -29,6 +30,7 @@ if (script === 'lint') {
     ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs],
     { stdio: 'inherit' }
   )
+  fs.unlinkSync('./tsconfig.json')
 }
 
 if (script === 'deploy') {
