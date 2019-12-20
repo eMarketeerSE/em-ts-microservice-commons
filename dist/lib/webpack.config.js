@@ -29,6 +29,9 @@ module.exports = {
                 use: [
                     {
                         loader: 'ts-loader',
+                        options: {
+                            configFile: './node_modules/em-ts-microservice-commons/dist/tsconfig.json'
+                        }
                     },
                 ],
             },

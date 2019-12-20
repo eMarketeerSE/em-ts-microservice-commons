@@ -5,7 +5,6 @@ import typescript from 'rollup-plugin-typescript2'
 import json from 'rollup-plugin-json'
 import copy from 'rollup-plugin-copy'
 import executable from 'rollup-plugin-executable'
-import { string } from 'rollup-plugin-string'
 
 export default [{
   input: `src/webpack.config.ts`,
@@ -42,14 +41,11 @@ export default [{
     copy({
       targets: [
         { src: 'src/.eslintrc', dest: 'dist/' },
+        { src: 'src/tsconfig.json', dest: 'dist/' },
       ]
     }),
     // Allow json resolution
     json(),
-    string({
-      // Required to be specified
-      include: "**/*.yml",
-    }),
     // Compile TypeScript files
     typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true, include: '"*.js+(|x)"' }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
