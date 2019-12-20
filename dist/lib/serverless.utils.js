@@ -18,6 +18,6 @@ exports.generateConfig = function () {
     fs.writeFileSync('./generated.serverless.yml', YAML.stringify(generatedConfig));
 };
 exports.cleanup = function () {
-    fs.unlinkSync('./generated.serverless.yml');
+    // fs.unlinkSync('./generated.serverless.yml')
 };
 //# sourceMappingURL=serverless.utils.js.map

@@ -52,10 +52,7 @@ if (script === 'deploy') {
 if (script === 'tsc') {
     console.log('running npx tsc --noEmit');
     fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
-    result = cross_spawn_1.default.sync('npx', __spreadArrays([
-        'tsc',
-        '--noEmit'
-    ], scriptArgs), { stdio: 'inherit' });
+    result = cross_spawn_1.default.sync('npx', __spreadArrays(['tsc', '--noEmit'], scriptArgs), { stdio: 'inherit' });
     fs.unlinkSync('./tsconfig.json');
 }
 if (result && result.signal) {
