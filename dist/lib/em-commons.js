@@ -36,7 +36,7 @@ if (script === 'lint') {
 if (script === 'deploy') {
     serverless_utils_1.generateConfig();
     console.log('running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml');
-    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', '.');
+    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
     result = cross_spawn_1.default.sync('npx', __spreadArrays([
         'cross-env',
         'NODE_OPTIONS=--max_old_space_size=4096',
