@@ -22,7 +22,7 @@ module.exports = {
                     {
                         loader: 'ts-loader',
                         options: {
-                            configFile: './node_modules/em-ts-microservice-commons/dist/tsconfig.json',
+                            configFile: '../node_modules/em-ts-microservice-commons/dist/tsconfig.json',
                             logLevel: 'info'
                         }
                     }
