@@ -10,9 +10,17 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var cross_spawn_1 = __importDefault(require("cross-spawn"));
 var serverless_utils_1 = require("./serverless.utils");
+var fs = __importStar(require("fs"));
 process.on('unhandledRejection', function (err) {
     throw err;
 });
@@ -28,6 +36,7 @@ if (script === 'lint') {
 if (script === 'deploy') {
     serverless_utils_1.generateConfig();
     console.log('running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml');
+    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', '.');
     result = cross_spawn_1.default.sync('npx', __spreadArrays([
         'cross-env',
         'NODE_OPTIONS=--max_old_space_size=4096',
@@ -37,6 +46,7 @@ if (script === 'deploy') {
         '--config',
         'generated.serverless.yml'
     ], scriptArgs), { stdio: 'inherit' });
+    fs.unlinkSync('./tsconfig.json');
     serverless_utils_1.cleanup();
 }
 if (result && result.signal) {
