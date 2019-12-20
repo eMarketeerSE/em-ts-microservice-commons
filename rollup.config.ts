@@ -33,9 +33,9 @@ export default [{
     sourceMaps()
   ],
 }, {
-  input: `bin/em-commons.ts`,
+  input: `src/em-commons.ts`,
   output: [
-    { name: 'bin/em-commons.js', format: 'commonjs' },
+    { name: 'em-commons.js', format: 'commonjs' },
   ],
   plugins: [
     executable(),
