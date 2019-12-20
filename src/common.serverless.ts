@@ -26,7 +26,7 @@ custom:
     token: "{{resolve:ssm:epsagon-token}}"
     appName: \${self:custom.name}
   webpack:
-    webpackConfig: 'node_modules/em-ts-microservice-commons/dist/lib/src/webpack.config.js'
+    webpackConfig: 'node_modules/em-ts-microservice-commons/dist/lib/webpack.config.js'
   region: \${opt:region, self:provider.region}
   stage: \${opt:stage, self:provider.stage}
   name: \${self:custom.stage}-\${self:service}

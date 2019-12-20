@@ -28,7 +28,15 @@ if (script === 'lint') {
 if (script === 'deploy') {
     serverless_utils_1.generateConfig();
     console.log('running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml');
-    result = cross_spawn_1.default.sync('npx', __spreadArrays(['cross-env', 'NODE_OPTIONS=--max_old_space_size=4096', 'npx', 'serverless', 'deploy', '--config', 'generated.serverless.yml'], scriptArgs), { stdio: 'inherit' });
+    result = cross_spawn_1.default.sync('npx', __spreadArrays([
+        'cross-env',
+        'NODE_OPTIONS=--max_old_space_size=4096',
+        'npx',
+        'serverless',
+        'deploy',
+        '--config',
+        'generated.serverless.yml'
+    ], scriptArgs), { stdio: 'inherit' });
     // cleanup()
 }
 if (result && result.signal) {
