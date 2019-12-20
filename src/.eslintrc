@@ -27,6 +27,16 @@
     "object-curly-newline": ["error", { "consistent": true }],
     "no-await-in-loop": "off",
     "prefer-destructuring": "off",
-    "arrow-body-style": "warn"
+    "arrow-body-style": "warn",
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ]
   }
 }
