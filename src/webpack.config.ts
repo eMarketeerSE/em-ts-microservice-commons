@@ -20,11 +20,7 @@ module.exports = {
         test: /\.ts(x?)$/,
         use: [
           {
-            loader: 'ts-loader',
-            options: {
-              configFile: '../node_modules/em-ts-microservice-commons/dist/tsconfig.json',
-              logLevel: 'info'
-            }
+            loader: 'ts-loader'
           }
         ]
       },

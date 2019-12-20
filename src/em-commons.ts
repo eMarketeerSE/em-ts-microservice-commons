@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import spawn from 'cross-spawn'
 import { cleanup, generateConfig } from './serverless.utils'
+import * as fs from 'fs'
 
 process.on('unhandledRejection', err => {
   throw err
@@ -35,6 +36,7 @@ if (script === 'deploy') {
   console.log(
     'running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml'
   )
+  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', '.')
   result = spawn.sync(
     'npx',
     [
@@ -49,6 +51,7 @@ if (script === 'deploy') {
     ],
     { stdio: 'inherit' }
   )
+  fs.unlinkSync('./tsconfig.json')
   cleanup()
 }
 
