@@ -27,7 +27,7 @@ try {
     if (script === 'deploy') {
         utils_1.generateServerlessConfig();
         utils_1.copyTsConfig();
-        result = utils_1.runCommand('npx cross-env -c NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml', scriptArgs);
+        result = utils_1.runCommand('npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml', scriptArgs);
         fs.unlinkSync('./tsconfig.json');
     }
     if (script === 'tsc') {

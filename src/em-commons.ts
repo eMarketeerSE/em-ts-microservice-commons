@@ -32,7 +32,7 @@ try {
     copyTsConfig()
 
     result = runCommand(
-      'npx cross-env -c NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
+      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
       scriptArgs
     )
     fs.unlinkSync('./tsconfig.json')
