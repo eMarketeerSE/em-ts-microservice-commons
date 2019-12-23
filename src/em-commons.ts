@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import * as fs from 'fs'
 import { cleanup, generateServerlessConfig, runCommand } from './utils'
 
 process.on('unhandledRejection', err => {
