@@ -25,7 +25,8 @@ process.on('unhandledRejection', function (err) {
     throw err;
 });
 var args = process.argv.slice(2);
-var scriptIndex = args.findIndex(function (x) { return x === 'lint' || x === 'deploy' || x === 'tsc'; });
+var supportedCommands = ['lint', 'deploy', 'tsc', 'jest'];
+var scriptIndex = args.findIndex(function (x) { return supportedCommands.indexOf(x) !== -1; });
 var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
 var scriptArgs = args.slice(scriptIndex + 1);
 var result;
@@ -58,7 +59,7 @@ if (script === 'tsc') {
     fs.unlinkSync('./tsconfig.json');
 }
 if (script === 'jest') {
-    console.log('running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json');
+    console.log('running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json', scriptArgs.join(' '));
     fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
     result = cross_spawn_1.default.sync('npx', __spreadArrays([
         'jest',
