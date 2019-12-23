@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as fs from 'fs'
-import { cleanup, copyTsConfig, generateServerlessConfig, runCommand } from './utils'
+import { cleanup, generateServerlessConfig, runCommand } from './utils'
 
 process.on('unhandledRejection', err => {
   throw err
@@ -19,8 +19,6 @@ const scriptArgs = args.slice(scriptIndex + 1)
 let result
 try {
   if (script === 'lint') {
-    copyTsConfig()
-
     result = runCommand(
       'npx eslint -c node_modules/em-ts-microservice-commons/dist/.eslintrc',
       scriptArgs
@@ -29,24 +27,18 @@ try {
 
   if (script === 'deploy') {
     generateServerlessConfig()
-    copyTsConfig()
 
     result = runCommand(
       'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
       scriptArgs
     )
-    fs.unlinkSync('./tsconfig.json')
   }
 
   if (script === 'tsc') {
-    copyTsConfig()
-
     result = runCommand('npx tsc --noEmit', scriptArgs)
   }
 
   if (script === 'jest') {
-    copyTsConfig()
-
     result = runCommand(
       'npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json',
       scriptArgs

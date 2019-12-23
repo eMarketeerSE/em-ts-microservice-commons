@@ -26,15 +26,9 @@ exports.generateServerlessConfig = function () {
     var generatedConfig = lodash_1.mergeWith(commonConfig, serviceConfig, mergeCustomizer);
     fs.writeFileSync('./generated.serverless.yml', YAML.stringify(generatedConfig));
 };
-exports.copyTsConfig = function () {
-    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
-};
 exports.cleanup = function () {
     if (fs.existsSync('./generated.serverless.yml')) {
         fs.unlinkSync('./generated.serverless.yml');
-    }
-    if (fs.existsSync('./tsconfig.json')) {
-        fs.unlinkSync('./tsconfig.json');
     }
 };
 exports.runCommand = function (command, additionalArgs) {

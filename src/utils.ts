@@ -20,17 +20,9 @@ export const generateServerlessConfig = () => {
   fs.writeFileSync('./generated.serverless.yml', YAML.stringify(generatedConfig))
 }
 
-export const copyTsConfig = () => {
-  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-}
-
 export const cleanup = () => {
   if (fs.existsSync('./generated.serverless.yml')) {
     fs.unlinkSync('./generated.serverless.yml')
-  }
-
-  if (fs.existsSync('./tsconfig.json')) {
-    fs.unlinkSync('./tsconfig.json')
   }
 }
 
