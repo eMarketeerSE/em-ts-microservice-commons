@@ -69,7 +69,16 @@ if (script === 'jest') {
     'running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json'
   )
   fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-  result = spawn.sync('npx', ['tsc', '--noEmit', ...scriptArgs], { stdio: 'inherit' })
+  result = spawn.sync(
+    'npx',
+    [
+      'jest',
+      '--config',
+      'node_modules/em-ts-microservice-commons/dist/jest.config.json',
+      ...scriptArgs
+    ],
+    { stdio: 'inherit' }
+  )
   fs.unlinkSync('./tsconfig.json')
 }
 
