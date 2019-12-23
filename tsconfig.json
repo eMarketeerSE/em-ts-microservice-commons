@@ -7,7 +7,9 @@
     "strict": true,
     "sourceMap": true,
     "declaration": true,
+    "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "declarationDir": "dist/types",
@@ -17,6 +19,7 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "bin"
   ]
 }
