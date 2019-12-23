@@ -64,6 +64,15 @@ if (script === 'tsc') {
   fs.unlinkSync('./tsconfig.json')
 }
 
+if (script === 'jest') {
+  console.log(
+    'running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json'
+  )
+  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
+  result = spawn.sync('npx', ['tsc', '--noEmit', ...scriptArgs], { stdio: 'inherit' })
+  fs.unlinkSync('./tsconfig.json')
+}
+
 if (result && result.signal) {
   if (result.signal === 'SIGKILL') {
     console.log(

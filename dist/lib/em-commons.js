@@ -57,6 +57,12 @@ if (script === 'tsc') {
     result = cross_spawn_1.default.sync('npx', __spreadArrays(['tsc', '--noEmit'], scriptArgs), { stdio: 'inherit' });
     fs.unlinkSync('./tsconfig.json');
 }
+if (script === 'jest') {
+    console.log('running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json');
+    fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json');
+    result = cross_spawn_1.default.sync('npx', __spreadArrays(['tsc', '--noEmit'], scriptArgs), { stdio: 'inherit' });
+    fs.unlinkSync('./tsconfig.json');
+}
 if (result && result.signal) {
     if (result.signal === 'SIGKILL') {
         console.log('The build failed because the process exited too early. ' +

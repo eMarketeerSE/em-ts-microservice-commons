@@ -42,6 +42,7 @@ export default [{
       targets: [
         { src: 'src/.eslintrc', dest: 'dist/' },
         { src: 'src/tsconfig.json', dest: 'dist/' },
+        { src: 'src/jest.config.json', dest: 'dist/' },
       ]
     }),
     // Allow json resolution
