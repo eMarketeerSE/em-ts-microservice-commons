@@ -66,9 +66,12 @@ if (script === 'tsc') {
 
 if (script === 'jest') {
   console.log(
-    'running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json'
+    'running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json',
+    scriptArgs.join(' ')
   )
+
   fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
+
   result = spawn.sync(
     'npx',
     [
@@ -79,6 +82,7 @@ if (script === 'jest') {
     ],
     { stdio: 'inherit' }
   )
+
   fs.unlinkSync('./tsconfig.json')
 }
 
