@@ -13,5 +13,5 @@ export const generateConfig = () => {
 }
 
 export const cleanup = () => {
-  // fs.unlinkSync('./generated.serverless.yml')
+  fs.unlinkSync('./generated.serverless.yml')
 }
