@@ -6,9 +6,6 @@
     "node": true,
     "jest/globals": true
   },
-  "parserOptions": {
-    "project": "./tsconfig.json"
-  },
   "settings": {
     "import/resolver": {
       "node": {
