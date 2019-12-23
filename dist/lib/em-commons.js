@@ -25,7 +25,8 @@ process.on('unhandledRejection', function (err) {
     throw err;
 });
 var args = process.argv.slice(2);
-var scriptIndex = args.findIndex(function (x) { return x === 'lint' || x === 'deploy' || x === 'tsc'; });
+var supportedCommands = ['lint', 'deploy', 'tsc', 'jest'];
+var scriptIndex = args.findIndex(function (x) { return supportedCommands.indexOf(x) !== -1; });
 var script = scriptIndex === -1 ? args[0] : args[scriptIndex];
 var scriptArgs = args.slice(scriptIndex + 1);
 var result;

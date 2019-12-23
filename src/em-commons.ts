@@ -9,7 +9,9 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-const scriptIndex = args.findIndex(x => x === 'lint' || x === 'deploy' || x === 'tsc')
+const supportedCommands = ['lint', 'deploy', 'tsc', 'jest']
+
+const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
 const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
 
