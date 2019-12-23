@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import spawn from 'cross-spawn'
-import { cleanup, generateConfig } from './serverless.utils'
 import * as fs from 'fs'
+import { cleanup, copyTsConfig, generateServerlessConfig, runCommand } from './utils'
 
 process.on('unhandledRejection', err => {
   throw err
@@ -18,74 +17,43 @@ const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
 const scriptArgs = args.slice(scriptIndex + 1)
 
 let result
+try {
+  if (script === 'lint') {
+    copyTsConfig()
 
-if (script === 'lint') {
-  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-  console.log(
-    'running npx',
-    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs].join(
-      ' '
+    result = runCommand(
+      'npx eslint -c node_modules/em-ts-microservice-commons/dist/.eslintrc',
+      scriptArgs
     )
-  )
-  result = spawn.sync(
-    'npx',
-    ['eslint', '-c', 'node_modules/em-ts-microservice-commons/dist/.eslintrc', ...scriptArgs],
-    { stdio: 'inherit' }
-  )
-  fs.unlinkSync('./tsconfig.json')
-}
+  }
 
-if (script === 'deploy') {
-  generateConfig()
-  console.log(
-    'running cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml'
-  )
-  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-  result = spawn.sync(
-    'npx',
-    [
-      'cross-env',
-      'NODE_OPTIONS=--max_old_space_size=4096',
-      'npx',
-      'serverless',
-      'deploy',
-      '--config',
-      'generated.serverless.yml',
-      ...scriptArgs
-    ],
-    { stdio: 'inherit' }
-  )
-  fs.unlinkSync('./tsconfig.json')
+  if (script === 'deploy') {
+    generateServerlessConfig()
+    copyTsConfig()
+
+    result = runCommand(
+      'npx cross-env -c NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
+      scriptArgs
+    )
+    fs.unlinkSync('./tsconfig.json')
+  }
+
+  if (script === 'tsc') {
+    copyTsConfig()
+
+    result = runCommand('npx tsc --noEmit', scriptArgs)
+  }
+
+  if (script === 'jest') {
+    copyTsConfig()
+
+    result = runCommand(
+      'npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json',
+      scriptArgs
+    )
+  }
+} finally {
   cleanup()
-}
-
-if (script === 'tsc') {
-  console.log('running npx tsc --noEmit')
-  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-  result = spawn.sync('npx', ['tsc', '--noEmit', ...scriptArgs], { stdio: 'inherit' })
-  fs.unlinkSync('./tsconfig.json')
-}
-
-if (script === 'jest') {
-  console.log(
-    'running npx jest --config node_modules/em-ts-microservice-commons/dist/jest.config.json',
-    scriptArgs.join(' ')
-  )
-
-  fs.copyFileSync('node_modules/em-ts-microservice-commons/dist/tsconfig.json', './tsconfig.json')
-
-  result = spawn.sync(
-    'npx',
-    [
-      'jest',
-      '--config',
-      'node_modules/em-ts-microservice-commons/dist/jest.config.json',
-      ...scriptArgs
-    ],
-    { stdio: 'inherit' }
-  )
-
-  fs.unlinkSync('./tsconfig.json')
 }
 
 if (result && result.signal) {
