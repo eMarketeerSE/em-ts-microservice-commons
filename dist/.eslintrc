@@ -28,6 +28,7 @@
     "no-await-in-loop": "off",
     "prefer-destructuring": "off",
     "arrow-body-style": "warn",
+    "import/no-extraneous-dependencies": ["error", {"ignore": ["aws-sdk"]}]
     "import/extensions": [
       "error",
       "ignorePackages",
