@@ -4,6 +4,7 @@
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
+  "rootDir": "../../../",
   "testRegex": "<rootDir>/(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
   "moduleFileExtensions": [
     "ts",
