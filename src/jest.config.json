@@ -5,7 +5,7 @@
     "^.+\\.tsx?$": "ts-jest"
   },
   "setupFilesAfterEnv": ["jest-extended"],
-  "rootDir": "../../../",
+  "rootDir": "../../../../",
   "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
   "moduleFileExtensions": [
     "ts",
