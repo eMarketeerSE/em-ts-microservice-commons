@@ -18,7 +18,7 @@ let result
 try {
   if (script === 'lint') {
     result = runCommand(
-      'npx eslint -c node_modules/em-ts-microservice-commons/dist/.eslintrc',
+      'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/.eslintrc',
       scriptArgs
     )
   }
@@ -47,7 +47,7 @@ try {
 
   if (script === 'jest') {
     result = runCommand(
-      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 jest --detectOpenHandles -w 1 --ci --forceExit --config node_modules/em-ts-microservice-commons/dist/jest.config.json',
+      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 jest --detectOpenHandles -w 1 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/jest.config.json',
       scriptArgs
     )
   }

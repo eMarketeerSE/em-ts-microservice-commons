@@ -32,7 +32,7 @@ module.exports = {
   mode: 'development',
   target: 'node',
   resolveLoader: {
-    modules: ['node_modules/em-ts-microservice-commons/node_modules', 'node_modules']
+    modules: ['node_modules/@emarketeer/ts-microservice-commons/node_modules', 'node_modules']
   },
   resolve: {
     extensions: ['.js', '.json', '.ts', '.tsx', '.mjs']
