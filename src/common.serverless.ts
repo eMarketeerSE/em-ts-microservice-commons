@@ -1,5 +1,4 @@
 export const config = `
-frameworkVersion: ">=1.28.0 <2.0.0"
 
 provider:
   name: aws
@@ -20,13 +19,9 @@ package:
 
 plugins:
   - "@recap.dev/serverless-plugin"
-  - serverless-plugin-epsagon
   - serverless-webpack
 
 custom:
-  epsagon:
-    token: \${ssm:epsagon-token}
-    appName: \${self:custom.name}
   webpack:
     webpackConfig: 'node_modules/@emarketeer/ts-microservice-commons/dist/lib/webpack.config.js'
   region: \${opt:region, self:provider.region}
