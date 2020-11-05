@@ -4,6 +4,7 @@
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
+  "testRunner": "jest-circus/runner",
   "setupFilesAfterEnv": ["jest-extended"],
   "rootDir": "../../../../",
   "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
