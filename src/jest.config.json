@@ -4,6 +4,13 @@
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
+  "globals": {
+    "ts-jest": {
+      "tsconfig": {
+        "target": "es6"
+      }
+    }
+  },
   "testRunner": "jest-circus/runner",
   "setupFilesAfterEnv": ["jest-extended"],
   "rootDir": "../../../../",
