@@ -1,13 +1,8 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "lib": [
-      "ES2020.Promise",
-      "es2018",
-      "es6",
-      "dom"
-    ],
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "target": "ESNext",
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
