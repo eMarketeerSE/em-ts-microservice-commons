@@ -65,23 +65,23 @@ module.exports = {
         test: /\.ts(x?)$/,
         use: [
           {
-            loader: 'babel-loader',
-            options: {
-              presets: [['babel-preset-latest-node', { target: 14 }]],
-              plugins: [
-                '@babel/plugin-proposal-numeric-separator',
-                '@babel/plugin-proposal-async-generator-functions',
-                ['@babel/plugin-proposal-decorators', { decoratorsBeforeExport: true }],
-                ['@babel/plugin-proposal-class-properties', { loose: true }],
-                '@babel/plugin-proposal-object-rest-spread',
-                '@recap.dev/babel-plugin'
-              ]
-            }
-          },
-          {
             loader: 'ts-loader',
             options: {
               transpileOnly: true
+            }
+          },
+          {
+            loader: 'babel-loader',
+            options: {
+              plugins: [
+                '@babel/plugin-syntax-typescript',
+                '@babel/plugin-syntax-numeric-separator',
+                '@babel/plugin-syntax-async-generators',
+                ['@babel/plugin-syntax-decorators', { decoratorsBeforeExport: true }],
+                ['@babel/plugin-syntax-class-properties', { loose: true }],
+                '@babel/plugin-syntax-object-rest-spread',
+                '@recap.dev/babel-plugin'
+              ]
             }
           }
         ]

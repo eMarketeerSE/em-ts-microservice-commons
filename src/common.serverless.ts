@@ -8,6 +8,8 @@ provider:
   versionFunctions: false
   tracing: false
   logRetentionInDays: 14
+  memorySize: 1024
+  timeout: 15
   iamRoleStatements:
     \${file(roleStatements.yml)}
   environment:

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "module": "ESNext",
-    "target": "ESNext",
+    "module": "commonjs",
+    "target": "ES2019",
+    "lib": ["es2020"],
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
