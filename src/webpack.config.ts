@@ -75,6 +75,7 @@ module.exports = {
             options: {
               plugins: [
                 '@babel/plugin-syntax-typescript',
+                '@babel/plugin-syntax-optional-chaining',
                 '@babel/plugin-syntax-numeric-separator',
                 '@babel/plugin-syntax-async-generators',
                 ['@babel/plugin-syntax-decorators', { decoratorsBeforeExport: true }],
