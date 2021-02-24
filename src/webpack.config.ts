@@ -1,6 +1,5 @@
 const path = require('path')
 const webpack = require('webpack')
-const TerserPlugin = require('terser-webpack-plugin')
 
 const optionalDependencies = ['pg']
 const additionalExternals = []
@@ -30,22 +29,7 @@ module.exports = {
     'pg-query-stream',
     ...additionalExternals
   ],
-  mode: 'production',
-  optimization: {
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true,
-        terserOptions: {
-          // Preventing mangling of function names fixes "Received packet in the wrong sequence" bug
-          // See https://github.com/mysqljs/mysql/issues/1655 and https://github.com/mysqljs/mysql/pull/2375/files
-          keep_fnames: /Packet|ChangeUser|Handshake|Ping|Query|Quit|Sequence|Statistics/
-        }
-      })
-    ]
-  },
+  mode: 'development',
   target: 'node',
   resolveLoader: {
     modules: ['node_modules/@emarketeer/ts-microservice-commons/node_modules', 'node_modules']
