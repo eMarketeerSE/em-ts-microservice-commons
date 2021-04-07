@@ -25,7 +25,9 @@
     "import/core-modules": [
       "aws-sdk",
       "aws-lambda",
-      "aws-sdk/clients/dynamodb"
+      "aws-sdk/clients/dynamodb",
+      "@aws/dynamodb-data-mapper",
+      "@aws/dynamodb-data-mapper-annotations"
     ]
   },
   "rules": {

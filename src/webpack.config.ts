@@ -16,6 +16,8 @@ for (const optionalDependency of optionalDependencies) {
 module.exports = {
   externals: [
     /^aws-sdk.*/,
+    '@aws/dynamodb-data-mapper',
+    '@aws/dynamodb-data-mapper-annotations',
     'sqlite3',
     'mysql2',
     'mssql',
