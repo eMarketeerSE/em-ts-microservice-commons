@@ -30,17 +30,6 @@
       "aws-sdk/clients/dynamodb"
     ]
   },
-  "overrides": [
-    {
-      "files": [
-        "*.test.ts",
-        "*.spec.ts"
-      ],
-      "rules": {
-        "sonarjs/no-duplicate-string": "off"
-      }
-    }
-  ],
   "rules": {
     "@typescript-eslint/semi": [
       "error",
@@ -87,6 +76,7 @@
     ],
     "no-await-in-loop": "off",
     "prefer-destructuring": "off",
+    "sonarjs/no-duplicate-string": "off",
     "arrow-body-style": "warn",
     "@typescript-eslint/no-unused-vars": [
       "error",
