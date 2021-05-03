@@ -1,11 +1,13 @@
 {
   "extends": [
-    "airbnb-base"
+    "airbnb-base",
+    "plugin:sonarjs/recommended"
   ],
   "parser": "@typescript-eslint/parser",
   "plugins": [
     "jest",
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "sonarjs"
   ],
   "env": {
     "node": true,
