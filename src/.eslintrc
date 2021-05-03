@@ -27,9 +27,20 @@
     "import/core-modules": [
       "aws-sdk",
       "aws-lambda",
-      "aws-sdk/clients/dynamodb",
+      "aws-sdk/clients/dynamodb"
     ]
   },
+  "overrides": [
+    {
+      "files": [
+        "*.test.ts",
+        "*.spec.ts"
+      ],
+      "rules": {
+        "sonarjs/no-duplicate-string": "off"
+      }
+    }
+  ],
   "rules": {
     "@typescript-eslint/semi": [
       "error",
