@@ -8,8 +8,6 @@ provider:
   versionFunctions: false
   tracing: false
   logRetentionInDays: 14
-  memorySize: 1024
-  timeout: 15
   iamRoleStatements:
     \${file(roleStatements.yml)}
   environment:
@@ -23,6 +21,7 @@ package:
 plugins:
   - "@recap.dev/serverless-plugin"
   - serverless-webpack
+  - serverless-plugin-lambda-insights
 
 custom:
   webpack:
@@ -30,4 +29,6 @@ custom:
   region: \${opt:region, self:provider.region}
   stage: \${opt:stage, self:provider.stage}
   name: \${self:custom.stage}-\${self:service}
+  lambdaInsights:
+    defaultLambdaInsights: true #enables Lambda Insights for all your functions
 `

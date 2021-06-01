@@ -37,3 +37,7 @@ Example usage:
 Where `-f` is the function name and `-d` is the request data.
 
 More information on arguments is available here: https://www.serverless.com/framework/docs/providers/aws/cli-reference/invoke-local/
+
+
+#### release ####
+Create a commit following the syntax of https://github.com/semantic-release/semantic-release#commit-message-format
