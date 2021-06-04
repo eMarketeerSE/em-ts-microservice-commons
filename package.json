@@ -113,6 +113,7 @@
     "serverless": "^2.43.1",
     "serverless-webpack": "^5.5.0",
     "serverless-plugin-lambda-insights": "^1.0.8",
+    "eslint-plugin-sonarjs": "^0.7.0",
     "ts-jest": "^26.4.3",
     "ts-loader": "^8.0.7",
     "typescript": "^4.3.2",

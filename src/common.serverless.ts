@@ -6,8 +6,12 @@ provider:
   runtime: nodejs14.x
   deploymentBucket: \${self:custom.stage}.\${self:provider.region}.serverless.deploys.em.com
   versionFunctions: false
-  tracing: false
+  tracing:
+    apiGateway: false
+    lambda: false
   logRetentionInDays: 14
+  memorySize: 1024
+  timeout: 15
   iamRoleStatements:
     \${file(roleStatements.yml)}
   environment:
