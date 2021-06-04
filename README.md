@@ -52,6 +52,5 @@ To unlink:
 `yarn unlink @emarketeer/ts-microservice-commons`
 
 
-
 #### release ####
 Create a commit following the syntax of https://github.com/semantic-release/semantic-release#commit-message-format
