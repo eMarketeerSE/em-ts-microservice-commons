@@ -26,6 +26,42 @@ Following commands are available:
 - `em-commons deploy`
 - `em-commons invoke-local`
 
+
+#### jest ####
+
+Please note that test will run in parallel. If you need to do a global setup/teardown before/after running your tests, the default configuration is like this:
+
+```json
+  "globalSetup": "<rootDir>/src/utils/func-test-setup.ts",
+  "globalTeardown": "<rootDir>/src/utils/func-test-teardown.ts",
+```
+
+Example `func-test-setup.ts` file:
+
+```typescript
+import { addCurrentHostToSecurityGroup, initTestRuntime } from './test.utils'
+
+const setup = async () => {
+  await initTestRuntime()
+  await addCurrentHostToSecurityGroup('...', ...)
+}
+
+export default setup
+```
+
+Example `func-test-teardown.ts` file:
+
+```typescript
+import { removeCurrentHostFromSecurityGroup } from './test.utils'
+
+const teardown = async () => {
+  await removeCurrentHostFromSecurityGroup('...', ...)
+}
+
+export default teardown
+```
+
+
 #### invoke-local ####
 
 This command runs a lambda locally. 
