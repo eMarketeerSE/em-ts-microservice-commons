@@ -8,6 +8,26 @@ import executable from 'rollup-plugin-executable'
 import shebang from '@robmarr/rollup-plugin-shebang'
 
 export default [{
+  input: `src/jest.config.ts`,
+  output: [
+    { dir: 'dist/lib', name: 'jest.config.js', format: 'umd' },
+  ],
+  plugins: [
+    // Allow json resolution
+    json(),
+    // Compile TypeScript files
+    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
+    // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
+    commonjs(),
+    // Allow node_modules resolution, so you can use 'external' to control
+    // which external modules to include in the bundle
+    // https://github.com/rollup/rollup-plugin-node-resolve#usage
+    resolve(),
+
+    // Resolve source maps to the original source
+    sourceMaps()
+  ],
+}, {
   input: `src/webpack.config.ts`,
   output: [
     { dir: 'dist/lib', name: 'webpack.config.js', format: 'umd' },

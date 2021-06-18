@@ -47,7 +47,7 @@ try {
 
   if (script === 'jest') {
     result = runCommand(
-      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 jest -w 8 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/jest.config.json',
+      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 jest -w 8 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
       scriptArgs
     )
   }
