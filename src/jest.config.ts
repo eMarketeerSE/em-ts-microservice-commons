@@ -8,7 +8,8 @@ const config: any = {
     'ts-jest': {
       tsconfig: {
         target: 'es6'
-      }
+      },
+      isolatedModules: true
     }
   },
   testRunner: 'jest-circus/runner',
