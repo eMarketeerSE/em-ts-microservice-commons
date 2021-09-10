@@ -29,6 +29,7 @@ plugins:
 
 custom:
   webpack:
+    concurrency: 6
     webpackConfig: 'node_modules/@emarketeer/ts-microservice-commons/dist/lib/webpack.config.js'
   region: \${opt:region, self:provider.region}
   stage: \${opt:stage, self:provider.stage}
