@@ -111,7 +111,7 @@
     "js-yaml": "^3.13.1",
     "lodash-es": "^4.17.15",
     "serverless": "^2.43.1",
-    "serverless-webpack": "^5.5.0",
+    "serverless-webpack": "^5.5.4",
     "serverless-plugin-lambda-insights": "^1.0.8",
     "eslint-plugin-sonarjs": "^0.7.0",
     "ts-jest": "^26.4.3",

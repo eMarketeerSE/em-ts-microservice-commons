@@ -6633,6 +6633,11 @@ eslint-plugin-jest@^22.19.0:
   dependencies:
     "@typescript-eslint/experimental-utils" "^1.13.0"
 
+eslint-plugin-sonarjs@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-sonarjs/-/eslint-plugin-sonarjs-0.7.0.tgz#2dbad45e03a6a4de687756b659e88bf3f977383f"
+  integrity sha512-vi6zGkd5Eznc32AQlleWUOMrMeDiUih9wR7nPPfrDCyVRmwYNHIBRPZGv1EgXwELwaPghCSvoAoHoR7uSbBF/Q==
+
 eslint-scope@^4.0.0, eslint-scope@^4.0.3:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/eslint-scope/-/eslint-scope-4.0.3.tgz#ca03833310f6889a3264781aa82e63eb9cfe7848"
@@ -14192,10 +14197,10 @@ serverless-plugin-lambda-insights@^1.0.8:
   resolved "https://registry.yarnpkg.com/serverless-plugin-lambda-insights/-/serverless-plugin-lambda-insights-1.0.8.tgz#359dae90c0ee450d7f56d4849d311469fab202cd"
   integrity sha512-uUvm0dwkXaRWonkBtE098qegkpfcfbWVL9XInqDEiYBwv1YqYzfodvWwaSmP0/DkbFgQ2Jir2T00y7Er4cSTJQ==
 
-serverless-webpack@^5.5.0:
-  version "5.5.0"
-  resolved "https://registry.yarnpkg.com/serverless-webpack/-/serverless-webpack-5.5.0.tgz#9f6f4b564041808a8b74150fedb85e96381b496f"
-  integrity sha512-05tkYPVMqUi/kauZ4mIIwTQBvsGrivN4pjvvBNlKXsC22URvAilLvxyJ/ivCOBwddk9cnwhbuENlZCXy0D5dhw==
+serverless-webpack@^5.5.4:
+  version "5.5.4"
+  resolved "https://registry.yarnpkg.com/serverless-webpack/-/serverless-webpack-5.5.4.tgz#45d44c4b1908458e20914e97d1c630d9a884ca7a"
+  integrity sha512-RwkrEFpIzRUi9Kv5mnPlRiaLBJIl6xJ9TCzr7NBIeO64n92JbchTldtb1KjrDn3UWGN2gswB/Ml6PeJyL85fyg==
   dependencies:
     bestzip "^2.2.0"
     bluebird "^3.7.2"
