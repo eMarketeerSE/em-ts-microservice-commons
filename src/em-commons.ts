@@ -51,6 +51,15 @@ try {
       scriptArgs
     )
   }
+
+  if (!supportedCommands.includes(script)) {
+    generateServerlessConfig()
+
+    result = runCommand(
+      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless --config generated.serverless.yml',
+      scriptArgs
+    )
+  }
 } finally {
   cleanup()
 }
