@@ -35,7 +35,7 @@ module.exports = {
     modules: ['node_modules/@emarketeer/ts-microservice-commons/node_modules', 'node_modules']
   },
   resolve: {
-    extensions: ['.js', '.json', '.ts', '.tsx', '.mjs']
+    extensions: ['.js', '.json', '.ts', '.tsx', '.mjs', '.node']
   },
   output: {
     libraryTarget: 'commonjs',
@@ -74,6 +74,10 @@ module.exports = {
         type: 'javascript/auto',
         test: /\.mjs$/,
         use: []
+      },
+      {
+        test: /\.node$/,
+        loader: 'node-loader'
       }
     ]
   }
