@@ -42,6 +42,9 @@ module.exports = {
     path: path.join(__dirname, '.webpack'),
     filename: '[name].js'
   },
+  node: {
+    __dirname: false
+  },
   plugins: [new webpack.IgnorePlugin(/^pg-native$/)],
   module: {
     rules: [
