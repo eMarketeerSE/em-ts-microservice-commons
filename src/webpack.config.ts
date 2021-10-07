@@ -80,7 +80,7 @@ module.exports = {
       },
       {
         test: /\.node$/,
-        loader: 'node-loader'
+        loader: 'native-addon-loader'
       }
     ]
   }
