@@ -29,7 +29,7 @@ module.exports = {
     'pg-query-stream',
     ...additionalExternals
   ],
-  mode: 'development',
+  mode: 'production',
   target: 'node',
   resolveLoader: {
     modules: ['node_modules/@emarketeer/ts-microservice-commons/node_modules', 'node_modules']
