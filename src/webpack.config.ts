@@ -1,5 +1,6 @@
 const path = require('path')
 const webpack = require('webpack')
+const ESBuildPlugin = require('esbuild-minimizer-webpack-plugin').default
 
 const optionalDependencies = ['pg']
 const additionalExternals = []
@@ -45,6 +46,10 @@ module.exports = {
   node: {
     __dirname: false
   },
+  optimization: {
+    minimize: true,
+    minimizer: [new ESBuildPlugin()]
+  },
   plugins: [new webpack.IgnorePlugin(/^pg-native$/)],
   module: {
     rules: [
@@ -56,7 +61,13 @@ module.exports = {
             options: {
               transpileOnly: true
             }
-          },
+          }
+        ]
+      },
+      {
+        test: /\.ts(x?)$/,
+        include: path.resolve(__dirname, 'src'),
+        use: [
           {
             loader: 'babel-loader',
             options: {
