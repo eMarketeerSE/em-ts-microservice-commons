@@ -2,7 +2,7 @@ const path = require('path')
 const webpack = require('webpack')
 const ESBuildPlugin = require('esbuild-minimizer-webpack-plugin').default
 
-const optionalDependencies = ['pg']
+const optionalDependencies = ['pg', 'mysql2']
 const additionalExternals = []
 
 for (const optionalDependency of optionalDependencies) {
@@ -18,7 +18,6 @@ module.exports = {
   externals: [
     /^aws-sdk.*/,
     'sqlite3',
-    'mysql2',
     'mssql',
     'tedious',
     'mssql/lib/base',
