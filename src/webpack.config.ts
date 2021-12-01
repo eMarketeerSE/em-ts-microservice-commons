@@ -18,6 +18,7 @@ module.exports = {
   externals: [
     /^aws-sdk.*/,
     'sqlite3',
+    'mysql',
     'mssql',
     'tedious',
     'mssql/lib/base',
