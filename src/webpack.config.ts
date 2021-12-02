@@ -48,7 +48,7 @@ module.exports = {
   },
   optimization: {
     minimize: true,
-    minimizer: [new ESBuildPlugin()]
+    minimizer: [new ESBuildPlugin({ parallel: false })]
   },
   plugins: [new webpack.IgnorePlugin(/^pg-native$/)],
   module: {
