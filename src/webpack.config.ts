@@ -1,6 +1,6 @@
 const path = require('path')
 const webpack = require('webpack')
-const ESBuildPlugin = require('esbuild-minimizer-webpack-plugin').default
+const ESBuildPlugin = require('@emarketeer/esbuild-minimizer-webpack-plugin').default
 
 const optionalDependencies = ['pg', 'mysql2']
 const additionalExternals = []
