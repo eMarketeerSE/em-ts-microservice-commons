@@ -1,6 +1,7 @@
+const TerserPlugin = require('terser-webpack-plugin')
+
 const path = require('path')
 const webpack = require('webpack')
-const ESBuildPlugin = require('@emarketeer/esbuild-minimizer-webpack-plugin').default
 
 const optionalDependencies = ['pg', 'mysql2']
 const additionalExternals = []
@@ -48,7 +49,14 @@ module.exports = {
   },
   optimization: {
     minimize: true,
-    minimizer: [new ESBuildPlugin({ parallel: false, cache: false })]
+    minimizer: [
+      new TerserPlugin({
+        minify: TerserPlugin.swcMinify,
+        terserOptions: {
+          minify: true
+        }
+      })
+    ]
   },
   plugins: [new webpack.IgnorePlugin(/^pg-native$/)],
   module: {
