@@ -159,5 +159,8 @@
   },
   "resolutions": {
     "@types/estree": "0.0.47"
+  },
+  "release": {
+    "branches": ["master", "beta"]
   }
 }
