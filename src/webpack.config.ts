@@ -57,11 +57,8 @@ module.exports = {
     __dirname: false
   },
   stats: { warnings: false },
-  cache: {
-    type: 'filesystem',
-    allowCollectingMemory: true
-  },
   optimization: {
+    usedExports: true,
     moduleIds: 'deterministic',
     minimize: true,
     minimizer: [
