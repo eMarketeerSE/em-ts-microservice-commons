@@ -65,7 +65,6 @@ module.exports = {
       new TerserPlugin({
         minify: TerserPlugin.swcMinify,
         terserOptions: {
-          minify: true,
           compress: true
         }
       })
