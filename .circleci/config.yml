@@ -15,6 +15,21 @@ jobs:
           name: release
           command: yarn semantic-release || true
 
+  beta-release:
+    docker:
+      - image: "cimg/node:lts"
+    steps:
+      - checkout
+      - run:
+          name: yarn
+          command: yarn
+      - run:
+          name: build
+          command: yarn build
+      - run:
+          name: release
+          command: yarn semantic-release --branches beta || true
+
 workflows:
   version: 2
   release:
@@ -24,4 +39,11 @@ workflows:
             branches:
               only:
                 - master
+
+  beta-release:
+    jobs:
+      - beta-release:
+          filters:
+            branches:
+              only:
                 - beta
