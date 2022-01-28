@@ -29,6 +29,15 @@ module.exports = {
     'strong-oracle',
     'oracledb',
     'pg-query-stream',
+    'react-native-sqlite-storage',
+    'sql.js',
+    'better-sqlite3',
+    'ioredis',
+    'redis',
+    'typeorm-aurora-data-api-driver',
+    'hdb-pool',
+    '@sap/hana-client',
+    'mongodb',
     ...additionalExternals
   ],
   mode: 'production',
@@ -47,7 +56,13 @@ module.exports = {
   node: {
     __dirname: false
   },
+  stats: { warnings: false },
+  cache: {
+    type: 'filesystem',
+    allowCollectingMemory: true
+  },
   optimization: {
+    moduleIds: 'deterministic',
     minimize: true,
     minimizer: [
       new TerserPlugin({
@@ -58,7 +73,7 @@ module.exports = {
       })
     ]
   },
-  plugins: [new webpack.IgnorePlugin(/^pg-native$/)],
+  plugins: [new webpack.IgnorePlugin({ resourceRegExp: /^pg-native$/ })],
   module: {
     rules: [
       {
