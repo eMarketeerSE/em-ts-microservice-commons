@@ -28,7 +28,7 @@ jobs:
           command: yarn build
       - run:
           name: release
-          command: yarn semantic-release --branches beta || true
+          command: yarn semantic-release || true
 
 workflows:
   version: 2
