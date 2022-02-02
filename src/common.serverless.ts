@@ -1,3 +1,5 @@
+const isRunningOnCi = !!process.env.CIRCLECI
+
 export const config = `
 
 provider:
@@ -29,6 +31,7 @@ plugins:
 
 custom:
   webpack:
+    concurrency: ${isRunningOnCi ? 2 : 4}
     webpackConfig: 'node_modules/@emarketeer/ts-microservice-commons/dist/lib/webpack.config.js'
   region: \${opt:region, self:provider.region}
   stage: \${opt:stage, self:provider.stage}
