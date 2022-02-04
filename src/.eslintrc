@@ -83,6 +83,7 @@
     "@typescript-eslint/no-useless-constructor": ["error"],
     "no-empty-function": "off",
     "@typescript-eslint/no-empty-function": ["error"],
+    "default-param-last": "off",
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
