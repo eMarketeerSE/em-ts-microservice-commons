@@ -8,6 +8,8 @@ provider:
   runtime: nodejs14.x
   deploymentBucket: \${self:custom.stage}.\${self:provider.region}.serverless.deploys.em.com
   versionFunctions: false
+  stackTags:
+    em-microservice: \${self:custom.stage}-\${self:service}
   tracing:
     apiGateway: false
     lambda: false
