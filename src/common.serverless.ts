@@ -1,7 +1,4 @@
-const isRunningOnCi = !!process.env.CIRCLECI
-
 export const config = `
-
 provider:
   name: aws
   region: eu-west-1
@@ -35,6 +32,7 @@ plugins:
 custom:
   esbuild:
     plugins: node_modules/@emarketeer/ts-microservice-commons/dist/esbuild-plugins.js
+    minify: true
     external:
       - 'mysql'
   region: \${opt:region, self:provider.region}
