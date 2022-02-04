@@ -1,3 +1,3 @@
-const esbuildPluginTsc = require('esbuild-plugin-tsc')
+const esbuildPluginTsc = require('@emarketeer/esbuild-plugin-tsc')
 
 module.exports = [esbuildPluginTsc()]
