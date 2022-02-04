@@ -31,6 +31,7 @@ plugins:
 
 custom:
   esbuild:
+    concurrency: 10
     plugins: node_modules/@emarketeer/ts-microservice-commons/dist/esbuild-plugins.js
     minify: true
     external:
