@@ -28,26 +28,6 @@ export default [{
     sourceMaps()
   ],
 }, {
-  input: `src/webpack.config.ts`,
-  output: [
-    { dir: 'dist/lib', name: 'webpack.config.js', format: 'umd' },
-  ],
-  plugins: [
-    // Allow json resolution
-    json(),
-    // Compile TypeScript files
-    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
-    // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
-    commonjs(),
-    // Allow node_modules resolution, so you can use 'external' to control
-    // which external modules to include in the bundle
-    // https://github.com/rollup/rollup-plugin-node-resolve#usage
-    resolve(),
-
-    // Resolve source maps to the original source
-    sourceMaps()
-  ],
-}, {
   input: `src/em-commons.ts`,
   output: [
     { name: 'em-commons.js', format: 'commonjs', file: 'dist/lib/em-commons.js' },
@@ -60,6 +40,7 @@ export default [{
         { src: 'src/.eslintrc', dest: 'dist/' },
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
+        { src: 'src/esbuild-plugins.js', dest: 'dist/' },
       ]
     }),
     // Allow json resolution

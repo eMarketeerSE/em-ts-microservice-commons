@@ -26,13 +26,15 @@ package:
 
 plugins:
   - "@recap.dev/serverless-plugin"
-  - serverless-webpack
+  - serverless-esbuild
+  - serverless-plugin-resource-tagging
   - serverless-plugin-lambda-insights
 
 custom:
-  webpack:
-    concurrency: ${isRunningOnCi ? 2 : 4}
-    webpackConfig: 'node_modules/@emarketeer/ts-microservice-commons/dist/lib/webpack.config.js'
+  esbuild:
+    plugins: node_modules/@emarketeer/ts-microservice-commons/dist/esbuild-plugins.js
+    external:
+      - 'mysql'
   region: \${opt:region, self:provider.region}
   stage: \${opt:stage, self:provider.stage}
   name: \${self:custom.stage}-\${self:service}
