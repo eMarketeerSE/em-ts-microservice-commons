@@ -17,7 +17,7 @@ provider:
     \${file(roleStatements.yml)}
   environment:
     stage: \${self:custom.stage}
-    RECAP_DEV_SYNC_ENDPOINT: \${ssm:recap-dev-sync-endpoint}
+    RECAP_DEV_SYNC_ENDPOINT: \${ssm:recap-dev-sync-endpoint, ""}
     RECAP_DEV_TIMEOUT_WINDOW: 300
 
 package:
