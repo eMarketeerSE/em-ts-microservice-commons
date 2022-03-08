@@ -90,7 +90,7 @@
     "cross-env": "^6.0.0",
     "cross-spawn": "^7.0.1",
     "esbuild": "^0.14.18",
-    "@emarketeer/esbuild-plugin-tsc": "^0.4.0",
+    "@emarketeer/esbuild-plugin-tsc": "^0.4.1",
     "eslint": "7.32.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.25.4",
@@ -106,12 +106,8 @@
     "serverless-esbuild": "^1.23.4",
     "serverless-plugin-lambda-insights": "^1.0.8",
     "serverless-plugin-resource-tagging": "^1.2.0",
-    "serverless-webpack": "^5.6.1",
-    "terser-webpack-plugin": "^5.3.0",
     "ts-jest": "^26.4.3",
-    "ts-loader": "^9.2.6",
     "typescript": "^4.4.2",
-    "webpack": "^5.67.0",
     "yaml": "^1.7.2"
   },
   "devDependencies": {

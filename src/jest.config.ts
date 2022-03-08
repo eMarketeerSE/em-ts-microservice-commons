@@ -1,3 +1,5 @@
+const esModules = ['@eMarketeerSE/runtime-commons'].join('|')
+
 const config: any = {
   verbose: true,
   testEnvironment: 'node',
@@ -16,7 +18,8 @@ const config: any = {
   setupFilesAfterEnv: ['jest-extended'],
   rootDir: '../../../../../',
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node']
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  transformIgnorePatterns: [`/node_modules/(?!${esModules})`]
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
