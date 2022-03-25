@@ -13065,7 +13065,7 @@ semver@^7.3.4:
   dependencies:
     lru-cache "^6.0.0"
 
-serverless-esbuild@^1.23.4:
+serverless-esbuild@1.23.4:
   version "1.23.4"
   resolved "https://registry.yarnpkg.com/serverless-esbuild/-/serverless-esbuild-1.23.4.tgz#b1f27c86343ae3fc9926328954424f186dd842ff"
   integrity sha512-9hyAwDXs5BLwOhTKBBMWbQHELeJeUUIay7K5kVOS6avqUxbrLaczM/OstyRRKu3JwAgNxP1lDCN/JkpYf2ak7g==
