@@ -85,9 +85,8 @@
   "dependencies": {
     "@recap.dev/serverless-plugin": "^1.1.2",
     "@types/jest": "^26.0.15",
-    "@typescript-eslint/eslint-plugin": "^2.22.0",
-    "@typescript-eslint/parser": "^2.22.0",
-    "@typescript-eslint/scope-manager": "5.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.36.2",
+    "@typescript-eslint/parser": "^5.36.2",
     "cross-env": "^6.0.0",
     "cross-spawn": "^7.0.1",
     "esbuild": "^0.14.18",
