@@ -76,6 +76,9 @@
         ]
       }
     ],
+    "no-undef": "off",
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": ["error"],
     "no-await-in-loop": "off",
     "prefer-destructuring": "off",
     "sonarjs/no-duplicate-string": "off",
