@@ -13,8 +13,8 @@ provider:
   logRetentionInDays: 14
   memorySize: 1024
   timeout: 15
-  iam
-    role
+  iam:
+    role:
       statements:
         \${file(roleStatements.yml)}
   environment:
