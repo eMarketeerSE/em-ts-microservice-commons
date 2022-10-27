@@ -2,7 +2,7 @@ export const config = `
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs14.x
+  runtime: nodejs16.x
   deploymentBucket: \${self:custom.stage}.\${self:provider.region}.serverless.deploys.em.com
   versionFunctions: false
   stackTags:
