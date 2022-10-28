@@ -7,7 +7,6 @@ import copy from 'rollup-plugin-copy'
 import executable from 'rollup-plugin-executable'
 import shebang from '@robmarr/rollup-plugin-shebang'
 
-
 export default [{
   input: `src/jest.config.ts`,
   output: [
