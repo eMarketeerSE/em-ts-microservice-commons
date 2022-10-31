@@ -13,10 +13,7 @@ provider:
   logRetentionInDays: 14
   memorySize: 1024
   timeout: 15
-  iam:
-    role:
-      statements:
-        \${file(roleStatements.yml)}
+  iamRoleStatements: \${file(roleStatements.yml)}
   environment:
     stage: \${self:custom.stage}
     RECAP_DEV_SYNC_ENDPOINT: \${ssm:recap-dev-sync-endpoint, ""}
