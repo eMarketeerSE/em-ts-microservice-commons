@@ -4,6 +4,7 @@ provider:
   region: eu-west-1
   runtime: nodejs16.x
   deploymentBucket: \${self:custom.stage}.\${self:provider.region}.serverless.deploys.em.com
+  deploymentMethod: direct
   versionFunctions: false
   stackTags:
     em-microservice: \${self:custom.stage}-\${self:service}
