@@ -7,7 +7,7 @@ provider:
   deploymentMethod: direct
   versionFunctions: false
   stackTags:
-    em-microservice: \${sls:stage}-\${self:service.name}
+    em-microservice: \${sls:stage}-\${self:service}
   tracing:
     apiGateway: false
     lambda: false
@@ -39,7 +39,7 @@ custom:
       - 'mysql'
   region: \${opt:region, self:provider.region}
   stage: \${sls:stage}
-  name: \${sls:stage}-\${self:service.name}
+  name: \${sls:stage}-\${self:service}
   lambdaInsights:
     defaultLambdaInsights: true #enables Lambda Insights for all your functions
 `
