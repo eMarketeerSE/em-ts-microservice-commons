@@ -28,7 +28,9 @@
       "aws-sdk",
       "aws-lambda",
       "aws-sdk/clients/dynamodb",
-      "@eMarketeerSE/dev-commons"
+      "@eMarketeerSE/dev-commons",
+      "@aws-sdk/**",
+      "@aws-sdk/client-dynamodb"
     ]
   },
   "rules": {
