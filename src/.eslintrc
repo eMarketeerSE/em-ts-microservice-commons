@@ -27,8 +27,10 @@
     "import/core-modules": [
       "aws-sdk",
       "aws-lambda",
+      "@aws-sdk/client-lambda",
       "aws-sdk/clients/dynamodb",
       "@eMarketeerSE/dev-commons",
+      "@aws-sdk/*",
       "@aws-sdk/**",
       "@aws-sdk/client-dynamodb"
     ]
