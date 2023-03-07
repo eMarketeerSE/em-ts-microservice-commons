@@ -2,12 +2,12 @@ export const config = `
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs16.x
-  deploymentBucket: \${self:custom.stage}.\${self:provider.region}.serverless.deploys.em.com
+  runtime: nodejs18.x
+  deploymentBucket: \${sls:stage}.\${self:provider.region}.serverless.deploys.em.com
   deploymentMethod: direct
   versionFunctions: false
   stackTags:
-    em-microservice: \${self:custom.stage}-\${self:service}
+    em-microservice: \${sls:stage}-\${self:service}
   tracing:
     apiGateway: false
     lambda: false
@@ -16,7 +16,7 @@ provider:
   timeout: 15
   iamRoleStatements: \${file(roleStatements.yml)}
   environment:
-    stage: \${self:custom.stage}
+    stage: \${sls:stage}
     RECAP_DEV_SYNC_ENDPOINT: \${ssm:recap-dev-sync-endpoint, ""}
     RECAP_DEV_TIMEOUT_WINDOW: 300
 
@@ -38,8 +38,8 @@ custom:
     external:
       - 'mysql'
   region: \${opt:region, self:provider.region}
-  stage: \${opt:stage, self:provider.stage}
-  name: \${self:custom.stage}-\${self:service}
+  stage: \${sls:stage}
+  name: \${sls:stage}-\${self:service}
   lambdaInsights:
     defaultLambdaInsights: true #enables Lambda Insights for all your functions
 `
