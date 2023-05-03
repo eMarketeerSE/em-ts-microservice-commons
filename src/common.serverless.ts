@@ -37,6 +37,9 @@ custom:
     minify: true
     external:
       - 'mysql'
+    exclude:
+      - aws-sdk
+      - '@aws-sdk/*'
   region: \${opt:region, self:provider.region}
   stage: \${sls:stage}
   name: \${sls:stage}-\${self:service}
