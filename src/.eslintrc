@@ -34,7 +34,8 @@
       "@aws-sdk/**",
       "@aws-sdk/client-dynamodb",
       "@aws-sdk/client-sqs",
-      "@aws-sdk/client-sns"
+      "@aws-sdk/client-sns",
+      "@aws-sdk/client-kinesis"
     ]
   },
   "rules": {
