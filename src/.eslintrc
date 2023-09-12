@@ -32,7 +32,9 @@
       "@eMarketeerSE/dev-commons",
       "@aws-sdk/*",
       "@aws-sdk/**",
-      "@aws-sdk/client-dynamodb"
+      "@aws-sdk/client-dynamodb",
+      "@aws-sdk/client-sqs",
+      "@aws-sdk/client-sns"
     ]
   },
   "rules": {
