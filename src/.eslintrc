@@ -30,12 +30,14 @@
       "@aws-sdk/client-lambda",
       "aws-sdk/clients/dynamodb",
       "@eMarketeerSE/dev-commons",
-      "@aws-sdk/*",
-      "@aws-sdk/**",
       "@aws-sdk/client-dynamodb",
       "@aws-sdk/client-sqs",
       "@aws-sdk/client-sns",
-      "@aws-sdk/client-kinesis"
+      "@aws-sdk/client-kinesis",
+      "@aws-sdk/client-cloudwatch",
+      "aws-sdk/clients/lambda",
+      "@aws-sdk/client-s3",
+      "aws-sdk/clients/ses"
     ]
   },
   "rules": {
