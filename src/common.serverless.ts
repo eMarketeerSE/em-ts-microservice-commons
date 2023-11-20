@@ -2,7 +2,7 @@ export const config = `
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs18.x
+  runtime: nodejs20.x
   deploymentBucket: \${sls:stage}.\${self:provider.region}.serverless.deploys.em.com
   deploymentMethod: direct
   versionFunctions: false
