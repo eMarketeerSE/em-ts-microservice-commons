@@ -31,6 +31,7 @@ plugins:
 
 custom:
   esbuild:
+    packager: yarn
     concurrency: 10
     nativeZip: true
     plugins: node_modules/@emarketeer/ts-microservice-commons/dist/esbuild-plugins.js
