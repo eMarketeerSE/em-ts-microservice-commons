@@ -6,6 +6,7 @@ provider:
   deploymentBucket: \${sls:stage}.\${self:provider.region}.serverless.deploys.em.com
   deploymentMethod: direct
   versionFunctions: false
+  architecture: arm64
   stackTags:
     em-microservice: \${sls:stage}-\${self:service}
   tracing:
