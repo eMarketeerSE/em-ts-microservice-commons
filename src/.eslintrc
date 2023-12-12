@@ -34,6 +34,7 @@
       "@aws-sdk/client-sqs",
       "@aws-sdk/client-sns",
       "@aws-sdk/client-ses",
+      "@aws-sdk/client-sts",
       "@aws-sdk/client-kinesis",
       "@aws-sdk/client-cloudwatch",
       "aws-sdk/clients/lambda",
