@@ -9024,6 +9024,11 @@ lodash-es@^4.17.15:
   resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.15.tgz#21bd96839354412f23d7a10340e5eac6ee455d78"
   integrity sha512-rlrc3yU3+JNOpZ9zj5pQtxnx2THmvRykwL4Xlxoa8I9lHBlVbbyPhgyPMioxVZ4NqyxaVVtaJnzsyOidQIhyyQ==
 
+lodash-es@^4.17.21:
+  version "4.17.21"
+  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.21.tgz#43e626c46e6591b7750beb2b50117390c609e3ee"
+  integrity sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==
+
 lodash.camelcase@^4.3.0:
   version "4.3.0"
   resolved "https://registry.yarnpkg.com/lodash.camelcase/-/lodash.camelcase-4.3.0.tgz#b28aa6288a2b9fc651035c7711f65ab6190331a6"
@@ -11755,10 +11760,10 @@ serverless-esbuild@^1.49.0:
     ramda "^0.28.0"
     semver "^7.3.8"
 
-serverless-plugin-lambda-insights@^1.6.0:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/serverless-plugin-lambda-insights/-/serverless-plugin-lambda-insights-1.6.0.tgz#9a7fc9493714cc27d287e1e81a619f4bb5a887f3"
-  integrity sha512-oi5PwKu9R0BNzawSflRNRXG2Wi+xk2vl+SWB+Tk56TPEoekQL7hzYSxTZOFsig7GxzVhSsRWd37nwgY3yFWMvQ==
+serverless-plugin-lambda-insights@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/serverless-plugin-lambda-insights/-/serverless-plugin-lambda-insights-2.0.0.tgz#9e99b5d5f73dae7e3b5bb58f9de756796402f355"
+  integrity sha512-+UMOO6sxIWBRbVkhHur4elFmeWAYREyZRI4g98Culfrs1V9/eX/Q26jsfxXZ42pNlUrYHwrWVmnS7NlOXBVENw==
 
 serverless-plugin-resource-tagging@^1.2.0:
   version "1.2.0"
