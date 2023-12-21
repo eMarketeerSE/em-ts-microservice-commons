@@ -4,15 +4,15 @@ const config: any = {
   verbose: true,
   testEnvironment: 'node',
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        target: 'es6'
-      },
-      isolatedModules: true
-    }
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          target: 'es6'
+        },
+        isolatedModules: true
+      }
+    ]
   },
   testRunner: 'jest-circus/runner',
   setupFilesAfterEnv: ['jest-extended'],

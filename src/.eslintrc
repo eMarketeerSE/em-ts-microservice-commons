@@ -27,8 +27,19 @@
     "import/core-modules": [
       "aws-sdk",
       "aws-lambda",
+      "@aws-sdk/client-lambda",
       "aws-sdk/clients/dynamodb",
-      "@eMarketeerSE/dev-commons"
+      "@eMarketeerSE/dev-commons",
+      "@aws-sdk/client-dynamodb",
+      "@aws-sdk/client-sqs",
+      "@aws-sdk/client-sns",
+      "@aws-sdk/client-ses",
+      "@aws-sdk/client-sts",
+      "@aws-sdk/client-kinesis",
+      "@aws-sdk/client-cloudwatch",
+      "aws-sdk/clients/lambda",
+      "@aws-sdk/client-s3",
+      "aws-sdk/clients/ses"
     ]
   },
   "rules": {
