@@ -39,6 +39,12 @@ custom:
     minify: true
     external:
       - 'mysql'
+      - 'pg'
+      - 'pg-native'
+      - 'sqlite3'
+      - 'mssql'
+      - 'oracledb'
+      - 'better-sqlite3'
     exclude:
       - aws-sdk
       - '@aws-sdk/*'
