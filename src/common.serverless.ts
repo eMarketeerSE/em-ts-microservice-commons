@@ -25,6 +25,7 @@ package:
   individually: true
 
 plugins:
+  - serverless-better-credentials
   - "@recap.dev/serverless-plugin"
   - serverless-esbuild
   - serverless-plugin-resource-tagging
