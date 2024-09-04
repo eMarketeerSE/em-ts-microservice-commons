@@ -11179,10 +11179,10 @@ serverless-better-credentials@^2.0.0:
   dependencies:
     open "^8.4.2"
 
-serverless-esbuild@^1.49.0:
-  version "1.49.0"
-  resolved "https://registry.yarnpkg.com/serverless-esbuild/-/serverless-esbuild-1.49.0.tgz#220d1d8bbeeeaed6c0cd76bffa5f64c877c57184"
-  integrity sha512-qSke5DiLOEEAs/TN1dAjvPqfuPW7fEToLV+X+IDCuXGXPfuIUVQF3ck043DvdroXf+nx3tXMDzajlHz0smbH5w==
+serverless-esbuild@^1.52.1:
+  version "1.52.1"
+  resolved "https://registry.yarnpkg.com/serverless-esbuild/-/serverless-esbuild-1.52.1.tgz#ef893be178c4b0bece6d0493a3644f65d3df5e0e"
+  integrity sha512-sTEVoJMFO213SJyEEvW4yf3FbxRkn3jZgp/bA2zOguVXv2veNptVzo3Cmn7pZVIrjv8HKH6uEq/E65bJhOO5yA==
   dependencies:
     acorn "^8.8.1"
     acorn-walk "^8.2.0"

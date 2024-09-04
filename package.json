@@ -105,7 +105,7 @@
     "serverless": "^4.2.4",
     "@serverless/utils": "^6.15.0",
     "serverless-better-credentials": "^2.0.0",
-    "serverless-esbuild": "^1.49.0",
+    "serverless-esbuild": "^1.52.1",
     "serverless-plugin-lambda-insights": "^2.0.0",
     "serverless-plugin-resource-tagging": "^1.2.0",
     "ts-jest": "^29.2.5",
