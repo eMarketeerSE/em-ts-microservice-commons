@@ -3,7 +3,7 @@ const TerserPlugin = require('terser-webpack-plugin')
 const path = require('path')
 const webpack = require('webpack')
 
-const optionalDependencies = ['pg', 'mysql2']
+const optionalDependencies = ['pg', 'mysql2', 'typeorm']
 const additionalExternals = []
 
 for (const optionalDependency of optionalDependencies) {

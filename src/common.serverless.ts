@@ -12,7 +12,7 @@ provider:
   tracing:
     apiGateway: false
     lambda: false
-  logRetentionInDays: 14
+  logRetentionInDays: 30
   memorySize: 1024
   timeout: 15
   iamRoleStatements: \${file(roleStatements.yml)}
@@ -25,6 +25,7 @@ package:
   individually: true
 
 plugins:
+  - serverless-better-credentials
   - "@recap.dev/serverless-plugin"
   - serverless-esbuild
   - serverless-plugin-resource-tagging

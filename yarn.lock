@@ -11741,6 +11741,13 @@ semver@^7.5.3:
   dependencies:
     lru-cache "^6.0.0"
 
+serverless-better-credentials@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/serverless-better-credentials/-/serverless-better-credentials-2.0.0.tgz#cec52045630c36344b0df2259cb79e82925c75a3"
+  integrity sha512-CscjdWPmK58M/X6l/nOgSvlP8U2fQUt1tmlFDp5+/aRMYrLrcZk9JtcYUmnJBTcwk92JYXPjsKei3jk3e///pg==
+  dependencies:
+    open "^8.4.2"
+
 serverless-esbuild@^1.49.0:
   version "1.49.0"
   resolved "https://registry.yarnpkg.com/serverless-esbuild/-/serverless-esbuild-1.49.0.tgz#220d1d8bbeeeaed6c0cd76bffa5f64c877c57184"
