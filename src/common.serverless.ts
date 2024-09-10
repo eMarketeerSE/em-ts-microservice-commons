@@ -21,10 +21,6 @@ provider:
     RECAP_DEV_SYNC_ENDPOINT: \${ssm:recap-dev-sync-endpoint, ""}
     RECAP_DEV_TIMEOUT_WINDOW: 300
 
-
-build:
-  esbuild: false
-
 package:
   individually: true
 
