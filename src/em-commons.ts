@@ -6,7 +6,7 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-const supportedCommands = ['lint', 'deploy', 'tsc', 'jest', 'invoke-local']
+const supportedCommands = ['lint', 'deploy', 'dev', 'tsc', 'jest', 'invoke-local']
 
 const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
@@ -28,6 +28,15 @@ try {
 
     result = runCommand(
       'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
+      scriptArgs
+    )
+  }
+
+  if (script === 'dev') {
+    generateServerlessConfig()
+
+    result = runCommand(
+      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless dev --config generated.serverless.yml',
       scriptArgs
     )
   }
