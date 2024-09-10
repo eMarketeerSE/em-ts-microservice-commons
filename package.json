@@ -102,14 +102,14 @@
     "js-yaml": "^3.13.1",
     "lodash-es": "^4.17.21",
     "native-addon-loader": "^2.0.1",
-    "serverless": "^4.2.4",
+    "serverless": "3.39.0",
     "@serverless/utils": "^6.15.0",
     "serverless-better-credentials": "^2.0.0",
     "serverless-esbuild": "^1.52.1",
     "serverless-plugin-lambda-insights": "^2.0.0",
     "serverless-plugin-resource-tagging": "^1.2.0",
     "ts-jest": "^29.2.5",
-    "typescript": "^5.5.4",
+    "typescript": "^5.6.2",
     "yaml": "^1.7.2"
   },
   "devDependencies": {
@@ -144,7 +144,7 @@
     "semantic-release": "^24.1.0",
     "shelljs": "^0.8.5",
     "travis-deploy-once": "^5.0.9",
-    "ts-node": "^10.9.1",
+    "ts-node": "^10.9.2",
     "typedoc": "^0.26.6"
   },
   "resolutions": {
