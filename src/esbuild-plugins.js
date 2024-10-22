@@ -16,7 +16,7 @@ const recapDevAutoWrapper = {
   })(...arguments);
   {
   mod = module.exports;
-  const { mysqlQueryWrapper } = require('@recap.dev')
+  const { mysqlQueryWrapper } = require('@recap.dev/client')
 
   mod.Connection.prototype.query = mysqlQueryWrapper(mod.Connection.prototype.query);
   mod.Connection.prototype.execute = mysqlQueryWrapper(mod.Connection.prototype.execute);
