@@ -43,6 +43,7 @@
     ]
   },
   "rules": {
+    "curly": ["error", "all"],
     "no-unreachable-loop": ["error", { "ignore": ["ForOfStatement"] }],
     "@typescript-eslint/semi": [
       "error",
