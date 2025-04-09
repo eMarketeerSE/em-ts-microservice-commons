@@ -29,7 +29,6 @@ plugins:
   - "@recap.dev/serverless-plugin"
   - serverless-esbuild
   - serverless-plugin-resource-tagging
-  - serverless-plugin-lambda-insights
 
 custom:
   esbuild:
