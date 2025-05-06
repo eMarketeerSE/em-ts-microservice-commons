@@ -39,7 +39,9 @@
       "@aws-sdk/client-cloudwatch",
       "aws-sdk/clients/lambda",
       "@aws-sdk/client-s3",
-      "aws-sdk/clients/ses"
+      "aws-sdk/clients/ses",
+      "@aws-sdk/client-api-gateway",
+      "@aws-sdk/client-cloudfront"
     ]
   },
   "rules": {
