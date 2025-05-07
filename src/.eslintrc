@@ -41,7 +41,9 @@
       "@aws-sdk/client-s3",
       "aws-sdk/clients/ses",
       "@aws-sdk/client-api-gateway",
-      "@aws-sdk/client-cloudfront"
+      "@aws-sdk/client-cloudfront",
+      "@aws-sdk/lib-dynamodb",
+      "@aws-sdk/credential-providers"
     ]
   },
   "rules": {
