@@ -48,6 +48,8 @@ custom:
       - 'pg-sqlite3'
       - 'tedious'
       - 'pg-query-stream'
+      - libsql
+      - mysql2
     exclude:
       - aws-sdk
       - '@aws-sdk/*'
