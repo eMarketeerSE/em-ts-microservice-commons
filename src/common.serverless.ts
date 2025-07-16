@@ -49,7 +49,7 @@ custom:
       - 'tedious'
       - 'pg-query-stream'
       - libsql
-      - mysql2
+      - mariadb
     exclude:
       - aws-sdk
       - '@aws-sdk/*'
