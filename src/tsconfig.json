@@ -1,18 +1,14 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
-    "lib": [
-      "ES2020.Promise",
-      "es2018",
-      "es6",
-      "dom"
-    ],
+    "lib": ["ES2022", "esnext.array", "esnext.promise", "esnext.string", "esnext.weakref"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "outDir": "./dist",
     "sourceMap": true,
+    "strict": true,
     "allowJs": true,
     "experimentalDecorators": true,
     "noImplicitAny": true,
