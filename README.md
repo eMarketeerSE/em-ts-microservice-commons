@@ -9,6 +9,7 @@ A common config for eMarketeer TypeScript microservice
 - Common parts of `serverless.yml` including Epsagon configuration
 - Common eslint config
 - Common jest config
+- **AWS CDK v2 constructs and utilities** (see [CDK README](src/cdk/README.md))
 
 ### How to use ###
 
@@ -90,3 +91,34 @@ To unlink:
 
 #### release ####
 Create a commit following the syntax of https://github.com/semantic-release/semantic-release#commit-message-format
+
+## CDK v2 Support
+
+This package now includes comprehensive AWS CDK v2 constructs and utilities for building microservices infrastructure.
+
+See the [CDK Documentation](src/cdk/README.md) for:
+- Lambda, DynamoDB, API Gateway, SQS, SNS, and EventBridge constructs
+- Utility functions for naming, tagging, IAM policies, and logging
+- Best practices and migration guidance from Serverless Framework
+- Complete examples and usage patterns
+
+Quick example:
+
+```typescript
+import { EmLambdaFunction, EmDynamoDBTable } from '@emarketeer/ts-microservice-commons/cdk'
+
+const lambda = new EmLambdaFunction(this, 'MyFunction', {
+  stage: 'dev',
+  serviceName: 'my-service',
+  functionName: 'handler',
+  handler: 'index.handler',
+  codePath: './dist'
+})
+
+const table = new EmDynamoDBTable(this, 'MyTable', {
+  stage: 'dev',
+  serviceName: 'my-service',
+  tableName: 'data',
+  partitionKey: { name: 'id', type: AttributeType.STRING }
+})
+```

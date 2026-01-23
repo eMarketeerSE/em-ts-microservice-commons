@@ -2,7 +2,7 @@ export const config = `
 provider:
   name: aws
   region: eu-west-1
-  runtime: nodejs20.x
+  runtime: nodejs22.x
   deploymentBucket: \${sls:stage}.\${self:provider.region}.serverless.deploys.em.com
   deploymentMethod: direct
   versionFunctions: false
@@ -29,7 +29,6 @@ plugins:
   - "@recap.dev/serverless-plugin"
   - serverless-esbuild
   - serverless-plugin-resource-tagging
-  - serverless-plugin-lambda-insights
 
 custom:
   esbuild:
@@ -49,6 +48,8 @@ custom:
       - 'pg-sqlite3'
       - 'tedious'
       - 'pg-query-stream'
+      - libsql
+      - mariadb
     exclude:
       - aws-sdk
       - '@aws-sdk/*'

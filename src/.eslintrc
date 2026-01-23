@@ -39,10 +39,15 @@
       "@aws-sdk/client-cloudwatch",
       "aws-sdk/clients/lambda",
       "@aws-sdk/client-s3",
-      "aws-sdk/clients/ses"
+      "aws-sdk/clients/ses",
+      "@aws-sdk/client-api-gateway",
+      "@aws-sdk/client-cloudfront",
+      "@aws-sdk/lib-dynamodb",
+      "@aws-sdk/credential-providers"
     ]
   },
   "rules": {
+    "curly": ["error", "all"],
     "no-unreachable-loop": ["error", { "ignore": ["ForOfStatement"] }],
     "@typescript-eslint/semi": [
       "error",

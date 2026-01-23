@@ -15,11 +15,13 @@ const recapDevAutoWrapper = {
     ${originalSource}
   })(...arguments);
   {
-  mod = module.exports;
-  const { mysqlQueryWrapper } = require('@recap.dev/client/dist/lib/module-trackers/mysql')
+  let mod = module.exports;
+  const { mysqlQueryWrapper } = require('@recap.dev/client')
 
-  mod.Connection.prototype.query = mysqlQueryWrapper(mod.Connection.prototype.query);
-  mod.Connection.prototype.execute = mysqlQueryWrapper(mod.Connection.prototype.execute);
+  if (mod && mod.Connection && mod.Connection.prototype) {
+    mod.Connection.prototype.query = mysqlQueryWrapper(mod.Connection.prototype.query);
+    mod.Connection.prototype.execute = mysqlQueryWrapper(mod.Connection.prototype.execute);
+  }
   module.exports = mod;
   }
   `,
