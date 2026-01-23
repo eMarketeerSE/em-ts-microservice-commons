@@ -3,7 +3,13 @@
  */
 
 import { Duration, RemovalPolicy } from 'aws-cdk-lib'
-import { Runtime, Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
+import {
+  Runtime,
+  Function as LambdaFunction,
+  Code,
+  Tracing,
+  Architecture
+} from 'aws-cdk-lib/aws-lambda'
 import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
 import { generateLambdaName } from '../utils/naming'
@@ -44,10 +50,13 @@ export class EmLambdaFunction extends Construct {
       tracing: config.enableTracing ? Tracing.ACTIVE : Tracing.DISABLED,
       reservedConcurrentExecutions: config.reservedConcurrentExecutions,
       retryAttempts: config.retryAttempts || 2,
-      logRetention: config.logRetentionDays
-        ? getLogRetentionDays(config.stage)
-        : undefined,
-      description: `${config.serviceName} - ${config.functionName}`
+      logRetention: config.logRetentionDays ? getLogRetentionDays(config.stage) : undefined,
+      description: `${config.serviceName} - ${config.functionName}`,
+      ...(config.vpcConfig && {
+        vpc: config.vpcConfig.vpc,
+        vpcSubnets: config.vpcConfig.vpcSubnets,
+        securityGroups: config.vpcConfig.securityGroups
+      })
     })
 
     // Apply standard tags

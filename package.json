@@ -10,6 +10,13 @@
   "files": [
     "dist"
   ],
+  "exports": {
+    "./cdk": {
+      "import": "./dist/cdk/index.js",
+      "require": "./dist/cdk/index.js",
+      "types": "./dist/types/cdk/index.d.ts"
+    }
+  },
   "author": "eMarketeer AB <dev@emarketeer.com>",
   "repository": {
     "type": "git",

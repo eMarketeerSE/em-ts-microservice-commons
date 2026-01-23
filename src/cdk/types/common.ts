@@ -2,9 +2,10 @@
  * Common type definitions for CDK constructs and utilities
  */
 
-import { Duration, Tags } from 'aws-cdk-lib'
+import { Duration } from 'aws-cdk-lib'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { AttributeType, BillingMode, ProjectionType } from 'aws-cdk-lib/aws-dynamodb'
+import { IVpc, ISecurityGroup, SubnetSelection } from 'aws-cdk-lib/aws-ec2'
 
 /**
  * Supported deployment stages
@@ -32,6 +33,15 @@ export interface BaseConstructConfig {
 }
 
 /**
+ * VPC configuration for Lambda functions
+ */
+export interface VpcConfig {
+  readonly vpc: IVpc
+  readonly vpcSubnets: SubnetSelection
+  readonly securityGroups: ISecurityGroup[]
+}
+
+/**
  * Lambda function configuration
  */
 export interface LambdaConfig extends BaseConstructConfig {
@@ -45,6 +55,7 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly reservedConcurrentExecutions?: number
   readonly retryAttempts?: number
   readonly logRetentionDays?: number
+  readonly vpcConfig?: VpcConfig
 }
 
 /**

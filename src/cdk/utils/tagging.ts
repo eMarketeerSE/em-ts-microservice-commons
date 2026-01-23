@@ -10,12 +10,12 @@ import { TaggingConfig } from '../types'
  * Standard tags applied to all resources
  */
 export interface StandardTags {
-  readonly Stage: string
-  readonly Service: string
-  readonly ManagedBy: string
-  readonly Owner?: string
-  readonly CostCenter?: string
-  readonly Project?: string
+  Stage: string
+  Service: string
+  ManagedBy: string
+  Owner?: string
+  CostCenter?: string
+  Project?: string
 }
 
 /**
