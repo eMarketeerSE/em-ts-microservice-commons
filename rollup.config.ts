@@ -7,7 +7,26 @@ import copy from 'rollup-plugin-copy'
 import executable from 'rollup-plugin-executable'
 import shebang from '@robmarr/rollup-plugin-shebang'
 
+const externalPkgs = [
+  /^aws-cdk-lib(\/.*)?$/,
+  /^constructs(\/.*)?$/,
+  /^@aws-cdk(\/.*)?$/, // if you have any v1 deps lingering
+];
+
 export default [{
+  input: `src/cdk/index.ts`,
+  external: (id) => externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
+  output: [
+    { dir: 'dist/cdk', format: 'esm', sourcemap: true },
+  ],
+  plugins: [
+    json(),
+    resolve({ preferBuiltins: true }),
+    commonjs(),
+    typescript({ useTsconfigDeclarationDir: true }),
+    sourceMaps(),
+  ],
+}, {
   input: `src/jest.config.ts`,
   output: [
     { dir: 'dist/lib', name: 'jest.config.js', format: 'umd' },
