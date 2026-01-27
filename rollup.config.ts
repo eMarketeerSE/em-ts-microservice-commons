@@ -19,11 +19,19 @@ export default [{
   output: [
     { dir: 'dist/cdk', format: 'esm', sourcemap: true },
   ],
+  target: 'es2020',
   plugins: [
     json(),
     resolve({ preferBuiltins: true }),
     commonjs(),
-    typescript({ useTsconfigDeclarationDir: true }),
+    typescript({
+      useTsconfigDeclarationDir: true,
+      tsconfigOverride: {
+        compilerOptions: {
+          target: 'ES2020'
+        },
+      },
+    }),
     sourceMaps(),
   ],
 }, {
