@@ -17,12 +17,12 @@ export const generateServerlessConfig = () => {
 
   const generatedConfig = mergeWith(commonConfig, serviceConfig, mergeCustomizer)
 
-  fs.writeFileSync('./generated.serverless.yml', YAML.stringify(generatedConfig))
+  fs.writeFileSync('./generated.serverless.json', JSON.stringify(generatedConfig, null, 2))
 }
 
 export const cleanup = () => {
-  if (fs.existsSync('./generated.serverless.yml')) {
-    fs.unlinkSync('./generated.serverless.yml')
+  if (fs.existsSync('./generated.serverless.json')) {
+    fs.unlinkSync('./generated.serverless.json')
   }
 }
 
