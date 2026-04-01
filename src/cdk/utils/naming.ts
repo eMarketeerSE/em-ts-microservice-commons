@@ -44,7 +44,6 @@ export const generateLambdaName = (
   return generateResourceName({
     stage,
     serviceName,
-    resourceType: 'lambda',
     resourceName: functionName
   })
 }

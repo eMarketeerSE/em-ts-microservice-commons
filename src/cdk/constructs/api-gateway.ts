@@ -2,24 +2,26 @@
  * Common API Gateway constructs (REST API and HTTP API)
  */
 
-import { Duration } from 'aws-cdk-lib'
 import {
   RestApi,
   LambdaIntegration,
+  LambdaIntegrationOptions,
   Cors,
   LogGroupLogDestination,
   AccessLogFormat,
   MethodLoggingLevel,
-  EndpointType,
-  SecurityPolicy
+  EndpointType
 } from 'aws-cdk-lib/aws-apigateway'
 import {
   HttpApi,
   CorsHttpMethod,
   HttpMethod,
-  PayloadFormatVersion
+  PayloadFormatVersion,
+  DomainName,
+  ApiMapping
 } from 'aws-cdk-lib/aws-apigatewayv2'
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations'
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
@@ -71,7 +73,8 @@ export class EmRestApi extends Construct {
             allowCredentials: config.defaultCorsOptions.allowCredentials
           }
         : undefined,
-      endpointTypes: [EndpointType.REGIONAL],
+      endpointTypes: [this.resolveEndpointType(config.endpointType)],
+      binaryMediaTypes: config.binaryMediaTypes,
       policy: undefined
     })
 
@@ -81,6 +84,17 @@ export class EmRestApi extends Construct {
       serviceName: config.serviceName,
       ...config.tags
     })
+  }
+
+  private resolveEndpointType(type?: 'EDGE' | 'REGIONAL' | 'PRIVATE'): EndpointType {
+    switch (type) {
+      case 'EDGE':
+        return EndpointType.EDGE
+      case 'PRIVATE':
+        return EndpointType.PRIVATE
+      default:
+        return EndpointType.REGIONAL
+    }
   }
 
   /**
@@ -106,7 +120,7 @@ export class EmRestApi extends Construct {
     path: string,
     method: string,
     handler: LambdaFunction,
-    options?: any
+    options?: LambdaIntegrationOptions
   ) {
     const resource = this.api.root.resourceForPath(path)
     const integration = new LambdaIntegration(handler, options)
@@ -196,7 +210,8 @@ export class EmHttpApi extends Construct {
    * Add a Lambda integration to a route
    */
   public addLambdaIntegration(path: string, method: string, handler: LambdaFunction) {
-    const integration = new HttpLambdaIntegration(`${handler.functionName}Integration`, handler, {
+    const id = `${path.replace(/[^a-zA-Z0-9]/g, '')}${method}Integration`
+    const integration = new HttpLambdaIntegration(id, handler, {
       payloadFormatVersion: PayloadFormatVersion.VERSION_2_0
     })
 
@@ -222,6 +237,28 @@ export class EmHttpApi extends Construct {
       ANY: HttpMethod.ANY
     }
     return methodMap[method.toUpperCase()] || HttpMethod.ANY
+  }
+
+  /**
+   * Attach a custom domain with base path mapping to this HTTP API.
+   * Returns the full base URL (e.g. https://api.example.com/mypath).
+   */
+  public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
+    const safeId = `${domainName}${basePath}`.replace(/[^a-zA-Z0-9]/g, '')
+    const certificate = Certificate.fromCertificateArn(this, `${safeId}Certificate`, certificateArn)
+
+    const domain = new DomainName(this, `${safeId}Domain`, {
+      domainName,
+      certificate
+    })
+
+    new ApiMapping(this, `${safeId}Mapping`, {
+      api: this.api,
+      domainName: domain,
+      ...(basePath && { apiMappingKey: basePath })
+    })
+
+    return `https://${domainName}/${basePath}`
   }
 
   /**

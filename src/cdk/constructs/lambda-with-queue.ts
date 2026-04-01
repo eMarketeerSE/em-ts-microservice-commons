@@ -1,8 +1,13 @@
 import { Duration } from 'aws-cdk-lib'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
-import { Runtime, Architecture, Tracing } from 'aws-cdk-lib/aws-lambda'
+import {
+  Function as LambdaFunction,
+  Runtime,
+  Code,
+  Architecture,
+  Tracing
+} from 'aws-cdk-lib/aws-lambda'
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
@@ -11,12 +16,14 @@ import { Construct } from 'constructs'
 import { Stage, VpcConfig } from '../types'
 import { applyStandardTags } from '../utils/tagging'
 import { getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
+import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DlqAlarm } from './dlq-alarm'
 
 export interface LambdaWithQueueProps {
   functionName: string
   queueName: string
-  handlerPath: string
+  handler: string
+  codePath: string
   reservedConcurrency: number
   batchSize: number
   reportBatchItemFailures: boolean
@@ -36,7 +43,7 @@ export interface LambdaWithQueueProps {
 }
 
 export class LambdaWithQueue extends Construct {
-  public readonly function: NodejsFunction
+  public readonly function: LambdaFunction
 
   public readonly queue: Queue
 
@@ -47,16 +54,14 @@ export class LambdaWithQueue extends Construct {
   constructor(scope: Construct, id: string, props: LambdaWithQueueProps) {
     super(scope, id)
 
-    const queueName = props.queueName
-
     this.dlq = new Queue(this, `${id}DLQ`, {
-      queueName: `${queueName}-dlq`,
+      queueName: `${props.queueName}-dlq`,
       retentionPeriod: Duration.days(14),
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
     this.queue = new Queue(this, `${id}Queue`, {
-      queueName,
+      queueName: props.queueName,
       visibilityTimeout: Duration.seconds(props.timeout.toSeconds() * 3),
       retentionPeriod: Duration.days(4),
       deadLetterQueue: {
@@ -82,23 +87,22 @@ export class LambdaWithQueue extends Construct {
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
-    this.function = new NodejsFunction(this, `${id}Function`, {
+    this.function = new LambdaFunction(this, `${id}Function`, {
       functionName: props.functionName,
-      entry: props.handlerPath,
-      runtime: Runtime.NODEJS_24_X,
+      runtime: Runtime.NODEJS_22_X,
+      handler: props.handler,
+      code: Code.fromAsset(props.codePath),
       architecture: Architecture.ARM_64,
       memorySize: props.memorySize,
       timeout: props.timeout,
-      environment: props.environment,
+      environment: {
+        ...props.environment,
+        ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
+      },
       role,
       reservedConcurrentExecutions: props.reservedConcurrency,
       tracing: props.enableTracing ? Tracing.ACTIVE : Tracing.DISABLED,
       logGroup,
-      bundling: {
-        minify: true,
-        sourceMap: true,
-        target: 'node22'
-      },
       ...(props.vpcConfig && {
         vpc: props.vpcConfig.vpc,
         vpcSubnets: props.vpcConfig.vpcSubnets,
@@ -139,21 +143,17 @@ export class LambdaWithQueue extends Construct {
       })
     }
 
-    if (props.snsTopics.length > 0) {
-      props.snsTopics.forEach(topic => {
-        topic.addSubscription(
-          new SqsSubscription(this.queue, {
-            rawMessageDelivery: props.rawMessageDelivery
-          })
-        )
-      })
-    }
+    props.snsTopics.forEach(topic => {
+      topic.addSubscription(
+        new SqsSubscription(this.queue, {
+          rawMessageDelivery: props.rawMessageDelivery
+        })
+      )
+    })
 
-    if (props.additionalQueues.length > 0) {
-      props.additionalQueues.forEach(queue => {
-        queue.grantSendMessages(this.function)
-        queue.grantConsumeMessages(this.function)
-      })
-    }
+    props.additionalQueues.forEach(queue => {
+      queue.grantSendMessages(this.function)
+      queue.grantConsumeMessages(this.function)
+    })
   }
 }
