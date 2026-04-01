@@ -2,6 +2,8 @@
  * Environment-specific configuration management utilities
  */
 
+import { Construct } from 'constructs'
+import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { EnvironmentConfig, Stage } from '../types'
 
 /**
@@ -163,6 +165,40 @@ export const getResourceLimits = (stage: Stage) => {
         logRetentionDays: 3
       }
   }
+}
+
+export const RECAP_DEV_TIMEOUT_WINDOW_SECONDS = 300
+
+/** SSM parameter key for recap.dev sync endpoint — shared across all services */
+const RECAP_DEV_SSM_KEY = 'recap-dev-sync-endpoint'
+
+/**
+ * Returns the env var block to inject for recap.dev, or an empty object.
+ * Handles CDK dummy values returned by valueFromLookup when the SSM key is absent.
+ */
+export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<string, string> => {
+  if (!endpoint || endpoint.startsWith('dummy-value-')) {
+    return {}
+  }
+
+  try {
+    new URL(endpoint)
+  } catch {
+    throw new Error(`recap.dev endpoint is not a valid URL: ${endpoint}`)
+  }
+
+  return {
+    RECAP_DEV_SYNC_ENDPOINT: endpoint,
+    RECAP_DEV_TIMEOUT_WINDOW: String(RECAP_DEV_TIMEOUT_WINDOW_SECONDS)
+  }
+}
+
+/**
+ * Resolves the recap.dev sync endpoint from SSM at synth time.
+ * Matches the serverless pattern: ${ssm:recap-dev-sync-endpoint, ""}
+ */
+export const resolveRecapDevEndpoint = (scope: Construct): string => {
+  return StringParameter.valueFromLookup(scope, RECAP_DEV_SSM_KEY)
 }
 
 /**

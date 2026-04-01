@@ -18,6 +18,7 @@ export default [{
   external: (id) => externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
   output: [
     { dir: 'dist/cdk', format: 'esm', sourcemap: true },
+    { dir: 'dist/cdk/cjs', format: 'cjs', sourcemap: true },
   ],
   target: 'es2020',
   plugins: [

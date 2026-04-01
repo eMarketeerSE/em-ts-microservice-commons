@@ -8,7 +8,8 @@ import { Stage, VpcConfig } from '../types'
 export interface ServiceLambdaWithQueueProps {
   functionName: string
   queueBaseName: string
-  handlerPath: string
+  handler: string
+  codePath: string
   stage: Stage
   serviceName: string
   environment: Record<string, string>
@@ -36,7 +37,8 @@ export class ServiceLambdaWithQueue extends LambdaWithQueue {
       functionName: physicalFunctionName,
       queueName: physicalQueueName,
       roleName: physicalRoleName,
-      handlerPath: props.handlerPath,
+      handler: props.handler,
+      codePath: props.codePath,
       reservedConcurrency: props.reservedConcurrency,
       batchSize: props.batchSize,
       reportBatchItemFailures: props.reportBatchItemFailures,
