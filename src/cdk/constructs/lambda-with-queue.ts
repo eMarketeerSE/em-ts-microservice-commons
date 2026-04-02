@@ -11,7 +11,7 @@ import {
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
-import { SqsSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
+import { SqsSubscription, SqsSubscriptionProps } from 'aws-cdk-lib/aws-sns-subscriptions'
 import { Construct } from 'constructs'
 import { Stage, VpcConfig } from '../types'
 import { applyStandardTags } from '../utils/tagging'
@@ -24,9 +24,9 @@ export interface LambdaWithQueueProps {
   queueName: string
   handler: string
   codePath: string
-  reservedConcurrency: number
-  batchSize: number
-  reportBatchItemFailures: boolean
+  reservedConcurrency?: number
+  batchSize?: number
+  reportBatchItemFailures?: boolean
   stage: Stage
   serviceName: string
   environment: Record<string, string>
@@ -36,9 +36,10 @@ export interface LambdaWithQueueProps {
   tags: Record<string, string>
   roleName: string
   alarmTopic: ITopic | null
-  snsTopics: ITopic[]
-  rawMessageDelivery: boolean
-  additionalQueues: Queue[]
+  additionalQueues?: Queue[]
+  maxReceiveCount?: number
+  maxBatchingWindow?: Duration
+  maxConcurrency?: number
   vpcConfig?: VpcConfig
 }
 
@@ -54,6 +55,13 @@ export class LambdaWithQueue extends Construct {
   constructor(scope: Construct, id: string, props: LambdaWithQueueProps) {
     super(scope, id)
 
+    const {
+      batchSize = 10,
+      reportBatchItemFailures = true,
+      additionalQueues = [],
+      maxReceiveCount = 3
+    } = props
+
     this.dlq = new Queue(this, `${id}DLQ`, {
       queueName: `${props.queueName}-dlq`,
       retentionPeriod: Duration.days(14),
@@ -62,11 +70,11 @@ export class LambdaWithQueue extends Construct {
 
     this.queue = new Queue(this, `${id}Queue`, {
       queueName: props.queueName,
-      visibilityTimeout: Duration.seconds(props.timeout.toSeconds() * 3),
+      visibilityTimeout: Duration.seconds(Math.max(30, props.timeout.toSeconds() * 3)),
       retentionPeriod: Duration.days(4),
       deadLetterQueue: {
         queue: this.dlq,
-        maxReceiveCount: 3
+        maxReceiveCount
       },
       removalPolicy: getRemovalPolicy(props.stage)
     })
@@ -80,6 +88,12 @@ export class LambdaWithQueue extends Construct {
     role.addManagedPolicy(
       ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
     )
+
+    if (props.vpcConfig) {
+      role.addManagedPolicy(
+        ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+      )
+    }
 
     const logGroup = new LogGroup(this, `${id}LogGroup`, {
       logGroupName: `/aws/lambda/${props.functionName}`,
@@ -112,8 +126,10 @@ export class LambdaWithQueue extends Construct {
 
     this.function.addEventSource(
       new SqsEventSource(this.queue, {
-        batchSize: props.batchSize,
-        reportBatchItemFailures: props.reportBatchItemFailures
+        batchSize,
+        reportBatchItemFailures,
+        ...(props.maxBatchingWindow && { maxBatchingWindow: props.maxBatchingWindow }),
+        ...(props.maxConcurrency !== undefined && { maxConcurrency: props.maxConcurrency })
       })
     )
 
@@ -143,17 +159,13 @@ export class LambdaWithQueue extends Construct {
       })
     }
 
-    props.snsTopics.forEach(topic => {
-      topic.addSubscription(
-        new SqsSubscription(this.queue, {
-          rawMessageDelivery: props.rawMessageDelivery
-        })
-      )
-    })
-
-    props.additionalQueues.forEach(queue => {
+    additionalQueues.forEach(queue => {
       queue.grantSendMessages(this.function)
       queue.grantConsumeMessages(this.function)
     })
+  }
+
+  public subscribeToTopic(topic: ITopic, options?: SqsSubscriptionProps) {
+    topic.addSubscription(new SqsSubscription(this.queue, options))
   }
 }

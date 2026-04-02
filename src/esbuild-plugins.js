@@ -47,7 +47,7 @@ const recapDevAutoWrapper = {
 const recapDevHandlerWrapper = {
   name: 'recap-dev-handler-wrapper',
   setup(build) {
-    build.onResolve({ filter: /\.ts$/ }, (args) => {
+    build.onResolve({ filter: /.*/ }, (args) => {
       if (args.kind !== 'entry-point') return
       return {
         path: path.resolve(args.resolveDir, args.path),

@@ -6,7 +6,7 @@ import {
   Tracing,
   Architecture
 } from 'aws-cdk-lib/aws-lambda'
-import { IGrantable, IRole } from 'aws-cdk-lib/aws-iam'
+import { IRole } from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
@@ -71,21 +71,5 @@ export class EmLambdaFunction extends Construct {
       serviceName: config.serviceName,
       ...config.tags
     })
-  }
-
-  public getFunction(): LambdaFunction {
-    return this.function
-  }
-
-  public getFunctionArn(): string {
-    return this.function.functionArn
-  }
-
-  public getFunctionName(): string {
-    return this.function.functionName
-  }
-
-  public grantInvoke(grantee: IGrantable) {
-    return this.function.grantInvoke(grantee)
   }
 }

@@ -46,17 +46,6 @@ export const createLambdaExecutionRole = (
 }
 
 /**
- * Create a standard Lambda execution policy statement
- */
-export const createLambdaExecutionPolicy = (): PolicyStatement => {
-  return new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-    resources: ['*']
-  })
-}
-
-/**
  * Create a DynamoDB access policy statement
  */
 export const createDynamoDBAccessPolicy = (
@@ -188,11 +177,11 @@ export const createXRayTracingPolicy = (): PolicyStatement => {
 /**
  * Create an EventBridge put events policy statement
  */
-export const createEventBridgePutEventsPolicy = (eventBusArn?: string): PolicyStatement => {
+export const createEventBridgePutEventsPolicy = (eventBusArn: string): PolicyStatement => {
   return new PolicyStatement({
     effect: Effect.ALLOW,
     actions: ['events:PutEvents'],
-    resources: [eventBusArn || '*']
+    resources: [eventBusArn]
   })
 }
 

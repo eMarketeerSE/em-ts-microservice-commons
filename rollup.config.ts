@@ -69,6 +69,7 @@ export default [{
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
         { src: 'src/esbuild-plugins.js', dest: 'dist/' },
+        { src: 'src/build-handlers.js', dest: 'dist/' },
       ]
     }),
     // Allow json resolution
