@@ -37,11 +37,8 @@ const recapDevAutoWrapper = {
  * that imports the original handler and wraps it with wrapLambdaHandler.
  *
  * Handler source files stay completely untouched — the wrapping is injected
- * at build time without modifying source. Must be listed first in the plugins
- * array so it intercepts entry points before other plugins run.
- *
- * Uses filter /.*/ with an args.kind === 'entry-point' guard rather than
- * a /\.ts$/ filter, so it correctly handles both .ts and .js entry points.
+ * at build time without modifying source. Include this plugin first in the
+ * esbuild plugins array so it intercepts entry points before other plugins run.
  *
  * Usage in build script:
  *   const { recapDevHandlerWrapper } = require('@emarketeer/ts-microservice-commons/esbuild-plugins')
