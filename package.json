@@ -16,7 +16,8 @@
       "require": "./dist/cdk/cjs/index.js",
       "types": "./dist/types/cdk/index.d.ts"
     },
-    "./esbuild-plugins": "./dist/esbuild-plugins.js"
+    "./esbuild-plugins": "./dist/esbuild-plugins.js",
+    "./build-handlers": "./dist/build-handlers.js"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",

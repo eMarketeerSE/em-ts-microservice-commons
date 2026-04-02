@@ -22,19 +22,7 @@ export class EmLambdaWithHttpApi extends Construct {
     config.httpApi.addLambdaIntegration(
       config.route.path,
       config.route.method,
-      this.lambda.getFunction()
+      this.lambda.function
     )
-  }
-
-  public getFunction() {
-    return this.lambda.getFunction()
-  }
-
-  public getFunctionArn() {
-    return this.lambda.getFunctionArn()
-  }
-
-  public getFunctionName() {
-    return this.lambda.getFunctionName()
   }
 }

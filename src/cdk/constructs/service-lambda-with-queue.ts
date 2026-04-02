@@ -1,59 +1,40 @@
-import { Duration } from 'aws-cdk-lib'
-import { ITopic } from 'aws-cdk-lib/aws-sns'
-import { Queue } from 'aws-cdk-lib/aws-sqs'
 import { Construct } from 'constructs'
-import { LambdaWithQueue } from './lambda-with-queue'
-import { Stage, VpcConfig } from '../types'
+import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
 
-export interface ServiceLambdaWithQueueProps {
-  functionName: string
+export interface ServiceLambdaWithQueueProps
+  extends Omit<LambdaWithQueueProps, 'queueName' | 'roleName'> {
   queueBaseName: string
-  handler: string
-  codePath: string
-  stage: Stage
-  serviceName: string
-  environment: Record<string, string>
-  reservedConcurrency: number
-  batchSize: number
-  reportBatchItemFailures: boolean
-  memorySize: number
-  timeout: Duration
-  enableTracing: boolean
-  tags: Record<string, string>
-  alarmTopic: ITopic | null
-  snsTopics: ITopic[]
-  rawMessageDelivery: boolean
-  additionalQueues: Queue[]
-  vpcConfig?: VpcConfig
 }
 
-export class ServiceLambdaWithQueue extends LambdaWithQueue {
-  constructor(scope: Construct, id: string, props: ServiceLambdaWithQueueProps) {
-    const physicalFunctionName = `${props.stage}-${props.serviceName}-${props.functionName}`
-    const physicalQueueName = `${props.stage}-${props.serviceName}-${props.queueBaseName}`
-    const physicalRoleName = `${props.stage}-${props.serviceName}-${props.functionName}-role`
+export class ServiceLambdaWithQueue extends Construct {
+  public readonly lambdaWithQueue: LambdaWithQueue
 
-    super(scope, id, {
-      functionName: physicalFunctionName,
-      queueName: physicalQueueName,
-      roleName: physicalRoleName,
-      handler: props.handler,
-      codePath: props.codePath,
-      reservedConcurrency: props.reservedConcurrency,
-      batchSize: props.batchSize,
-      reportBatchItemFailures: props.reportBatchItemFailures,
-      stage: props.stage,
-      serviceName: props.serviceName,
-      environment: props.environment,
-      memorySize: props.memorySize,
-      timeout: props.timeout,
-      enableTracing: props.enableTracing,
-      tags: props.tags,
-      alarmTopic: props.alarmTopic,
-      snsTopics: props.snsTopics,
-      rawMessageDelivery: props.rawMessageDelivery,
-      additionalQueues: props.additionalQueues,
-      vpcConfig: props.vpcConfig
+  public get function() {
+    return this.lambdaWithQueue.function
+  }
+
+  public get queue() {
+    return this.lambdaWithQueue.queue
+  }
+
+  public get dlq() {
+    return this.lambdaWithQueue.dlq
+  }
+
+  public get dlqAlarm() {
+    return this.lambdaWithQueue.dlqAlarm
+  }
+
+  constructor(scope: Construct, id: string, props: ServiceLambdaWithQueueProps) {
+    super(scope, id)
+
+    const { queueBaseName, ...rest } = props
+
+    this.lambdaWithQueue = new LambdaWithQueue(this, 'Default', {
+      ...rest,
+      functionName: `${props.stage}-${props.serviceName}-${rest.functionName}`,
+      queueName: `${props.stage}-${props.serviceName}-${queueBaseName}`,
+      roleName: `${props.stage}-${props.serviceName}-${rest.functionName}-role`
     })
   }
 }

@@ -2,7 +2,7 @@
  * Common EventBridge rule construct with standard configurations
  */
 
-import { Rule, RuleTargetInput, Schedule, EventPattern } from 'aws-cdk-lib/aws-events'
+import { Rule, RuleProps, RuleTargetInput, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction, SqsQueue, SnsTopic } from 'aws-cdk-lib/aws-events-targets'
 import { Function as Lambda } from 'aws-cdk-lib/aws-lambda'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
@@ -23,23 +23,18 @@ export class EmEventBridgeRule extends Construct {
 
     const ruleName = generateRuleName(config.stage, config.serviceName, config.ruleName)
 
-    // Prepare rule properties
-    const ruleProps: any = {
-      ruleName,
-      description: config.description || `${config.serviceName} - ${config.ruleName}`,
-      enabled: config.enabled ?? true
-    }
-
-    // Add event pattern or schedule
-    if (config.eventPattern) {
-      ruleProps.eventPattern = config.eventPattern as EventPattern
-    } else if (config.schedule) {
-      ruleProps.schedule = this.parseSchedule(config.schedule)
-    } else {
+    if (!config.eventPattern && !config.schedule) {
       throw new Error('Either eventPattern or schedule must be provided')
     }
 
-    // Create rule
+    const ruleProps: RuleProps = {
+      ruleName,
+      description: config.description || `${config.serviceName} - ${config.ruleName}`,
+      enabled: config.enabled ?? true,
+      ...(config.eventPattern && { eventPattern: config.eventPattern }),
+      ...(config.schedule && { schedule: Schedule.expression(config.schedule) })
+    }
+
     this.rule = new Rule(this, `${id}Rule`, ruleProps)
 
     // Apply standard tags
@@ -48,34 +43,6 @@ export class EmEventBridgeRule extends Construct {
       serviceName: config.serviceName,
       ...config.tags
     })
-  }
-
-  /**
-   * Parse schedule string to Schedule object
-   */
-  private parseSchedule(schedule: string): Schedule {
-    // Support rate() and cron() expressions
-    if (schedule.startsWith('rate(')) {
-      const match = schedule.match(/rate\((\d+)\s+(minute|minutes|hour|hours|day|days)\)/)
-      if (match) {
-        const [, value, unit] = match
-        const duration = parseInt(value, 10)
-
-        if (unit.startsWith('minute')) {
-          return Schedule.rate({ minutes: duration } as any)
-        } else if (unit.startsWith('hour')) {
-          return Schedule.rate({ hours: duration } as any)
-        } else if (unit.startsWith('day')) {
-          return Schedule.rate({ days: duration } as any)
-        }
-      }
-    } else if (schedule.startsWith('cron(')) {
-      // Extract cron expression
-      return Schedule.expression(schedule)
-    }
-
-    // Default to expression
-    return Schedule.expression(schedule)
   }
 
   /**

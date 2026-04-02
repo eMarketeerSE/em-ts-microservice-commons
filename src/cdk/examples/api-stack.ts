@@ -28,8 +28,8 @@ export class ApiExampleStack extends Stack {
       stage,
       serviceName,
       functionName: 'get-contacts',
-      handler: 'handlers/getContacts.handler',
-      codePath: './dist',
+      handler: 'index.handler',
+      codePath: './dist/handlers/getContacts',
       environment: { TABLE_NAME: contactsTable.getTableName() }
     })
 
@@ -37,14 +37,14 @@ export class ApiExampleStack extends Stack {
       stage,
       serviceName,
       functionName: 'create-contact',
-      handler: 'handlers/createContact.handler',
-      codePath: './dist',
+      handler: 'index.handler',
+      codePath: './dist/handlers/createContact',
       environment: { TABLE_NAME: contactsTable.getTableName() }
     })
 
     // Grant permissions
-    contactsTable.grantReadData(getContacts.getFunction())
-    contactsTable.grantReadWriteData(createContact.getFunction())
+    contactsTable.grantReadData(getContacts.function)
+    contactsTable.grantReadWriteData(createContact.function)
 
     // Create API
     const api = new EmRestApi(this, 'ContactsApi', {
@@ -58,7 +58,7 @@ export class ApiExampleStack extends Stack {
     })
 
     // Add routes
-    api.addLambdaIntegration('/contacts', 'GET', getContacts.getFunction())
-    api.addLambdaIntegration('/contacts', 'POST', createContact.getFunction())
+    api.addLambdaIntegration('/contacts', 'GET', getContacts.function)
+    api.addLambdaIntegration('/contacts', 'POST', createContact.function)
   }
 }

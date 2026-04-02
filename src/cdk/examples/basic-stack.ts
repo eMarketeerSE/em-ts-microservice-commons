@@ -31,13 +31,13 @@ export class BasicExampleStack extends Stack {
       serviceName,
       functionName: 'handler',
       handler: 'index.handler',
-      codePath: './dist',
+      codePath: './dist/handlers/handler',
       environment: {
         TABLE_NAME: table.getTableName()
       }
     })
 
     // Grant permissions
-    table.grantReadWriteData(handler.getFunction())
+    table.grantReadWriteData(handler.function)
   }
 }
