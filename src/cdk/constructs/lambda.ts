@@ -12,7 +12,7 @@ import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
 import { generateLambdaName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
-import { getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
+import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
 import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 
@@ -36,7 +36,7 @@ export class EmLambdaFunction extends Construct {
 
     const logGroup = new LogGroup(this, `${id}LogGroup`, {
       logGroupName: `/aws/lambda/${functionName}`,
-      retention: getLogRetentionDays(config.stage),
+      retention: convertRetentionDays(config.logRetentionDays) ?? getLogRetentionDays(config.stage),
       removalPolicy: getRemovalPolicy(config.stage)
     })
 
@@ -48,7 +48,7 @@ export class EmLambdaFunction extends Construct {
       memorySize: config.memorySize || 1024,
       timeout: config.timeout || Duration.seconds(15),
       environment: {
-        ...config.environment,
+        ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
       role,

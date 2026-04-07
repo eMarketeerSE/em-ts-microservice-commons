@@ -244,7 +244,8 @@ export class EmHttpApi extends Construct {
    * Returns the full base URL (e.g. https://api.example.com/mypath).
    */
   public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
-    const safeId = `${domainName}${basePath}`.replace(/[^a-zA-Z0-9]/g, '')
+    const normalisedPath = basePath.trim().replace(/^\/+|\/+$/g, '')
+    const safeId = `${domainName}${normalisedPath}`.replace(/[^a-zA-Z0-9]/g, '')
     const certificate = Certificate.fromCertificateArn(this, `${safeId}Certificate`, certificateArn)
 
     const domain = new DomainName(this, `${safeId}Domain`, {
@@ -255,10 +256,10 @@ export class EmHttpApi extends Construct {
     new ApiMapping(this, `${safeId}Mapping`, {
       api: this.api,
       domainName: domain,
-      ...(basePath && { apiMappingKey: basePath })
+      ...(normalisedPath && { apiMappingKey: normalisedPath })
     })
 
-    return `https://${domainName}/${basePath}`
+    return normalisedPath ? `https://${domainName}/${normalisedPath}` : `https://${domainName}`
   }
 
   /**
