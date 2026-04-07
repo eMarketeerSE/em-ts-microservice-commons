@@ -16,7 +16,7 @@ export class DlqAlarm extends Construct {
   constructor(scope: Construct, id: string, props: DlqAlarmProps) {
     super(scope, id)
 
-    this.alarm = new Alarm(this, `${id}Alarm`, {
+    this.alarm = new Alarm(this, 'Alarm', {
       alarmName: props.alarmName,
       metric: props.dlq.metricApproximateNumberOfMessagesVisible(),
       threshold: 0,

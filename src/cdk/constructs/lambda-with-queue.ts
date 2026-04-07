@@ -62,13 +62,13 @@ export class LambdaWithQueue extends Construct {
       maxReceiveCount = 3
     } = props
 
-    this.dlq = new Queue(this, `${id}DLQ`, {
+    this.dlq = new Queue(this, 'DLQ', {
       queueName: `${props.queueName}-dlq`,
       retentionPeriod: Duration.days(14),
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
-    this.queue = new Queue(this, `${id}Queue`, {
+    this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
       visibilityTimeout: Duration.seconds(Math.max(30, props.timeout.toSeconds() * 3)),
       retentionPeriod: Duration.days(4),
@@ -79,7 +79,7 @@ export class LambdaWithQueue extends Construct {
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
-    const role = new Role(this, `${id}Role`, {
+    const role = new Role(this, 'Role', {
       roleName: props.roleName,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       description: `Lambda execution role for ${props.serviceName}`
@@ -95,13 +95,13 @@ export class LambdaWithQueue extends Construct {
       )
     }
 
-    const logGroup = new LogGroup(this, `${id}LogGroup`, {
+    const logGroup = new LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/${props.functionName}`,
       retention: getLogRetentionDays(props.stage),
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
-    this.function = new LambdaFunction(this, `${id}Function`, {
+    this.function = new LambdaFunction(this, 'Function', {
       functionName: props.functionName,
       runtime: Runtime.NODEJS_22_X,
       handler: props.handler,
@@ -152,7 +152,7 @@ export class LambdaWithQueue extends Construct {
     })
 
     if (props.alarmTopic !== null) {
-      this.dlqAlarm = new DlqAlarm(this, `${id}DLQAlarm`, {
+      this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
         dlq: this.dlq,
         alarmName: `${props.stage}-${props.serviceName}-${props.queueName}-dlq-alarm`,
         alarmTopic: props.alarmTopic

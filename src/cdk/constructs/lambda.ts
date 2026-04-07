@@ -26,7 +26,7 @@ export class EmLambdaFunction extends Construct {
 
     const role: IRole =
       config.role ??
-      createLambdaExecutionRole(this, `${id}Role`, {
+      createLambdaExecutionRole(this, 'Role', {
         roleName: config.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
@@ -35,15 +35,15 @@ export class EmLambdaFunction extends Construct {
       })
 
     const logGroup: ILogGroup = config.importExistingLogGroup
-      ? LogGroup.fromLogGroupName(this, `${id}LogGroup`, `/aws/lambda/${functionName}`)
-      : new LogGroup(this, `${id}LogGroup`, {
+      ? LogGroup.fromLogGroupName(this, 'LogGroup', `/aws/lambda/${functionName}`)
+      : new LogGroup(this, 'LogGroup', {
           logGroupName: `/aws/lambda/${functionName}`,
           retention:
             convertRetentionDays(config.logRetentionDays) ?? getLogRetentionDays(config.stage),
           removalPolicy: getRemovalPolicy(config.stage)
         })
 
-    this.function = new LambdaFunction(this, `${id}Function`, {
+    this.function = new LambdaFunction(this, 'Function', {
       functionName,
       runtime: config.runtime || Runtime.NODEJS_22_X,
       handler: config.handler,

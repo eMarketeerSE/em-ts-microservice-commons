@@ -39,7 +39,7 @@ export class EmEventBridgeRule extends Construct {
       ...(config.schedule && { schedule: Schedule.expression(config.schedule) })
     }
 
-    this.rule = new Rule(this, `${id}Rule`, ruleProps)
+    this.rule = new Rule(this, 'Rule', ruleProps)
 
     // Apply standard tags
     applyStandardTags(this.rule, {
@@ -121,11 +121,9 @@ export const createEventBridgeRule = (
 export const createScheduledRule = (
   scope: Construct,
   id: string,
-  config: Omit<EventBridgeRuleConfig, 'eventPattern'>
+  config: Omit<EventBridgeRuleConfig, 'eventPattern'> &
+    Required<Pick<EventBridgeRuleConfig, 'schedule'>>
 ): EmEventBridgeRule => {
-  if (!config.schedule) {
-    throw new Error('Schedule must be provided for scheduled rules')
-  }
   return new EmEventBridgeRule(scope, id, config)
 }
 
@@ -135,11 +133,9 @@ export const createScheduledRule = (
 export const createEventPatternRule = (
   scope: Construct,
   id: string,
-  config: Omit<EventBridgeRuleConfig, 'schedule'>
+  config: Omit<EventBridgeRuleConfig, 'schedule'> &
+    Required<Pick<EventBridgeRuleConfig, 'eventPattern'>>
 ): EmEventBridgeRule => {
-  if (!config.eventPattern) {
-    throw new Error('Event pattern must be provided for event pattern rules')
-  }
   return new EmEventBridgeRule(scope, id, config)
 }
 

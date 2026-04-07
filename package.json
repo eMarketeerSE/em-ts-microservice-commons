@@ -20,6 +20,7 @@
     "./build-handlers": "./dist/build-handlers.js"
   },
   "peerDependencies": {
+    "@recap.dev/client": "^4.3.0",
     "aws-cdk-lib": "^2.0.0",
     "constructs": "^10.0.0"
   },
@@ -97,7 +98,6 @@
   },
   "dependencies": {
     "@emarketeer/esbuild-plugin-tsc": "^0.4.1",
-    "@recap.dev/client": "^4.3.0",
     "@recap.dev/serverless-plugin": "^1.1.2",
     "@serverless/utils": "^6.15.0",
     "@types/jest": "^29.5.1",

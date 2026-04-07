@@ -45,14 +45,14 @@ export class EmRestApi extends Construct {
     // Create log group
     this.logGroup = createApiGatewayLogGroup(
       this,
-      `${id}LogGroup`,
+      'LogGroup',
       config.stage,
       config.serviceName,
       config.apiName
     )
 
     // Create REST API
-    this.api = new RestApi(this, `${id}Api`, {
+    this.api = new RestApi(this, 'Api', {
       restApiName: apiName,
       description: config.description || `${config.serviceName} REST API`,
       deployOptions: {
@@ -161,7 +161,7 @@ export class EmHttpApi extends Construct {
     const apiName = generateApiName(config.stage, config.serviceName, config.apiName)
 
     // Create HTTP API
-    this.api = new HttpApi(this, `${id}Api`, {
+    this.api = new HttpApi(this, 'Api', {
       apiName,
       description: config.description || `${config.serviceName} HTTP API`,
       corsPreflight: config.corsOptions
@@ -178,7 +178,15 @@ export class EmHttpApi extends Construct {
             allowCredentials: config.corsOptions.allowCredentials,
             maxAge: config.corsOptions.maxAge
           }
-        : undefined
+        : undefined,
+      ...(config.throttle && {
+        defaultStageOptions: {
+          throttle: {
+            rateLimit: config.throttle.rateLimit,
+            burstLimit: config.throttle.burstLimit
+          }
+        }
+      })
     })
 
     // Apply standard tags

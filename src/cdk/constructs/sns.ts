@@ -29,7 +29,7 @@ export class EmSnsTopic extends Construct {
     const topicName = generateTopicName(config.stage, config.serviceName, config.topicName)
 
     // Create topic
-    this.topic = new Topic(this, `${id}Topic`, {
+    this.topic = new Topic(this, 'Topic', {
       topicName: config.fifo ? `${topicName}.fifo` : topicName,
       displayName: config.displayName || topicName,
       fifo: config.fifo,

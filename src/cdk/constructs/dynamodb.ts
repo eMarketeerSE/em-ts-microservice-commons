@@ -29,7 +29,7 @@ export class EmDynamoDBTable extends Construct {
     const tableName = generateTableName(config.stage, config.serviceName, config.tableName)
 
     // Create DynamoDB table
-    this.table = new Table(this, `${id}Table`, {
+    this.table = new Table(this, 'Table', {
       tableName,
       partitionKey: config.partitionKey,
       sortKey: config.sortKey,

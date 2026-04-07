@@ -25,7 +25,7 @@ export class EmSqsQueue extends Construct {
     // Create Dead Letter Queue if enabled
     if (config.enableDLQ) {
       const dlqName = `${queueName}-dlq`
-      this.deadLetterQueue = new Queue(this, `${id}DLQ`, {
+      this.deadLetterQueue = new Queue(this, 'DLQ', {
         queueName: dlqName,
         retentionPeriod: config.dlqRetentionPeriod || Duration.days(14),
         encryption: QueueEncryption.SQS_MANAGED,
@@ -42,7 +42,7 @@ export class EmSqsQueue extends Construct {
     }
 
     // Create main queue
-    this.queue = new Queue(this, `${id}Queue`, {
+    this.queue = new Queue(this, 'Queue', {
       queueName: config.fifo ? `${queueName}.fifo` : queueName,
       visibilityTimeout: config.visibilityTimeout || Duration.seconds(30),
       retentionPeriod: config.retentionPeriod || Duration.days(4),

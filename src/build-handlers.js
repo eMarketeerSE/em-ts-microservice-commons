@@ -50,6 +50,8 @@ esbuild.build({
   target: 'node22',
   format: 'cjs',
   sourcemap: false,
+  minify: true,
+  external: ['@aws-sdk/*'],
   plugins: [recapDevHandlerWrapper, ...plugins],
 }).then(() => {
   entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
