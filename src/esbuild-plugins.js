@@ -71,5 +71,4 @@ const recapDevHandlerWrapper = {
 }
 
 const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTsc()]
-module.exports = defaultPlugins
-module.exports.recapDevHandlerWrapper = recapDevHandlerWrapper
+module.exports = { defaultPlugins, recapDevHandlerWrapper }

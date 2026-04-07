@@ -14,6 +14,7 @@ import {
 } from 'aws-cdk-lib/aws-apigateway'
 import {
   HttpApi,
+  HttpStage,
   CorsHttpMethod,
   HttpMethod,
   PayloadFormatVersion,
@@ -155,6 +156,8 @@ export class EmRestApi extends Construct {
 export class EmHttpApi extends Construct {
   public readonly api: HttpApi
 
+  private readonly domainNames = new Map<string, DomainName>()
+
   constructor(scope: Construct, id: string, config: HttpApiConfig) {
     super(scope, id)
 
@@ -164,6 +167,7 @@ export class EmHttpApi extends Construct {
     this.api = new HttpApi(this, 'Api', {
       apiName,
       description: config.description || `${config.serviceName} HTTP API`,
+      createDefaultStage: false,
       corsPreflight: config.corsOptions
         ? {
             allowOrigins: config.corsOptions.allowOrigins,
@@ -178,13 +182,17 @@ export class EmHttpApi extends Construct {
             allowCredentials: config.corsOptions.allowCredentials,
             maxAge: config.corsOptions.maxAge
           }
-        : undefined,
+        : undefined
+    })
+
+    new HttpStage(this, 'DefaultStage', {
+      httpApi: this.api,
+      stageName: '$default',
+      autoDeploy: true,
       ...(config.throttle && {
-        defaultStageOptions: {
-          throttle: {
-            rateLimit: config.throttle.rateLimit,
-            burstLimit: config.throttle.burstLimit
-          }
+        throttle: {
+          rateLimit: config.throttle.rateLimit,
+          burstLimit: config.throttle.burstLimit
         }
       })
     })
@@ -218,7 +226,11 @@ export class EmHttpApi extends Construct {
    * Add a Lambda integration to a route
    */
   public addLambdaIntegration(path: string, method: string, handler: LambdaFunction) {
-    const id = `${path.replace(/[^a-zA-Z0-9]/g, '')}${method}Integration`
+    const id = `${require('crypto')
+      .createHash('sha1')
+      .update(path + method)
+      .digest('hex')
+      .slice(0, 8)}Integration`
     const integration = new HttpLambdaIntegration(id, handler, {
       payloadFormatVersion: PayloadFormatVersion.VERSION_2_0
     })
@@ -253,15 +265,29 @@ export class EmHttpApi extends Construct {
    */
   public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
     const normalisedPath = basePath.trim().replace(/^\/+|\/+$/g, '')
-    const safeId = `${domainName}${normalisedPath}`.replace(/[^a-zA-Z0-9]/g, '')
-    const certificate = Certificate.fromCertificateArn(this, `${safeId}Certificate`, certificateArn)
+    const mappingHash = require('crypto')
+      .createHash('sha1')
+      .update(domainName + normalisedPath)
+      .digest('hex')
+      .slice(0, 8)
 
-    const domain = new DomainName(this, `${safeId}Domain`, {
-      domainName,
-      certificate
-    })
+    let domain = this.domainNames.get(domainName)
+    if (!domain) {
+      const domainHash = require('crypto')
+        .createHash('sha1')
+        .update(domainName)
+        .digest('hex')
+        .slice(0, 8)
+      const certificate = Certificate.fromCertificateArn(
+        this,
+        `${domainHash}Certificate`,
+        certificateArn
+      )
+      domain = new DomainName(this, `${domainHash}Domain`, { domainName, certificate })
+      this.domainNames.set(domainName, domain)
+    }
 
-    new ApiMapping(this, `${safeId}Mapping`, {
+    new ApiMapping(this, `${mappingHash}Mapping`, {
       api: this.api,
       domainName: domain,
       ...(normalisedPath && { apiMappingKey: normalisedPath })
@@ -281,7 +307,7 @@ export class EmHttpApi extends Construct {
    * Get the API URL
    */
   public getApiUrl(): string | undefined {
-    return this.api.url
+    return this.api.defaultStage?.url
   }
 
   /**

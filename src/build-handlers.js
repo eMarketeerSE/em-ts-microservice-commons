@@ -5,7 +5,7 @@ const esbuild = require('esbuild')
 const fs = require('fs')
 const plugins = require('./esbuild-plugins')
 
-const { recapDevHandlerWrapper } = plugins
+const { recapDevHandlerWrapper, defaultPlugins } = plugins
 
 const args = process.argv.slice(2)
 const handlersDirIndex = args.indexOf('--handlers-dir')
@@ -15,7 +15,18 @@ const handlersDir = handlersDirIndex !== -1 ? args[handlersDirIndex + 1] : 'src/
 const outDir = outDirIndex !== -1 ? args[outDirIndex + 1] : 'dist/handlers'
 
 const rootDir = process.cwd()
-const absoluteHandlersDir = path.join(rootDir, handlersDir)
+const absoluteHandlersDir = path.resolve(rootDir, handlersDir)
+const absoluteOutDir = path.resolve(rootDir, outDir)
+
+if (!absoluteHandlersDir.startsWith(rootDir + path.sep)) {
+  console.error(`--handlers-dir must be inside the project root: ${absoluteHandlersDir}`)
+  process.exit(1)
+}
+
+if (!absoluteOutDir.startsWith(rootDir + path.sep)) {
+  console.error(`--out-dir must be inside the project root: ${absoluteOutDir}`)
+  process.exit(1)
+}
 
 if (!fs.existsSync(absoluteHandlersDir)) {
   console.error(`Handlers directory not found: ${absoluteHandlersDir}`)
@@ -44,7 +55,7 @@ console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)
 
 esbuild.build({
   entryPoints,
-  outdir: path.join(rootDir, outDir),
+  outdir: absoluteOutDir,
   bundle: true,
   platform: 'node',
   target: 'node22',
@@ -52,7 +63,7 @@ esbuild.build({
   sourcemap: false,
   minify: true,
   external: ['@aws-sdk/*'],
-  plugins: [recapDevHandlerWrapper, ...plugins],
+  plugins: [recapDevHandlerWrapper, ...defaultPlugins],
 }).then(() => {
   entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
 }).catch((err) => {
