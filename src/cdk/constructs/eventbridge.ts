@@ -27,6 +27,10 @@ export class EmEventBridgeRule extends Construct {
       throw new Error('Either eventPattern or schedule must be provided')
     }
 
+    if (config.eventPattern && config.schedule) {
+      throw new Error('Only one of eventPattern or schedule can be provided, not both')
+    }
+
     const ruleProps: RuleProps = {
       ruleName,
       description: config.description || `${config.serviceName} - ${config.ruleName}`,

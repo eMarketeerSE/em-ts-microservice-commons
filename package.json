@@ -97,6 +97,7 @@
   },
   "dependencies": {
     "@emarketeer/esbuild-plugin-tsc": "^0.4.1",
+    "@recap.dev/client": "^4.3.0",
     "@recap.dev/serverless-plugin": "^1.1.2",
     "@serverless/utils": "^6.15.0",
     "@types/jest": "^29.5.1",

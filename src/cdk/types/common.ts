@@ -62,6 +62,8 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly vpcConfig?: VpcConfig
   /** Provide an existing role instead of creating a per-function one. */
   readonly role?: IRole
+  /** When true, imports the log group by name instead of creating a managed resource. Use when migrating existing functions where the log group was auto-created by Lambda. */
+  readonly importExistingLogGroup?: boolean
 }
 
 /**

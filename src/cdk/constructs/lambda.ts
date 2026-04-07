@@ -7,7 +7,7 @@ import {
   Architecture
 } from 'aws-cdk-lib/aws-lambda'
 import { IRole } from 'aws-cdk-lib/aws-iam'
-import { LogGroup } from 'aws-cdk-lib/aws-logs'
+import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
 import { generateLambdaName } from '../utils/naming'
@@ -34,11 +34,14 @@ export class EmLambdaFunction extends Construct {
         managedPolicies: config.vpcConfig ? ['AWSLambdaVPCAccessExecutionRole'] : undefined
       })
 
-    const logGroup = new LogGroup(this, `${id}LogGroup`, {
-      logGroupName: `/aws/lambda/${functionName}`,
-      retention: convertRetentionDays(config.logRetentionDays) ?? getLogRetentionDays(config.stage),
-      removalPolicy: getRemovalPolicy(config.stage)
-    })
+    const logGroup: ILogGroup = config.importExistingLogGroup
+      ? LogGroup.fromLogGroupName(this, `${id}LogGroup`, `/aws/lambda/${functionName}`)
+      : new LogGroup(this, `${id}LogGroup`, {
+          logGroupName: `/aws/lambda/${functionName}`,
+          retention:
+            convertRetentionDays(config.logRetentionDays) ?? getLogRetentionDays(config.stage),
+          removalPolicy: getRemovalPolicy(config.stage)
+        })
 
     this.function = new LambdaFunction(this, `${id}Function`, {
       functionName,

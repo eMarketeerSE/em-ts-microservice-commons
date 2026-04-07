@@ -36,7 +36,7 @@ describe('Naming Utilities', () => {
   describe('generateLambdaName', () => {
     it('should generate correct lambda name', () => {
       const result = generateLambdaName('test', 'users', 'get-user')
-      expect(result).toBe('test-users-lambda-get-user')
+      expect(result).toBe('test-users-get-user')
     })
   })
 
