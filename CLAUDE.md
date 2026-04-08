@@ -42,8 +42,8 @@ Plus the `em-commons` binary at `dist/lib/em-commons.js`.
 ### Source Layout
 
 - `src/cdk/` — CDK v2 constructs, types, and utilities. This is the main active area of development.
-  - `constructs/` — `EmLambdaFunction`, `EmDynamoDBTable`, `EmRestApi`, `EmHttpApi`, `EmSqsQueue`, `EmSnsTopic`, `EmEventBridgeRule`, plus pattern constructs (LambdaWithQueue, ServiceLambdaWithQueue, LambdaWithHttpApi, DLQAlarm)
-  - `utils/` — naming conventions, tagging, IAM policy builders, config (stage-based defaults), logging, RDS/VPC helpers
+  - `constructs/` — `EmStack` (base stack class), `EmLambdaFunction`, `EmDynamoDBTable`, `EmRestApi`, `EmHttpApi`, `EmSqsQueue`, `EmSnsTopic`, `EmEventBridgeRule`, plus pattern constructs (LambdaWithQueue, ServiceLambdaWithQueue, LambdaWithHttpApi, DLQAlarm)
+  - `utils/` — naming conventions, tagging, IAM policy builders, config (stage-based defaults), logging, RDS/VPC helpers, serverless-migration (logical ID overrides), cdk-app (CDK entry point helper)
   - `types/` — all CDK type interfaces in `common.ts`. Stage is `'dev' | 'test' | 'staging' | 'prod'`
   - `examples/` — reference stack implementations
 - `src/em-commons.ts` — CLI entry point that wraps lint/tsc/jest/deploy/invoke-local/build-handlers
@@ -65,6 +65,17 @@ Rollup produces 4 outputs:
 All constructs follow a pattern: they accept a config object with `stage`, `serviceName`, and resource-specific options. Stage drives defaults for memory, timeouts, log retention, throttling, alarms, and removal policies (RETAIN in prod, DESTROY otherwise).
 
 Naming utilities (`generateLambdaName`, `generateTableName`, etc.) produce consistent resource names across all services.
+
+### EmStack and Serverless Migration
+
+`EmStack` is the base stack class for all microservices. It auto-generates stack names, descriptions, and applies standard tags. Services use `this.createFunction()` to create Lambdas and `this.addOutput()` for exports.
+
+For services migrating from Serverless Framework, pass `useSharedRole: true` — this enables migration mode:
+- Creates a shared IAM role pinned to `IamRoleLambdaExecution`
+- `createFunction()` overrides Lambda + log group logical IDs to match Serverless naming
+- Log groups get RETAIN removal policy to protect existing data
+
+`createEmApp()` is the CDK app entry helper — reads stage from `-c stage=...` context, defaults to `'dev'`, returns typed `Stage`.
 
 ### Testing
 
