@@ -36,8 +36,8 @@
   "scripts": {
     "lint": "tslint  --project tsconfig.json -t codeFrame 'src/**/*.ts' 'test/**/*.ts'",
     "prebuild": "rimraf dist",
-    "build": "rollup -c rollup.config.ts",
-    "start": "rollup -c rollup.config.ts -w",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 rollup -c rollup.config.ts",
+    "start": "NODE_OPTIONS=--max-old-space-size=4096 rollup -c rollup.config.ts -w",
     "test": "jest --coverage",
     "test:watch": "jest --coverage --watch",
     "test:prod": "npm run lint && npm run test -- --no-cache",
