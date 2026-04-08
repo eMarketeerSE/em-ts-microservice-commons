@@ -25,6 +25,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
+import { createHash } from 'crypto'
 import { Construct } from 'constructs'
 import { RestApiConfig, HttpApiConfig } from '../types'
 import { generateApiName } from '../utils/naming'
@@ -57,11 +58,11 @@ export class EmRestApi extends Construct {
       restApiName: apiName,
       description: config.description || `${config.serviceName} REST API`,
       deployOptions: {
-        stageName: config.deployOptions?.stageName || config.stage,
-        throttlingRateLimit: config.deployOptions?.throttleRateLimit || 10000,
-        throttlingBurstLimit: config.deployOptions?.throttleBurstLimit || 5000,
+        stageName: config.deployOptions?.stageName ?? config.stage,
+        throttlingRateLimit: config.deployOptions?.throttleRateLimit ?? 10000,
+        throttlingBurstLimit: config.deployOptions?.throttleBurstLimit ?? 5000,
         loggingLevel: this.getLoggingLevel(config.deployOptions?.loggingLevel),
-        dataTraceEnabled: config.deployOptions?.dataTraceEnabled ?? config.stage !== 'prod',
+        dataTraceEnabled: config.deployOptions?.dataTraceEnabled ?? false,
         metricsEnabled: config.deployOptions?.metricsEnabled ?? true,
         accessLogDestination: new LogGroupLogDestination(this.logGroup),
         accessLogFormat: AccessLogFormat.jsonWithStandardFields()
@@ -156,6 +157,8 @@ export class EmRestApi extends Construct {
 export class EmHttpApi extends Construct {
   public readonly api: HttpApi
 
+  public readonly defaultStage: HttpStage
+
   private readonly domainNames = new Map<string, DomainName>()
 
   constructor(scope: Construct, id: string, config: HttpApiConfig) {
@@ -185,7 +188,7 @@ export class EmHttpApi extends Construct {
         : undefined
     })
 
-    new HttpStage(this, 'DefaultStage', {
+    this.defaultStage = new HttpStage(this, 'DefaultStage', {
       httpApi: this.api,
       stageName: '$default',
       autoDeploy: true,
@@ -219,15 +222,20 @@ export class EmHttpApi extends Construct {
       OPTIONS: CorsHttpMethod.OPTIONS,
       ANY: CorsHttpMethod.ANY
     }
-    return methodMap[method.toUpperCase()] || CorsHttpMethod.ANY
+    const resolved = methodMap[method.toUpperCase()]
+    if (!resolved) {
+      throw new Error(
+        `Unknown HTTP method: "${method}". Valid values: ${Object.keys(methodMap).join(', ')}`
+      )
+    }
+    return resolved
   }
 
   /**
    * Add a Lambda integration to a route
    */
   public addLambdaIntegration(path: string, method: string, handler: LambdaFunction) {
-    const id = `${require('crypto')
-      .createHash('sha1')
+    const id = `${createHash('sha256')
       .update(path + method)
       .digest('hex')
       .slice(0, 8)}Integration`
@@ -256,7 +264,13 @@ export class EmHttpApi extends Construct {
       OPTIONS: HttpMethod.OPTIONS,
       ANY: HttpMethod.ANY
     }
-    return methodMap[method.toUpperCase()] || HttpMethod.ANY
+    const resolved = methodMap[method.toUpperCase()]
+    if (!resolved) {
+      throw new Error(
+        `Unknown HTTP method: "${method}". Valid values: ${Object.keys(methodMap).join(', ')}`
+      )
+    }
+    return resolved
   }
 
   /**
@@ -265,16 +279,14 @@ export class EmHttpApi extends Construct {
    */
   public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
     const normalisedPath = basePath.trim().replace(/^\/+|\/+$/g, '')
-    const mappingHash = require('crypto')
-      .createHash('sha1')
+    const mappingHash = createHash('sha256')
       .update(domainName + normalisedPath)
       .digest('hex')
       .slice(0, 8)
 
     let domain = this.domainNames.get(domainName)
     if (!domain) {
-      const domainHash = require('crypto')
-        .createHash('sha1')
+      const domainHash = createHash('sha256')
         .update(domainName)
         .digest('hex')
         .slice(0, 8)
@@ -306,8 +318,8 @@ export class EmHttpApi extends Construct {
   /**
    * Get the API URL
    */
-  public getApiUrl(): string | undefined {
-    return this.api.defaultStage?.url
+  public getApiUrl(): string {
+    return this.defaultStage.url
   }
 
   /**

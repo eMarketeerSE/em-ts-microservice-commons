@@ -29,7 +29,7 @@ export class ApiExampleStack extends Stack {
       serviceName,
       functionName: 'get-contacts',
       handler: 'index.handler',
-      codePath: './dist/handlers/getContacts',
+      codePath: './dist/handlers/get-contacts',
       environment: { TABLE_NAME: contactsTable.getTableName() }
     })
 
@@ -38,7 +38,7 @@ export class ApiExampleStack extends Stack {
       serviceName,
       functionName: 'create-contact',
       handler: 'index.handler',
-      codePath: './dist/handlers/createContact',
+      codePath: './dist/handlers/create-contact',
       environment: { TABLE_NAME: contactsTable.getTableName() }
     })
 

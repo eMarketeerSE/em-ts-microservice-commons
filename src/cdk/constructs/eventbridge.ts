@@ -5,8 +5,8 @@
 import { Rule, RuleProps, RuleTargetInput, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction, SqsQueue, SnsTopic } from 'aws-cdk-lib/aws-events-targets'
 import { Function as Lambda } from 'aws-cdk-lib/aws-lambda'
-import { Queue } from 'aws-cdk-lib/aws-sqs'
-import { Topic } from 'aws-cdk-lib/aws-sns'
+import { IQueue } from 'aws-cdk-lib/aws-sqs'
+import { ITopic } from 'aws-cdk-lib/aws-sns'
 import { Construct } from 'constructs'
 import { EventBridgeRuleConfig } from '../types'
 import { generateRuleName } from '../utils/naming'
@@ -84,7 +84,7 @@ export class EmEventBridgeRule extends Construct {
   /**
    * Add an SQS queue as a target
    */
-  public addSqsTarget(queue: Queue, input?: RuleTargetInput) {
+  public addSqsTarget(queue: IQueue, input?: RuleTargetInput) {
     this.rule.addTarget(
       new SqsQueue(queue, {
         message: input
@@ -95,7 +95,7 @@ export class EmEventBridgeRule extends Construct {
   /**
    * Add an SNS topic as a target
    */
-  public addSnsTarget(topic: Topic, input?: RuleTargetInput) {
+  public addSnsTarget(topic: ITopic, input?: RuleTargetInput) {
     this.rule.addTarget(
       new SnsTopic(topic, {
         message: input

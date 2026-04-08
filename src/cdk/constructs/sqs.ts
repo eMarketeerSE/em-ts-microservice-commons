@@ -2,8 +2,9 @@
  * Common SQS queue construct with standard configurations
  */
 
-import { Duration, RemovalPolicy } from 'aws-cdk-lib'
+import { Duration } from 'aws-cdk-lib'
 import { Queue, QueueEncryption, DeadLetterQueue } from 'aws-cdk-lib/aws-sqs'
+import { IGrantable } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { SqsQueueConfig } from '../types'
 import { generateQueueName } from '../utils/naming'
@@ -105,14 +106,14 @@ export class EmSqsQueue extends Construct {
   /**
    * Grant send messages permissions to a grantee
    */
-  public grantSendMessages(grantee: any) {
+  public grantSendMessages(grantee: IGrantable) {
     return this.queue.grantSendMessages(grantee)
   }
 
   /**
    * Grant consume messages permissions to a grantee
    */
-  public grantConsumeMessages(grantee: any) {
+  public grantConsumeMessages(grantee: IGrantable) {
     return this.queue.grantConsumeMessages(grantee)
   }
 }

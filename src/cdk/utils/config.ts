@@ -2,9 +2,13 @@
  * Environment-specific configuration management utilities
  */
 
+import { Stack } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { EnvironmentConfig, Stage } from '../types'
+
+const RECAP_DEV_SSM_KEY = 'recap-dev-sync-endpoint'
+const recapDevEndpointCache = new WeakMap<Stack, string>()
 
 /**
  * Default configuration values by stage
@@ -169,9 +173,6 @@ export const getResourceLimits = (stage: Stage) => {
 
 export const RECAP_DEV_TIMEOUT_WINDOW_SECONDS = 300
 
-/** SSM parameter key for recap.dev sync endpoint — shared across all services */
-const RECAP_DEV_SSM_KEY = 'recap-dev-sync-endpoint'
-
 /**
  * Returns the env var block to inject for recap.dev, or an empty object.
  * Handles CDK dummy values returned by valueFromLookup when the SSM key is absent.
@@ -182,9 +183,14 @@ export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<s
   }
 
   try {
-    new URL(endpoint)
-  } catch {
-    throw new Error(`recap.dev endpoint is not a valid URL: ${endpoint}`)
+    const parsed = new URL(endpoint)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`recap.dev endpoint must use http or https, got: ${parsed.protocol}`)
+    }
+  } catch (err) {
+    throw err instanceof Error
+      ? err
+      : new Error(`recap.dev endpoint is not a valid URL: ${endpoint}`)
   }
 
   return {
@@ -195,10 +201,15 @@ export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<s
 
 /**
  * Resolves the recap.dev sync endpoint from SSM at synth time.
- * Matches the serverless pattern: ${ssm:recap-dev-sync-endpoint, ""}
+ * Cached per stack so the SSM lookup happens once per stack
+ * regardless of how many constructs call this.
  */
 export const resolveRecapDevEndpoint = (scope: Construct): string => {
-  return StringParameter.valueFromLookup(scope, RECAP_DEV_SSM_KEY)
+  const stack = Stack.of(scope)
+  if (!recapDevEndpointCache.has(stack)) {
+    recapDevEndpointCache.set(stack, StringParameter.valueFromLookup(stack, RECAP_DEV_SSM_KEY))
+  }
+  return recapDevEndpointCache.get(stack)!
 }
 
 /**

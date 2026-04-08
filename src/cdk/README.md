@@ -70,7 +70,7 @@ export class MyServiceStack extends Stack {
       serviceName: 'my-service',
       functionName: 'handler',
       handler: 'index.handler',
-      codePath: './dist'
+      codePath: './dist/handlers/handler'
     })
 
     // Create a DynamoDB table
@@ -101,8 +101,8 @@ const lambda = new EmLambdaFunction(this, 'MyFunction', {
   stage: 'dev',
   serviceName: 'contacts',
   functionName: 'get-contact',
-  handler: 'handlers/getContact.handler',
-  codePath: './dist',
+  handler: 'index.handler',
+  codePath: './dist/handlers/get-contact',
   memorySize: 1024,
   timeout: Duration.seconds(30),
   environment: {
@@ -112,7 +112,7 @@ const lambda = new EmLambdaFunction(this, 'MyFunction', {
 ```
 
 **Default configurations:**
-- Runtime: Node.js 22.x
+- Runtime: Node.js 24.x
 - Architecture: ARM64
 - Memory: 1024 MB
 - Timeout: 15 seconds
@@ -475,8 +475,8 @@ export class ContactsStack extends Stack {
       stage,
       serviceName: 'contacts',
       functionName: 'get-contact',
-      handler: 'handlers/getContact.handler',
-      codePath: './dist',
+      handler: 'index.handler',
+      codePath: './dist/handlers/get-contact',
       memorySize: 1024,
       timeout: Duration.seconds(30),
       environment: {
@@ -544,8 +544,8 @@ handlers.forEach(handlerName => {
     stage,
     serviceName: 'contacts',
     functionName: handlerName,
-    handler: `handlers/${handlerName}.handler`,
-    codePath: './dist',
+    handler: 'index.handler',
+    codePath: `./dist/handlers/${handlerName}`,
     environment: { TABLE_NAME: table.getTableName() }
   })
   
@@ -574,6 +574,11 @@ export class ApiStack extends Stack {
     super(scope, id, props)
     
     const lambda = new EmLambdaFunction(this, 'Handler', {
+      stage,
+      serviceName: 'contacts',
+      functionName: 'handler',
+      handler: 'index.handler',
+      codePath: './dist/handlers/handler',
       environment: { TABLE_NAME: table.getTableName() }
     })
     

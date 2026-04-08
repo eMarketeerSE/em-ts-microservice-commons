@@ -15,12 +15,11 @@ const externalPkgs = [
 
 export default [{
   input: `src/cdk/index.ts`,
-  external: (id) => externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
+  external: (id) => id === 'crypto' || externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
   output: [
     { dir: 'dist/cdk', format: 'esm', sourcemap: true },
     { dir: 'dist/cdk/cjs', format: 'cjs', sourcemap: true },
   ],
-  target: 'es2020',
   plugins: [
     json(),
     resolve({ preferBuiltins: true }),
@@ -56,6 +55,26 @@ export default [{
     sourceMaps()
   ],
 }, {
+  input: `src/build-handlers.ts`,
+  output: [
+    { file: 'dist/build-handlers.js', format: 'commonjs' },
+  ],
+  external: ['path', 'fs', 'esbuild', './esbuild-plugins'],
+  plugins: [
+    typescript({
+      useTsconfigDeclarationDir: true,
+      objectHashIgnoreUnknownHack: true,
+      tsconfigOverride: {
+        compilerOptions: {
+          target: 'ES2020'
+        }
+      }
+    }),
+    resolve({ preferBuiltins: true }),
+    commonjs(),
+    sourceMaps(),
+  ],
+}, {
   input: `src/em-commons.ts`,
   output: [
     { name: 'em-commons.js', format: 'commonjs', file: 'dist/lib/em-commons.js' },
@@ -69,7 +88,6 @@ export default [{
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
         { src: 'src/esbuild-plugins.js', dest: 'dist/' },
-        { src: 'src/build-handlers.js', dest: 'dist/' },
       ]
     }),
     // Allow json resolution

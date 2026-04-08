@@ -116,7 +116,7 @@ export const generateLogGroupName = (
   serviceName: string,
   resourceName: string
 ): string => {
-  return `/aws/${stage}/${serviceName}/${resourceName}`
+  return `${stage}-${serviceName}-${resourceName}`
 }
 
 /**

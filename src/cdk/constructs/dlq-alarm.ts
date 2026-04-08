@@ -1,11 +1,11 @@
 import { Construct } from 'constructs'
-import { Queue } from 'aws-cdk-lib/aws-sqs'
+import { IQueue } from 'aws-cdk-lib/aws-sqs'
 import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
 
 export interface DlqAlarmProps {
-  dlq: Queue
+  dlq: IQueue
   alarmName: string
   alarmTopic: ITopic
 }

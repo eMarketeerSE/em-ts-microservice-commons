@@ -189,7 +189,6 @@ export interface IamRoleConfig {
   readonly roleName: string
   readonly stage: Stage
   readonly serviceName: string
-  readonly assumedBy: string
   readonly managedPolicies?: string[]
   readonly inlinePolicies?: Record<string, PolicyDocument>
 }

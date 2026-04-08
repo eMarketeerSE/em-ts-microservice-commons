@@ -41,7 +41,7 @@ export class QueueExampleStack extends Stack {
       serviceName,
       functionName: 'process-order',
       handler: 'index.handler',
-      codePath: './dist/handlers/processOrder',
+      codePath: './dist/handlers/process-order',
       timeout: Duration.minutes(5)
     })
 

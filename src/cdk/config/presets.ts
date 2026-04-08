@@ -3,7 +3,6 @@
  */
 
 import { Duration } from 'aws-cdk-lib'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb'
 
 /**
@@ -14,7 +13,6 @@ export const LAMBDA_PRESETS = {
    * Small Lambda (256MB, 15s timeout)
    */
   small: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 256,
     timeout: Duration.seconds(15)
   },
@@ -23,7 +21,6 @@ export const LAMBDA_PRESETS = {
    * Medium Lambda (512MB, 30s timeout)
    */
   medium: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 512,
     timeout: Duration.seconds(30)
   },
@@ -32,7 +29,6 @@ export const LAMBDA_PRESETS = {
    * Large Lambda (1024MB, 60s timeout)
    */
   large: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 1024,
     timeout: Duration.seconds(60)
   },
@@ -41,7 +37,6 @@ export const LAMBDA_PRESETS = {
    * XLarge Lambda (2048MB, 5min timeout)
    */
   xlarge: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 2048,
     timeout: Duration.minutes(5)
   },
@@ -50,7 +45,6 @@ export const LAMBDA_PRESETS = {
    * API Handler (1024MB, 30s timeout)
    */
   apiHandler: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 1024,
     timeout: Duration.seconds(30)
   },
@@ -59,7 +53,6 @@ export const LAMBDA_PRESETS = {
    * Queue Processor (1024MB, 5min timeout)
    */
   queueProcessor: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 1024,
     timeout: Duration.minutes(5)
   },
@@ -68,7 +61,6 @@ export const LAMBDA_PRESETS = {
    * Scheduled Job (2048MB, 15min timeout)
    */
   scheduledJob: {
-    runtime: Runtime.NODEJS_22_X,
     memorySize: 2048,
     timeout: Duration.minutes(15)
   }

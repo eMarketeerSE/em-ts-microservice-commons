@@ -1,11 +1,11 @@
 import { Duration } from 'aws-cdk-lib'
-import { Queue } from 'aws-cdk-lib/aws-sqs'
+import { Queue, IQueue } from 'aws-cdk-lib/aws-sqs'
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 import {
   Function as LambdaFunction,
-  Runtime,
   Code,
   Architecture,
+  Runtime,
   Tracing
 } from 'aws-cdk-lib/aws-lambda'
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
@@ -17,30 +17,35 @@ import { Stage, VpcConfig } from '../types'
 import { applyStandardTags } from '../utils/tagging'
 import { getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
+import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { DlqAlarm } from './dlq-alarm'
 
 export interface LambdaWithQueueProps {
-  functionName: string
-  queueName: string
-  handler: string
-  codePath: string
-  reservedConcurrency?: number
-  batchSize?: number
-  reportBatchItemFailures?: boolean
-  stage: Stage
-  serviceName: string
-  environment: Record<string, string>
-  memorySize: number
-  timeout: Duration
-  enableTracing: boolean
-  tags: Record<string, string>
-  roleName: string
-  alarmTopic: ITopic | null
-  additionalQueues?: Queue[]
-  maxReceiveCount?: number
-  maxBatchingWindow?: Duration
-  maxConcurrency?: number
-  vpcConfig?: VpcConfig
+  readonly functionName: string
+  readonly queueName: string
+  /** Short name used for codePath default and alarm naming. Defaults to functionName. */
+  readonly resourceName?: string
+  readonly handler?: string
+  readonly codePath?: string
+  readonly reservedConcurrency?: number
+  readonly batchSize?: number
+  readonly reportBatchItemFailures?: boolean
+  readonly stage: Stage
+  readonly serviceName: string
+  readonly environment?: Record<string, string>
+  readonly memorySize: number
+  readonly timeout: Duration
+  readonly enableTracing: boolean
+  readonly tags?: Record<string, string>
+  readonly roleName: string
+  readonly alarmTopic: ITopic
+  readonly additionalQueues?: IQueue[]
+  readonly maxReceiveCount?: number
+  readonly maxBatchingWindow?: Duration
+  readonly maxConcurrency?: number
+  readonly vpcConfig?: VpcConfig
+  readonly architecture?: Architecture
+  readonly runtime?: Runtime
 }
 
 export class LambdaWithQueue extends Construct {
@@ -50,10 +55,16 @@ export class LambdaWithQueue extends Construct {
 
   public readonly dlq: Queue
 
-  public readonly dlqAlarm?: DlqAlarm
+  public readonly dlqAlarm: DlqAlarm
 
   constructor(scope: Construct, id: string, props: LambdaWithQueueProps) {
     super(scope, id)
+
+    if (props.reservedConcurrency === 0) {
+      throw new Error(
+        `reservedConcurrency:0 disables the Lambda entirely for ${props.functionName}. Omit the prop to use account-level concurrency.`
+      )
+    }
 
     const {
       batchSize = 10,
@@ -61,6 +72,8 @@ export class LambdaWithQueue extends Construct {
       additionalQueues = [],
       maxReceiveCount = 3
     } = props
+
+    const resourceName = props.resourceName ?? props.functionName
 
     this.dlq = new Queue(this, 'DLQ', {
       queueName: `${props.queueName}-dlq`,
@@ -103,14 +116,14 @@ export class LambdaWithQueue extends Construct {
 
     this.function = new LambdaFunction(this, 'Function', {
       functionName: props.functionName,
-      runtime: Runtime.NODEJS_22_X,
-      handler: props.handler,
-      code: Code.fromAsset(props.codePath),
-      architecture: Architecture.ARM_64,
+      runtime: props.runtime ?? DEFAULT_LAMBDA_RUNTIME,
+      handler: props.handler ?? 'index.handler',
+      code: Code.fromAsset(props.codePath ?? `./dist/handlers/${resourceName}`),
+      architecture: props.architecture ?? Architecture.ARM_64,
       memorySize: props.memorySize,
       timeout: props.timeout,
       environment: {
-        ...props.environment,
+        ...(props.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
       role,
@@ -151,13 +164,11 @@ export class LambdaWithQueue extends Construct {
       ...props.tags
     })
 
-    if (props.alarmTopic !== null) {
-      this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
-        dlq: this.dlq,
-        alarmName: `${props.stage}-${props.serviceName}-${props.queueName}-dlq-alarm`,
-        alarmTopic: props.alarmTopic
-      })
-    }
+    this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
+      dlq: this.dlq,
+      alarmName: `${props.stage}-${props.serviceName}-${resourceName}-dlq-alarm`,
+      alarmTopic: props.alarmTopic
+    })
 
     additionalQueues.forEach(queue => {
       queue.grantSendMessages(this.function)

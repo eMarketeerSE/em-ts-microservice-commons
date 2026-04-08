@@ -1,11 +1,5 @@
 import { Duration } from 'aws-cdk-lib'
-import {
-  Runtime,
-  Function as LambdaFunction,
-  Code,
-  Tracing,
-  Architecture
-} from 'aws-cdk-lib/aws-lambda'
+import { Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
 import { IRole } from 'aws-cdk-lib/aws-iam'
 import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
@@ -15,6 +9,7 @@ import { applyStandardTags } from '../utils/tagging'
 import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
 import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
+import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 
 export class EmLambdaFunction extends Construct {
   public readonly function: LambdaFunction
@@ -30,13 +25,12 @@ export class EmLambdaFunction extends Construct {
         roleName: config.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
-        assumedBy: 'lambda.amazonaws.com',
         managedPolicies: config.vpcConfig ? ['AWSLambdaVPCAccessExecutionRole'] : undefined
       })
 
     const logGroup: ILogGroup = config.importExistingLogGroup
-      ? LogGroup.fromLogGroupName(this, 'LogGroup', `/aws/lambda/${functionName}`)
-      : new LogGroup(this, 'LogGroup', {
+      ? LogGroup.fromLogGroupName(this, `${id}LogGroup`, `/aws/lambda/${functionName}`)
+      : new LogGroup(this, `${id}LogGroup`, {
           logGroupName: `/aws/lambda/${functionName}`,
           retention:
             convertRetentionDays(config.logRetentionDays) ?? getLogRetentionDays(config.stage),
@@ -45,11 +39,11 @@ export class EmLambdaFunction extends Construct {
 
     this.function = new LambdaFunction(this, 'Function', {
       functionName,
-      runtime: config.runtime || Runtime.NODEJS_22_X,
+      runtime: config.runtime ?? DEFAULT_LAMBDA_RUNTIME,
       handler: config.handler,
       code: Code.fromAsset(config.codePath),
-      memorySize: config.memorySize || 1024,
-      timeout: config.timeout || Duration.seconds(15),
+      memorySize: config.memorySize ?? 1024,
+      timeout: config.timeout ?? Duration.seconds(15),
       environment: {
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
