@@ -2,8 +2,6 @@ import * as path from 'path'
 import * as esbuild from 'esbuild'
 import * as fs from 'fs'
 
-// require() is necessary here — esbuild-plugins.js is a CJS external module and cannot be consumed
-// with import syntax under the project's module: "es2015" TypeScript target
 const { recapDevHandlerWrapper, defaultPlugins } = require('./esbuild-plugins')
 
 const args = process.argv.slice(2)
