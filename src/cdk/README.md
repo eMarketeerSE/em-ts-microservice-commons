@@ -215,6 +215,9 @@ import {
 ### EmLambdaFunction
 
 ```typescript
+import { Duration } from 'aws-cdk-lib'
+import { EmLambdaFunction } from '@emarketeer/ts-microservice-commons/cdk'
+
 const fn = new EmLambdaFunction(this, 'GetContact', {
   stage: 'dev',
   serviceName: 'contacts',
@@ -232,6 +235,9 @@ Defaults: Node.js 24.x, ARM64, 1024 MB, 15s timeout.
 ### EmDynamoDBTable
 
 ```typescript
+import { AttributeType } from 'aws-cdk-lib/aws-dynamodb'
+import { EmDynamoDBTable, createSingleTable, GSI_PATTERNS } from '@emarketeer/ts-microservice-commons/cdk'
+
 const table = new EmDynamoDBTable(this, 'UserTable', {
   stage: 'dev',
   serviceName: 'contacts',

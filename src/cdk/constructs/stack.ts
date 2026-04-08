@@ -140,6 +140,12 @@ export class EmStack extends cdk.Stack {
     })
 
     if (this.sharedRole) {
+      if (config.importExistingLogGroup) {
+        throw new Error(
+          `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${config.functionName}". ` +
+            'Migration mode requires explicit log groups to override their logical IDs.'
+        )
+      }
       overrideFunctionLogicalIds(fn.function, config.functionName)
     }
 

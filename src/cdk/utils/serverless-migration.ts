@@ -39,9 +39,18 @@ const overrideLambdaLogicalId = (fn: LambdaFunction, serverlessFunctionName: str
  */
 const overrideLogGroupLogicalId = (logGroup: Construct, serverlessFunctionName: string): void => {
   const prefix = toServerlessLogicalIdPrefix(serverlessFunctionName)
-  const cfnLogGroup = logGroup.node.defaultChild as CfnLogGroup
-  cfnLogGroup.overrideLogicalId(`${prefix}LogGroup`)
-  cfnLogGroup.applyRemovalPolicy(RemovalPolicy.RETAIN)
+  const defaultChild = logGroup.node.defaultChild
+
+  if (!(defaultChild instanceof CfnLogGroup)) {
+    throw new Error(
+      `Cannot override log group logical ID for "${serverlessFunctionName}": ` +
+        'the log group does not have a CfnLogGroup default child. ' +
+        'Imported log groups (e.g. via importExistingLogGroup) cannot have their logical IDs overridden.'
+    )
+  }
+
+  defaultChild.overrideLogicalId(`${prefix}LogGroup`)
+  defaultChild.applyRemovalPolicy(RemovalPolicy.RETAIN)
 }
 
 /**
@@ -52,6 +61,8 @@ const overrideLogGroupLogicalId = (logGroup: Construct, serverlessFunctionName: 
  * - Sets the function logical ID to {prefix}LambdaFunction
  * - Sets the log group logical ID to {prefix}LogGroup
  * - Sets the log group removal policy to RETAIN (prevents log deletion during migration)
+ *
+ * Only works with functions that have explicit (non-imported) log groups.
  *
  * @example
  * ```typescript
@@ -75,24 +86,44 @@ export const overrideFunctionLogicalIds = (
  * Serverless Framework uses the layer key from serverless.yml as the logical ID,
  * typically in the form '{LayerName}LambdaLayer'.
  *
+ * Only works with layers created in this stack, not imported layers.
+ *
  * @param logicalId - The full logical ID to set (e.g. 'ChromiumLayerLambdaLayer')
  */
 export const overrideLayerLogicalId = (layer: ILayerVersion, logicalId: string): void => {
-  const cfnLayer = (layer as Construct).node.defaultChild as CfnLayerVersion
-  cfnLayer.overrideLogicalId(logicalId)
+  const defaultChild = (layer as Construct).node.defaultChild
+
+  if (!(defaultChild instanceof CfnLayerVersion)) {
+    throw new Error(
+      `Cannot override logical ID "${logicalId}": the layer does not have a CfnLayerVersion default child. ` +
+        'Imported layers (e.g. via LayerVersion.fromLayerVersionArn) cannot have their logical IDs overridden.'
+    )
+  }
+
+  defaultChild.overrideLogicalId(logicalId)
 }
 
 /**
  * Override an IAM role's logical ID.
  * Defaults to 'IamRoleLambdaExecution' — the standard Serverless Framework
  * shared execution role logical ID.
+ *
+ * Only works with roles created in this stack, not imported roles.
  */
 export const overrideRoleLogicalId = (
   role: Construct,
   logicalId = 'IamRoleLambdaExecution'
 ): void => {
-  const cfnRole = role.node.defaultChild as CfnRole
-  cfnRole.overrideLogicalId(logicalId)
+  const defaultChild = role.node.defaultChild
+
+  if (!(defaultChild instanceof CfnRole)) {
+    throw new Error(
+      'Cannot override role logical ID: the role does not have a CfnRole default child. ' +
+        'Imported roles (e.g. via Role.fromRoleArn) cannot have their logical IDs overridden.'
+    )
+  }
+
+  defaultChild.overrideLogicalId(logicalId)
 }
 
 export interface ServerlessCompatibleOutputProps {
