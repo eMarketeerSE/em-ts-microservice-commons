@@ -112,7 +112,7 @@ const lambda = new EmLambdaFunction(this, 'MyFunction', {
   serviceName: 'my-service',
   functionName: 'handler',
   handler: 'index.handler',
-  codePath: './dist'
+  codePath: './dist/handlers/handler'
 })
 
 const table = new EmDynamoDBTable(this, 'MyTable', {

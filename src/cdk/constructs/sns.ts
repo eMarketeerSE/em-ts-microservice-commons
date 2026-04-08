@@ -2,7 +2,6 @@
  * Common SNS topic construct with standard configurations
  */
 
-import { RemovalPolicy } from 'aws-cdk-lib'
 import { Topic, TopicProps } from 'aws-cdk-lib/aws-sns'
 import {
   EmailSubscription,
@@ -11,6 +10,7 @@ import {
 } from 'aws-cdk-lib/aws-sns-subscriptions'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
+import { IGrantable } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { SnsTopicConfig } from '../types'
 import { generateTopicName } from '../utils/naming'
@@ -29,7 +29,7 @@ export class EmSnsTopic extends Construct {
     const topicName = generateTopicName(config.stage, config.serviceName, config.topicName)
 
     // Create topic
-    this.topic = new Topic(this, `${id}Topic`, {
+    this.topic = new Topic(this, 'Topic', {
       topicName: config.fifo ? `${topicName}.fifo` : topicName,
       displayName: config.displayName || topicName,
       fifo: config.fifo,
@@ -93,7 +93,7 @@ export class EmSnsTopic extends Construct {
   /**
    * Grant publish permissions to a grantee
    */
-  public grantPublish(grantee: any) {
+  public grantPublish(grantee: IGrantable) {
     return this.topic.grantPublish(grantee)
   }
 }

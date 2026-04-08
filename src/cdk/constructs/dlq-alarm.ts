@@ -1,11 +1,11 @@
 import { Construct } from 'constructs'
-import { Queue } from 'aws-cdk-lib/aws-sqs'
+import { IQueue } from 'aws-cdk-lib/aws-sqs'
 import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
 
 export interface DlqAlarmProps {
-  dlq: Queue
+  dlq: IQueue
   alarmName: string
   alarmTopic: ITopic
 }
@@ -16,7 +16,7 @@ export class DlqAlarm extends Construct {
   constructor(scope: Construct, id: string, props: DlqAlarmProps) {
     super(scope, id)
 
-    this.alarm = new Alarm(this, `${id}Alarm`, {
+    this.alarm = new Alarm(this, 'Alarm', {
       alarmName: props.alarmName,
       metric: props.dlq.metricApproximateNumberOfMessagesVisible(),
       threshold: 0,

@@ -2,26 +2,30 @@
  * Common API Gateway constructs (REST API and HTTP API)
  */
 
-import { Duration } from 'aws-cdk-lib'
 import {
   RestApi,
   LambdaIntegration,
+  LambdaIntegrationOptions,
   Cors,
   LogGroupLogDestination,
   AccessLogFormat,
   MethodLoggingLevel,
-  EndpointType,
-  SecurityPolicy
+  EndpointType
 } from 'aws-cdk-lib/aws-apigateway'
 import {
   HttpApi,
+  HttpStage,
   CorsHttpMethod,
   HttpMethod,
-  PayloadFormatVersion
+  PayloadFormatVersion,
+  DomainName,
+  ApiMapping
 } from 'aws-cdk-lib/aws-apigatewayv2'
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations'
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
+import { createHash } from 'crypto'
 import { Construct } from 'constructs'
 import { RestApiConfig, HttpApiConfig } from '../types'
 import { generateApiName } from '../utils/naming'
@@ -43,22 +47,22 @@ export class EmRestApi extends Construct {
     // Create log group
     this.logGroup = createApiGatewayLogGroup(
       this,
-      `${id}LogGroup`,
+      'LogGroup',
       config.stage,
       config.serviceName,
       config.apiName
     )
 
     // Create REST API
-    this.api = new RestApi(this, `${id}Api`, {
+    this.api = new RestApi(this, 'Api', {
       restApiName: apiName,
       description: config.description || `${config.serviceName} REST API`,
       deployOptions: {
-        stageName: config.deployOptions?.stageName || config.stage,
-        throttlingRateLimit: config.deployOptions?.throttleRateLimit || 10000,
-        throttlingBurstLimit: config.deployOptions?.throttleBurstLimit || 5000,
+        stageName: config.deployOptions?.stageName ?? config.stage,
+        throttlingRateLimit: config.deployOptions?.throttleRateLimit ?? 10000,
+        throttlingBurstLimit: config.deployOptions?.throttleBurstLimit ?? 5000,
         loggingLevel: this.getLoggingLevel(config.deployOptions?.loggingLevel),
-        dataTraceEnabled: config.deployOptions?.dataTraceEnabled ?? config.stage !== 'prod',
+        dataTraceEnabled: config.deployOptions?.dataTraceEnabled ?? false,
         metricsEnabled: config.deployOptions?.metricsEnabled ?? true,
         accessLogDestination: new LogGroupLogDestination(this.logGroup),
         accessLogFormat: AccessLogFormat.jsonWithStandardFields()
@@ -71,7 +75,8 @@ export class EmRestApi extends Construct {
             allowCredentials: config.defaultCorsOptions.allowCredentials
           }
         : undefined,
-      endpointTypes: [EndpointType.REGIONAL],
+      endpointTypes: [this.resolveEndpointType(config.endpointType)],
+      binaryMediaTypes: config.binaryMediaTypes,
       policy: undefined
     })
 
@@ -81,6 +86,17 @@ export class EmRestApi extends Construct {
       serviceName: config.serviceName,
       ...config.tags
     })
+  }
+
+  private resolveEndpointType(type?: 'EDGE' | 'REGIONAL' | 'PRIVATE'): EndpointType {
+    switch (type) {
+      case 'EDGE':
+        return EndpointType.EDGE
+      case 'PRIVATE':
+        return EndpointType.PRIVATE
+      default:
+        return EndpointType.REGIONAL
+    }
   }
 
   /**
@@ -106,7 +122,7 @@ export class EmRestApi extends Construct {
     path: string,
     method: string,
     handler: LambdaFunction,
-    options?: any
+    options?: LambdaIntegrationOptions
   ) {
     const resource = this.api.root.resourceForPath(path)
     const integration = new LambdaIntegration(handler, options)
@@ -141,15 +157,20 @@ export class EmRestApi extends Construct {
 export class EmHttpApi extends Construct {
   public readonly api: HttpApi
 
+  public readonly defaultStage: HttpStage
+
+  private readonly domainNames = new Map<string, DomainName>()
+
   constructor(scope: Construct, id: string, config: HttpApiConfig) {
     super(scope, id)
 
     const apiName = generateApiName(config.stage, config.serviceName, config.apiName)
 
     // Create HTTP API
-    this.api = new HttpApi(this, `${id}Api`, {
+    this.api = new HttpApi(this, 'Api', {
       apiName,
       description: config.description || `${config.serviceName} HTTP API`,
+      createDefaultStage: false,
       corsPreflight: config.corsOptions
         ? {
             allowOrigins: config.corsOptions.allowOrigins,
@@ -165,6 +186,18 @@ export class EmHttpApi extends Construct {
             maxAge: config.corsOptions.maxAge
           }
         : undefined
+    })
+
+    this.defaultStage = new HttpStage(this, 'DefaultStage', {
+      httpApi: this.api,
+      stageName: '$default',
+      autoDeploy: true,
+      ...(config.throttle && {
+        throttle: {
+          rateLimit: config.throttle.rateLimit,
+          burstLimit: config.throttle.burstLimit
+        }
+      })
     })
 
     // Apply standard tags
@@ -189,14 +222,24 @@ export class EmHttpApi extends Construct {
       OPTIONS: CorsHttpMethod.OPTIONS,
       ANY: CorsHttpMethod.ANY
     }
-    return methodMap[method.toUpperCase()] || CorsHttpMethod.ANY
+    const resolved = methodMap[method.toUpperCase()]
+    if (!resolved) {
+      throw new Error(
+        `Unknown HTTP method: "${method}". Valid values: ${Object.keys(methodMap).join(', ')}`
+      )
+    }
+    return resolved
   }
 
   /**
    * Add a Lambda integration to a route
    */
   public addLambdaIntegration(path: string, method: string, handler: LambdaFunction) {
-    const integration = new HttpLambdaIntegration(`${handler.functionName}Integration`, handler, {
+    const id = `${createHash('sha256')
+      .update(path + method)
+      .digest('hex')
+      .slice(0, 8)}Integration`
+    const integration = new HttpLambdaIntegration(id, handler, {
       payloadFormatVersion: PayloadFormatVersion.VERSION_2_0
     })
 
@@ -221,7 +264,48 @@ export class EmHttpApi extends Construct {
       OPTIONS: HttpMethod.OPTIONS,
       ANY: HttpMethod.ANY
     }
-    return methodMap[method.toUpperCase()] || HttpMethod.ANY
+    const resolved = methodMap[method.toUpperCase()]
+    if (!resolved) {
+      throw new Error(
+        `Unknown HTTP method: "${method}". Valid values: ${Object.keys(methodMap).join(', ')}`
+      )
+    }
+    return resolved
+  }
+
+  /**
+   * Attach a custom domain with base path mapping to this HTTP API.
+   * Returns the full base URL (e.g. https://api.example.com/mypath).
+   */
+  public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
+    const normalisedPath = basePath.trim().replace(/^\/+|\/+$/g, '')
+    const mappingHash = createHash('sha256')
+      .update(domainName + normalisedPath)
+      .digest('hex')
+      .slice(0, 8)
+
+    let domain = this.domainNames.get(domainName)
+    if (!domain) {
+      const domainHash = createHash('sha256')
+        .update(domainName)
+        .digest('hex')
+        .slice(0, 8)
+      const certificate = Certificate.fromCertificateArn(
+        this,
+        `${domainHash}Certificate`,
+        certificateArn
+      )
+      domain = new DomainName(this, `${domainHash}Domain`, { domainName, certificate })
+      this.domainNames.set(domainName, domain)
+    }
+
+    new ApiMapping(this, `${mappingHash}Mapping`, {
+      api: this.api,
+      domainName: domain,
+      ...(normalisedPath && { apiMappingKey: normalisedPath })
+    })
+
+    return normalisedPath ? `https://${domainName}/${normalisedPath}` : `https://${domainName}`
   }
 
   /**
@@ -234,8 +318,8 @@ export class EmHttpApi extends Construct {
   /**
    * Get the API URL
    */
-  public getApiUrl(): string | undefined {
-    return this.api.url
+  public getApiUrl(): string {
+    return this.defaultStage.url
   }
 
   /**

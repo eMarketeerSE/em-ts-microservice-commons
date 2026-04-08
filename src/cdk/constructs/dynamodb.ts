@@ -2,7 +2,6 @@
  * Common DynamoDB table construct with standard configurations
  */
 
-import { RemovalPolicy } from 'aws-cdk-lib'
 import {
   Table,
   AttributeType,
@@ -11,6 +10,7 @@ import {
   ProjectionType,
   TableEncryption
 } from 'aws-cdk-lib/aws-dynamodb'
+import { IGrantable } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { DynamoDBTableConfig, DynamoDBGSIConfig } from '../types'
 import { generateTableName } from '../utils/naming'
@@ -29,7 +29,7 @@ export class EmDynamoDBTable extends Construct {
     const tableName = generateTableName(config.stage, config.serviceName, config.tableName)
 
     // Create DynamoDB table
-    this.table = new Table(this, `${id}Table`, {
+    this.table = new Table(this, 'Table', {
       tableName,
       partitionKey: config.partitionKey,
       sortKey: config.sortKey,
@@ -93,28 +93,28 @@ export class EmDynamoDBTable extends Construct {
   /**
    * Grant read permissions to a grantee
    */
-  public grantReadData(grantee: any) {
+  public grantReadData(grantee: IGrantable) {
     return this.table.grantReadData(grantee)
   }
 
   /**
    * Grant write permissions to a grantee
    */
-  public grantWriteData(grantee: any) {
+  public grantWriteData(grantee: IGrantable) {
     return this.table.grantWriteData(grantee)
   }
 
   /**
    * Grant read/write permissions to a grantee
    */
-  public grantReadWriteData(grantee: any) {
+  public grantReadWriteData(grantee: IGrantable) {
     return this.table.grantReadWriteData(grantee)
   }
 
   /**
    * Grant stream read permissions to a grantee
    */
-  public grantStreamRead(grantee: any) {
+  public grantStreamRead(grantee: IGrantable) {
     return this.table.grantStreamRead(grantee)
   }
 }

@@ -44,7 +44,6 @@ export const generateLambdaName = (
   return generateResourceName({
     stage,
     serviceName,
-    resourceType: 'lambda',
     resourceName: functionName
   })
 }
@@ -117,7 +116,7 @@ export const generateLogGroupName = (
   serviceName: string,
   resourceName: string
 ): string => {
-  return `/aws/${stage}/${serviceName}/${resourceName}`
+  return `${stage}-${serviceName}-${resourceName}`
 }
 
 /**

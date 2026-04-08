@@ -6,7 +6,7 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-const supportedCommands = ['lint', 'deploy', 'dev', 'tsc', 'jest', 'invoke-local']
+const supportedCommands = ['lint', 'deploy', 'dev', 'tsc', 'jest', 'invoke-local', 'build-handlers']
 
 const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
@@ -52,6 +52,13 @@ try {
 
   if (script === 'tsc') {
     result = runCommand('npx tsc --noEmit', scriptArgs)
+  }
+
+  if (script === 'build-handlers') {
+    result = runCommand(
+      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
+      scriptArgs
+    )
   }
 
   if (script === 'jest') {

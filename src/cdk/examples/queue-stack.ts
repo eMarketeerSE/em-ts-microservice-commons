@@ -40,20 +40,20 @@ export class QueueExampleStack extends Stack {
       stage,
       serviceName,
       functionName: 'process-order',
-      handler: 'handlers/processOrder.handler',
-      codePath: './dist',
+      handler: 'index.handler',
+      codePath: './dist/handlers/process-order',
       timeout: Duration.minutes(5)
     })
 
     // Add SQS trigger
-    processor.getFunction().addEventSource(
+    processor.function.addEventSource(
       new SqsEventSource(orderQueue.getQueue(), {
         batchSize: 10
       })
     )
 
     // Grant permissions
-    orderQueue.grantConsumeMessages(processor.getFunction())
-    orderTopic.grantPublish(processor.getFunction())
+    orderQueue.grantConsumeMessages(processor.function)
+    orderTopic.grantPublish(processor.function)
   }
 }

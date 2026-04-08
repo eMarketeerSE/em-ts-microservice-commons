@@ -3,9 +3,11 @@
  */
 
 import { Duration } from 'aws-cdk-lib'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Runtime, Architecture, ILayerVersion } from 'aws-cdk-lib/aws-lambda'
+import { IRole, PolicyDocument } from 'aws-cdk-lib/aws-iam'
 import { AttributeType, BillingMode, ProjectionType } from 'aws-cdk-lib/aws-dynamodb'
 import { IVpc, ISecurityGroup, SubnetSelection } from 'aws-cdk-lib/aws-ec2'
+import { EventPattern } from 'aws-cdk-lib/aws-events'
 
 /**
  * Supported deployment stages
@@ -55,7 +57,13 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly reservedConcurrentExecutions?: number
   readonly retryAttempts?: number
   readonly logRetentionDays?: number
+  readonly layers?: ILayerVersion[]
+  readonly architecture?: Architecture
   readonly vpcConfig?: VpcConfig
+  /** Provide an existing role instead of creating a per-function one. */
+  readonly role?: IRole
+  /** When true, imports the log group by name instead of creating a managed resource. Use when migrating existing functions where the log group was auto-created by Lambda. */
+  readonly importExistingLogGroup?: boolean
 }
 
 /**
@@ -101,6 +109,8 @@ export interface DynamoDBGSIConfig {
 export interface RestApiConfig extends BaseConstructConfig {
   readonly apiName: string
   readonly description?: string
+  readonly endpointType?: 'EDGE' | 'REGIONAL' | 'PRIVATE'
+  readonly binaryMediaTypes?: string[]
   readonly deployOptions?: {
     stageName?: string
     throttleRateLimit?: number
@@ -167,7 +177,7 @@ export interface SnsTopicConfig extends BaseConstructConfig {
 export interface EventBridgeRuleConfig extends BaseConstructConfig {
   readonly ruleName: string
   readonly description?: string
-  readonly eventPattern?: Record<string, any>
+  readonly eventPattern?: EventPattern
   readonly schedule?: string
   readonly enabled?: boolean
 }
@@ -179,9 +189,8 @@ export interface IamRoleConfig {
   readonly roleName: string
   readonly stage: Stage
   readonly serviceName: string
-  readonly assumedBy: string
   readonly managedPolicies?: string[]
-  readonly inlinePolicies?: Record<string, any>
+  readonly inlinePolicies?: Record<string, PolicyDocument>
 }
 
 /**
