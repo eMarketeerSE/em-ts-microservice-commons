@@ -1,3 +1,4 @@
+import * as path from 'path'
 import * as cdk from 'aws-cdk-lib'
 import { Role, ServicePrincipal, ManagedPolicy, IManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
@@ -39,10 +40,73 @@ export interface EmStackProps extends cdk.StackProps {
 /**
  * Config for `EmStack.createFunction()`. Stage and serviceName are optional —
  * they default to the stack's values.
+ *
+ * When `handlerPath` is provided, `codePath`, `handler`, and `functionName`
+ * become optional — they are derived from the source path:
+ *
+ * ```typescript
+ * // Instead of:
+ * this.createFunction('CaptureScreenshot', {
+ *   functionName: 'capture-screenshot-from-url',
+ *   handler: 'index.handler',
+ *   codePath: 'dist/handlers/capture-screenshot/capture-screenshot-from-url',
+ * })
+ *
+ * // You can write:
+ * this.createFunction('CaptureScreenshot', {
+ *   handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url',
+ * })
+ * ```
  */
-export type CreateFunctionConfig = Omit<LambdaConfig, 'stage' | 'serviceName'> & {
+export type CreateFunctionConfig = Omit<
+  LambdaConfig,
+  'stage' | 'serviceName' | 'handler' | 'codePath' | 'functionName'
+> & {
   stage?: LambdaConfig['stage']
   serviceName?: LambdaConfig['serviceName']
+  handler?: LambdaConfig['handler']
+  codePath?: LambdaConfig['codePath']
+  functionName?: LambdaConfig['functionName']
+}
+
+type ResolvedFunctionConfig = CreateFunctionConfig &
+  Required<Pick<LambdaConfig, 'functionName' | 'handler' | 'codePath'>>
+
+const DEFAULT_HANDLERS_DIR = 'src/handlers'
+const DEFAULT_OUT_DIR = 'dist/handlers'
+
+/**
+ * Resolve `handlerPath` into `codePath`, `handler`, and optionally `functionName`.
+ *
+ * Given `handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url'`:
+ * - `codePath` → `'dist/handlers/capture-screenshot/capture-screenshot-from-url'`
+ * - `handler` → `'index.handler'`
+ * - `functionName` → `'capture-screenshot-from-url'` (only when not explicitly provided)
+ */
+function resolveHandlerPath(config: CreateFunctionConfig): ResolvedFunctionConfig {
+  const { handlerPath } = config
+
+  if (handlerPath) {
+    const normalised = handlerPath.replace(/\.ts$/, '')
+    const relative = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
+      ? normalised.slice(DEFAULT_HANDLERS_DIR.length + 1)
+      : normalised
+
+    return {
+      ...config,
+      functionName: config.functionName ?? path.basename(relative),
+      handler: config.handler ?? 'index.handler',
+      codePath: config.codePath ?? path.join(DEFAULT_OUT_DIR, relative)
+    }
+  }
+
+  if (!config.functionName || !config.handler || !config.codePath) {
+    throw new Error(
+      'createFunction() requires either `handlerPath` or all of `functionName`, `handler`, and `codePath`.'
+    )
+  }
+
+  return config as ResolvedFunctionConfig
 }
 
 /**
@@ -62,10 +126,16 @@ export type CreateFunctionConfig = Omit<LambdaConfig, 'stage' | 'serviceName'> &
  *   constructor(scope: Construct, id: string, props: MyStackProps) {
  *     super(scope, id, { ...props, useSharedRole: true })
  *
+ *     // Short form — derives codePath, handler, and functionName from handlerPath
  *     const fn = this.createFunction('GetData', {
- *       functionName: 'get-data',
+ *       handlerPath: 'src/handlers/get-data',
+ *     })
+ *
+ *     // Explicit form — still supported
+ *     const fn2 = this.createFunction('PostData', {
+ *       functionName: 'post-data',
  *       handler: 'index.handler',
- *       codePath: './dist/handlers/get-data'
+ *       codePath: './dist/handlers/post-data',
  *     })
  *
  *     this.addOutput('ServiceEndpoint', 'https://...')
@@ -132,21 +202,23 @@ export class EmStack extends cdk.Stack {
    * logical ID overrides needed.
    */
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
+    const resolved = resolveHandlerPath(config)
+
     const fn = new EmLambdaFunction(this, id, {
-      ...config,
-      stage: config.stage ?? this.stage,
-      serviceName: config.serviceName ?? this.serviceName,
-      role: config.role ?? this.sharedRole
+      ...resolved,
+      stage: resolved.stage ?? this.stage,
+      serviceName: resolved.serviceName ?? this.serviceName,
+      role: resolved.role ?? this.sharedRole
     })
 
     if (this.sharedRole) {
-      if (config.importExistingLogGroup) {
+      if (resolved.importExistingLogGroup) {
         throw new Error(
-          `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${config.functionName}". ` +
+          `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${resolved.functionName}". ` +
             'Migration mode requires explicit log groups to override their logical IDs.'
         )
       }
-      overrideFunctionLogicalIds(fn.function, config.functionName)
+      overrideFunctionLogicalIds(fn.function, resolved.functionName)
     }
 
     return fn

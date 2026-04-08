@@ -10,7 +10,8 @@ import {
   LogGroupLogDestination,
   AccessLogFormat,
   MethodLoggingLevel,
-  EndpointType
+  EndpointType,
+  CfnBasePathMapping
 } from 'aws-cdk-lib/aws-apigateway'
 import {
   HttpApi,
@@ -127,6 +128,47 @@ export class EmRestApi extends Construct {
     const resource = this.api.root.resourceForPath(path)
     const integration = new LambdaIntegration(handler, options)
     return resource.addMethod(method, integration)
+  }
+
+  /**
+   * Add a base path mapping to an existing custom domain.
+   *
+   * Use this when the domain was created externally (e.g. by serverless-domain-manager)
+   * and you just need to point a base path at this API's deployment stage.
+   *
+   * @param domainName - The custom domain name (e.g. `'api.example.com'`)
+   * @param options - Optional basePath (defaults to `''`) and logical ID override
+   * @returns The CfnBasePathMapping resource
+   *
+   * @example
+   * ```typescript
+   * const mapping = restApi.addBasePathMapping('api.example.com', {
+   *   basePath: 'screenshots',
+   *   logicalId: 'ScreenshotBasePathMapping',
+   * })
+   * ```
+   */
+  public addBasePathMapping(
+    domainName: string,
+    options?: { basePath?: string; logicalId?: string }
+  ): CfnBasePathMapping {
+    const basePath = options?.basePath ?? ''
+    const id = options?.logicalId ?? `${domainName.replace(/\./g, '')}BasePathMapping`
+
+    const mapping = new CfnBasePathMapping(this, id, {
+      domainName,
+      restApiId: this.api.restApiId,
+      stage: this.api.deploymentStage.stageName,
+      basePath: basePath || undefined
+    })
+
+    mapping.node.addDependency(this.api)
+
+    if (options?.logicalId) {
+      mapping.overrideLogicalId(options.logicalId)
+    }
+
+    return mapping
   }
 
   /**

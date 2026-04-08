@@ -262,6 +262,93 @@ describe('EmStack', () => {
     })
   })
 
+  describe('createFunction with handlerPath', () => {
+    it('derives codePath, handler, and functionName from handlerPath', () => {
+      const stack = makeStack()
+      stack.createFunction('CaptureScreenshot', {
+        handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-capture-screenshot-from-url',
+        Handler: 'index.handler'
+      })
+    })
+
+    it('strips .ts extension from handlerPath', () => {
+      const stack = makeStack()
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/get-data.ts',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-get-data',
+        Handler: 'index.handler'
+      })
+    })
+
+    it('allows overriding functionName when using handlerPath', () => {
+      const stack = makeStack()
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url',
+        functionName: 'custom-name',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-custom-name'
+      })
+    })
+
+    it('allows overriding handler when using handlerPath', () => {
+      const stack = makeStack()
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/get-data',
+        handler: 'main.handle',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Handler: 'main.handle'
+      })
+    })
+
+    it('works with migration mode (useSharedRole)', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.createFunction('CaptureScreenshot', {
+        handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url',
+        codePath: CODE_PATH
+      })
+
+      const template = Template.fromStack(stack)
+      const functions = template.findResources('AWS::Lambda::Function')
+      expect(functions).toHaveProperty('CaptureDashscreenshotDashfromDashurlLambdaFunction')
+    })
+
+    it('handles paths without the src/handlers/ prefix', () => {
+      const stack = makeStack()
+      stack.createFunction('Handler', {
+        handlerPath: 'get-data',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-get-data'
+      })
+    })
+
+    it('throws when neither handlerPath nor required fields are provided', () => {
+      const stack = makeStack()
+      expect(() => {
+        stack.createFunction('Handler', {} as any)
+      }).toThrow(
+        'createFunction() requires either `handlerPath` or all of `functionName`, `handler`, and `codePath`.'
+      )
+    })
+  })
+
   describe('addOutput', () => {
     it('creates output with sls-{service}-{stage}-{key} export name', () => {
       const stack = makeStack()

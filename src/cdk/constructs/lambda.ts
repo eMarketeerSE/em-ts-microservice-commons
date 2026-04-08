@@ -8,7 +8,11 @@ import { generateLambdaName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
-import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
+import {
+  buildRecapDevEnvironment,
+  getLambdaEnvironmentVariables,
+  resolveRecapDevEndpoint
+} from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 
 export class EmLambdaFunction extends Construct {
@@ -45,6 +49,7 @@ export class EmLambdaFunction extends Construct {
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {
+        ...getLambdaEnvironmentVariables(config.stage),
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },

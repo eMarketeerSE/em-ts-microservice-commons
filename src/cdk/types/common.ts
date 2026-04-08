@@ -50,6 +50,22 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly functionName: string
   readonly handler: string
   readonly codePath: string
+  /**
+   * Source handler path relative to the project root, e.g.
+   * `'src/handlers/capture-screenshot/capture-screenshot-from-url'`.
+   *
+   * When provided on `CreateFunctionConfig`, `codePath` and `handler`
+   * are derived automatically:
+   * - `codePath` → `dist/handlers/<relative-path>`
+   * - `handler` → `'index.handler'`
+   *
+   * If `functionName` is omitted it defaults to the last segment of
+   * the path (e.g. `'capture-screenshot-from-url'`).
+   *
+   * NOTE: This field is only used by `EmStack.createFunction()` — it is
+   * stripped before the config reaches `EmLambdaFunction`.
+   */
+  readonly handlerPath?: string
   readonly runtime?: Runtime
   readonly memorySize?: number
   readonly timeout?: Duration

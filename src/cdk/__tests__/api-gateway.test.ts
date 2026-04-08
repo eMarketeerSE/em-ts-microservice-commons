@@ -113,6 +113,50 @@ describe('EmRestApi', () => {
       Template.fromStack(stack).resourceCountIs('AWS::ApiGateway::Method', 1)
     })
   })
+
+  describe('addBasePathMapping', () => {
+    it('creates a CfnBasePathMapping resource', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addBasePathMapping('api.example.com')
+
+      Template.fromStack(stack).resourceCountIs('AWS::ApiGateway::BasePathMapping', 1)
+    })
+
+    it('sets the domain name on the mapping', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addBasePathMapping('api.example.com')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::ApiGateway::BasePathMapping', {
+        DomainName: 'api.example.com'
+      })
+    })
+
+    it('sets basePath when provided', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addBasePathMapping('api.example.com', { basePath: 'screenshots' })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::ApiGateway::BasePathMapping', {
+        DomainName: 'api.example.com',
+        BasePath: 'screenshots'
+      })
+    })
+
+    it('overrides logical ID when logicalId is provided', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addBasePathMapping('api.example.com', {
+        basePath: 'screenshots',
+        logicalId: 'ScreenshotBasePathMapping'
+      })
+
+      const template = Template.fromStack(stack)
+      const mappings = template.findResources('AWS::ApiGateway::BasePathMapping')
+      expect(mappings).toHaveProperty('ScreenshotBasePathMapping')
+    })
+  })
 })
 
 describe('EmHttpApi', () => {
