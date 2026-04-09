@@ -133,7 +133,6 @@
     "yaml": "^1.7.2"
   },
   "devDependencies": {
-    "@emarketeer/ts-microservice-commons": "file:../em-ts-microservice-commons",
     "@robmarr/rollup-plugin-shebang": "^1.0.1",
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
