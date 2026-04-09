@@ -499,6 +499,10 @@ describe('EmStack', () => {
       const template = Template.fromStack(stack)
       // Shared role — only 1 IAM role (the shared one), not 2
       template.resourceCountIs('AWS::IAM::Role', 1)
+      // Function name prefixed with stage-serviceName
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-process-jobs'
+      })
       // Lambda logical ID overridden to Serverless naming
       const functions = template.findResources('AWS::Lambda::Function')
       expect(functions).toHaveProperty('ProcessDashjobsLambdaFunction')
