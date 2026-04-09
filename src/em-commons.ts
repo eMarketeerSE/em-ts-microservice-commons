@@ -93,7 +93,7 @@ try {
   if (script === 'cdk-test') {
     buildHandlersOrExit()
     result = runCommand(
-      'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js',
+      'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js --rootDir cdk',
       scriptArgs
     )
   }
