@@ -43,9 +43,12 @@ export interface LambdaWithQueueProps {
   readonly stage: Stage
   readonly serviceName: string
   readonly environment?: Record<string, string>
-  readonly memorySize: number
-  readonly timeout: Duration
-  readonly enableTracing: boolean
+  /** Lambda memory in MB. Defaults to 1024. */
+  readonly memorySize?: number
+  /** Lambda timeout. Defaults to 15 seconds. */
+  readonly timeout?: Duration
+  /** Enable X-Ray tracing. Defaults to true. */
+  readonly enableTracing?: boolean
   readonly tags?: Record<string, string>
   /** IAM role name. Required when `role` is not provided. */
   readonly roleName?: string
@@ -110,6 +113,10 @@ export class LambdaWithQueue extends Construct {
       maxReceiveCount = 3
     } = props
 
+    const memorySize = props.memorySize ?? 1024
+    const timeout = props.timeout ?? Duration.seconds(15)
+    const enableTracing = props.enableTracing ?? true
+
     this.dlq = new Queue(this, 'DLQ', {
       queueName: props.dlqName ?? `${props.queueName}-dlq`,
       retentionPeriod: Duration.days(14),
@@ -118,7 +125,7 @@ export class LambdaWithQueue extends Construct {
 
     this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
-      visibilityTimeout: Duration.seconds(Math.max(30, props.timeout.toSeconds() * 3)),
+      visibilityTimeout: Duration.seconds(Math.max(30, timeout.toSeconds() * 3)),
       retentionPeriod: Duration.days(4),
       deadLetterQueue: {
         queue: this.dlq,
@@ -141,15 +148,15 @@ export class LambdaWithQueue extends Construct {
       handler,
       code: Code.fromAsset(codePath),
       architecture: props.architecture ?? Architecture.ARM_64,
-      memorySize: props.memorySize,
-      timeout: props.timeout,
+      memorySize,
+      timeout,
       environment: {
         ...(props.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
       role,
       reservedConcurrentExecutions: props.reservedConcurrency,
-      tracing: props.enableTracing ? Tracing.ACTIVE : Tracing.DISABLED,
+      tracing: enableTracing ? Tracing.ACTIVE : Tracing.DISABLED,
       logGroup,
       ...(props.vpcConfig && {
         vpc: props.vpcConfig.vpc,
