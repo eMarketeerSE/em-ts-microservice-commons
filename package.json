@@ -16,6 +16,9 @@
       "require": "./dist/cdk/cjs/index.js",
       "types": "./dist/types/cdk/index.d.ts"
     },
+    "./cdk/jest.config": "./dist/cdk/jest.config.js",
+    "./cdk/tsconfig.json": "./dist/cdk/tsconfig.json",
+    "./cdk/.eslintrc": "./dist/cdk/.eslintrc",
     "./esbuild-plugins": "./dist/esbuild-plugins.js",
     "./build-handlers": "./dist/build-handlers.js"
   },
