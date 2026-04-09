@@ -195,19 +195,23 @@ Base stack class. Provides:
 
 ### defaultFunctionConfig
 
-Set shared defaults once in the stack constructor. `environment` is deep-merged (per-function values override matching keys):
+Set shared defaults in the constructor or after construction with `setDefaultFunctionConfig()`. `environment` is deep-merged (per-function values override matching keys):
 
 ```typescript
 super(scope, id, {
   ...props,
   useSharedRole: true,
   defaultFunctionConfig: {
-    environment: sharedEnvironment,
-    vpcConfig,
     memorySize: 1024,
     enableTracing: true,
     timeout: Duration.seconds(60),
   }
+})
+
+// Set defaults that depend on resources created after super():
+this.setDefaultFunctionConfig({
+  environment: sharedEnvironment,
+  vpcConfig,
 })
 
 // Functions inherit defaults — only specify overrides:
@@ -227,10 +231,12 @@ this.createQueueConsumer('ProcessJobs', {
 Add policies to the shared role (requires `useSharedRole: true`):
 
 ```typescript
-this.addLambdaInvokePolicy()                                    // lambda:InvokeFunction (account-scoped)
-this.addKinesisPolicy('signals')                                 // kinesis:PutRecord/PutRecords → {stage}-signals
-this.addSnsPublishPolicy(topic)                                  // sns:Publish → topic ARN
-this.addSqsSendPolicy('em-contacts-service-contact-source')      // sqs:SendMessage → {stage}-{name}
+this.addLambdaInvokePolicy()                                        // scoped to {stage}-{serviceName}-*
+this.addLambdaInvokePolicy('dev-other-service-*')                    // custom scope
+this.addKinesisPolicy('signals')                                     // kinesis:PutRecord/PutRecords → {stage}-signals
+this.addSnsPublishPolicy(topic)                                      // sns:Publish → topic ARN
+this.addSnsPublishPolicy('emarketeer-event-contact-event')           // sns:Publish → {stage}-{name}
+this.addSqsSendPolicy('em-contacts-service-contact-source')          // sqs:SendMessage → {stage}-{name}
 ```
 
 ### createFunction() with handlerPath

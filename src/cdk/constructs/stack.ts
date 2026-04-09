@@ -11,7 +11,7 @@ import {
 import { ITopic, Topic } from 'aws-cdk-lib/aws-sns'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
-import { LambdaConfig, Stage, VpcConfig } from '../types'
+import { LambdaConfig, Stage } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { resolveHandlerPath } from '../utils/handler-path'
@@ -141,7 +141,7 @@ export class EmStack extends cdk.Stack {
    * Pinned to logical ID `IamRoleLambdaExecution` for Serverless migration.
    */
   public readonly sharedRole?: Role
-  private readonly defaultFunctionConfig: Partial<CreateFunctionConfig>
+  private defaultFunctionConfig: Partial<CreateFunctionConfig>
 
   constructor(scope: Construct, id: string, props: EmStackProps) {
     super(scope, id, {
@@ -184,6 +184,48 @@ export class EmStack extends cdk.Stack {
   }
 
   /**
+   * Update default function config after construction.
+   * Use this when defaults depend on resources created after `super()`.
+   * Environment is deep-merged with any existing defaults.
+   *
+   * @example
+   * ```typescript
+   * // After creating resources:
+   * this.setDefaultFunctionConfig({
+   *   environment: sharedEnvironment,
+   *   vpcConfig,
+   * })
+   * ```
+   */
+  setDefaultFunctionConfig(config: Partial<CreateFunctionConfig>): void {
+    this.defaultFunctionConfig = {
+      ...this.defaultFunctionConfig,
+      ...config,
+      environment: {
+        ...(this.defaultFunctionConfig.environment ?? {}),
+        ...(config.environment ?? {})
+      }
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private mergeConfig<T extends Record<string, any>>(config: T): T {
+    const defaults = this.defaultFunctionConfig as Record<string, unknown>
+    const merged = { ...defaults, ...config } as T
+
+    const defaultEnv = this.defaultFunctionConfig.environment
+    const configEnv = (config as { environment?: Record<string, string> }).environment
+    if (defaultEnv || configEnv) {
+      ;((merged as unknown) as { environment: Record<string, string> }).environment = {
+        ...(defaultEnv ?? {}),
+        ...(configEnv ?? {})
+      }
+    }
+
+    return merged
+  }
+
+  /**
    * Create a Lambda function. Defaults `stage` and `serviceName` from the stack.
    *
    * When `useSharedRole: true` (Serverless migration mode), also:
@@ -191,29 +233,7 @@ export class EmStack extends cdk.Stack {
    * - Overrides log group logical ID to `{prefix}LogGroup`
    * - Sets log group removal policy to RETAIN
    * - Uses the shared role unless `config.role` is provided
-   *
-   * This means existing Serverless stacks are migrated in-place — no manual
-   * logical ID overrides needed.
    */
-  /**
-   * Merge per-call config with defaultFunctionConfig.
-   * Environment is deep-merged (per-call values override matching keys).
-   * All other fields use per-call values when provided.
-   */
-  private mergeConfig<T extends { environment?: Record<string, string> }>(config: T): T {
-    const defaults = this.defaultFunctionConfig
-    const merged = { ...defaults, ...config }
-
-    if (defaults.environment || config.environment) {
-      merged.environment = {
-        ...(defaults.environment ?? {}),
-        ...(config.environment ?? {})
-      }
-    }
-
-    return merged as T
-  }
-
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
     const merged = this.mergeConfig(config)
     const resolved = resolveHandlerPath(merged)
@@ -304,12 +324,10 @@ export class EmStack extends cdk.Stack {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
     const fn = this.createFunction(id, functionConfig)
 
-    const resolved = resolveHandlerPath(this.mergeConfig(functionConfig))
-
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
       stage: config.stage ?? this.stage,
       serviceName: config.serviceName ?? this.serviceName,
-      ruleName: ruleName ?? resolved.functionName,
+      ruleName: ruleName ?? resolveHandlerPath(functionConfig).functionName,
       description: ruleDescription,
       schedule
     })
@@ -338,16 +356,20 @@ export class EmStack extends cdk.Stack {
   }
 
   /**
-   * Add a Lambda invoke policy to the shared role (account-scoped).
-   * Requires `useSharedRole: true`.
+   * Add a Lambda invoke policy to the shared role.
+   * @param functionPattern - Optional function name pattern. Defaults to `{stage}-{serviceName}-*`.
+   *   Pass `'*'` for account-wide access.
    */
-  addLambdaInvokePolicy(): void {
+  addLambdaInvokePolicy(functionPattern?: string): void {
     this.requireSharedRole('addLambdaInvokePolicy')
+    const pattern = functionPattern ?? `${this.stage}-${this.serviceName}-*`
     this.sharedRole!.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['lambda:InvokeFunction'],
-        resources: [`arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:*`]
+        resources: [
+          `arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`
+        ]
       })
     )
   }
@@ -370,15 +392,19 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an SNS Publish policy to the shared role.
-   * @param topic - An ITopic reference.
+   * @param topicOrName - An ITopic reference, or a short topic name (prefixed with `{stage}-`).
    */
-  addSnsPublishPolicy(topic: ITopic): void {
+  addSnsPublishPolicy(topicOrName: ITopic | string): void {
     this.requireSharedRole('addSnsPublishPolicy')
+    const arn =
+      typeof topicOrName === 'string'
+        ? `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${topicOrName}`
+        : topicOrName.topicArn
     this.sharedRole!.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sns:Publish'],
-        resources: [topic.topicArn]
+        resources: [arn]
       })
     )
   }

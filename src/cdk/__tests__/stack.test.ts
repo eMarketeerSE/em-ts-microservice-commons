@@ -757,9 +757,94 @@ describe('EmStack', () => {
       })
     })
 
+    it('addLambdaInvokePolicy scopes to service by default', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addLambdaInvokePolicy()
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain(':function:dev-test-service-*')
+    })
+
+    it('addLambdaInvokePolicy accepts custom pattern', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addLambdaInvokePolicy('dev-other-service-*')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'lambda:InvokeFunction',
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
+    it('addSnsPublishPolicy accepts a topic name string', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSnsPublishPolicy('emarketeer-event-contact-event')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'sns:Publish',
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
     it('throws when shared role is not enabled', () => {
       const stack = makeStack()
       expect(() => stack.addLambdaInvokePolicy()).toThrow('requires useSharedRole: true')
+    })
+  })
+
+  describe('setDefaultFunctionConfig', () => {
+    it('applies defaults set after construction', () => {
+      const stack = makeStack()
+      stack.setDefaultFunctionConfig({
+        environment: { SHARED_VAR: 'post-constructor' }
+      })
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/test',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ SHARED_VAR: 'post-constructor' })
+        }
+      })
+    })
+
+    it('merges with existing defaults', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          environment: { INITIAL: 'from-constructor' }
+        }
+      })
+      stack.setDefaultFunctionConfig({
+        environment: { ADDED: 'post-constructor' }
+      })
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/test',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({
+            INITIAL: 'from-constructor',
+            ADDED: 'post-constructor'
+          })
+        }
+      })
     })
   })
 })
