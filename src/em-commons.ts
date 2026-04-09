@@ -82,7 +82,7 @@ try {
 
   if (script === 'cdk-deploy') {
     buildHandlersOrExit()
-    result = runCommand('npx cdk deploy', scriptArgs)
+    result = runCommand('npx cdk deploy --require-approval never', scriptArgs)
   }
 
   if (script === 'cdk-synth') {
