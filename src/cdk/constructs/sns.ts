@@ -26,7 +26,8 @@ export class EmSnsTopic extends Construct {
   constructor(scope: Construct, id: string, config: SnsTopicConfig) {
     super(scope, id)
 
-    const topicName = generateTopicName(config.stage, config.serviceName, config.topicName)
+    const topicName =
+      config.rawTopicName ?? generateTopicName(config.stage, config.serviceName, config.topicName)
 
     // Create topic
     this.topic = new Topic(this, 'Topic', {

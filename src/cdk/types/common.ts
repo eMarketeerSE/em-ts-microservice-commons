@@ -182,6 +182,8 @@ export interface SqsQueueConfig extends BaseConstructConfig {
  */
 export interface SnsTopicConfig extends BaseConstructConfig {
   readonly topicName: string
+  /** Use an exact topic name instead of generating `{stage}-{serviceName}-topic-{topicName}`. */
+  readonly rawTopicName?: string
   readonly displayName?: string
   readonly fifo?: boolean
   readonly contentBasedDeduplication?: boolean
