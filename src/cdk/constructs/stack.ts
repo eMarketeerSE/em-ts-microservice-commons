@@ -1,11 +1,12 @@
-import * as path from 'path'
 import * as cdk from 'aws-cdk-lib'
 import { Role, ServicePrincipal, ManagedPolicy, IManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
+import { resolveHandlerPath } from '../utils/handler-path'
 import { EmLambdaFunction } from './lambda'
+import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
 import {
   overrideFunctionLogicalIds,
   overrideRoleLogicalId,
@@ -85,46 +86,6 @@ export type CreateFunctionConfig = Omit<
   handler?: LambdaConfig['handler']
   codePath?: LambdaConfig['codePath']
   functionName?: LambdaConfig['functionName']
-}
-
-type ResolvedFunctionConfig = CreateFunctionConfig &
-  Required<Pick<LambdaConfig, 'functionName' | 'handler' | 'codePath'>>
-
-const DEFAULT_HANDLERS_DIR = 'src/handlers'
-const DEFAULT_OUT_DIR = 'dist/handlers'
-
-/**
- * Resolve `handlerPath` into `codePath`, `handler`, and optionally `functionName`.
- *
- * Given `handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url'`:
- * - `codePath` → `'dist/handlers/capture-screenshot/capture-screenshot-from-url'`
- * - `handler` → `'index.handler'`
- * - `functionName` → `'capture-screenshot-from-url'` (only when not explicitly provided)
- */
-function resolveHandlerPath(config: CreateFunctionConfig): ResolvedFunctionConfig {
-  const { handlerPath } = config
-
-  if (handlerPath) {
-    const normalised = handlerPath.replace(/\.ts$/, '')
-    const relative = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
-      ? normalised.slice(DEFAULT_HANDLERS_DIR.length + 1)
-      : normalised
-
-    return {
-      ...config,
-      functionName: config.functionName ?? path.basename(relative),
-      handler: config.handler ?? 'index.handler',
-      codePath: config.codePath ?? path.join(DEFAULT_OUT_DIR, relative)
-    }
-  }
-
-  if (!config.functionName || !config.handler || !config.codePath) {
-    throw new Error(
-      'createFunction() requires either `handlerPath` or all of `functionName`, `handler`, and `codePath`.'
-    )
-  }
-
-  return config as ResolvedFunctionConfig
 }
 
 /**
@@ -224,25 +185,71 @@ export class EmStack extends cdk.Stack {
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
     const merged = { ...this.defaultFunctionConfig, ...config }
     const resolved = resolveHandlerPath(merged)
+    const functionName = resolved.functionName
+    const handler = resolved.handler ?? merged.handler
+    const codePath = resolved.codePath ?? merged.codePath
+
+    if (!handler || !codePath) {
+      throw new Error(
+        `createFunction() requires either \`handlerPath\` or all of \`functionName\`, \`handler\`, and \`codePath\` for "${functionName}".`
+      )
+    }
 
     const fn = new EmLambdaFunction(this, id, {
-      ...resolved,
-      stage: resolved.stage ?? this.stage,
-      serviceName: resolved.serviceName ?? this.serviceName,
-      role: resolved.role ?? this.sharedRole
+      ...merged,
+      functionName,
+      handler: handler as string,
+      codePath: codePath as string,
+      stage: merged.stage ?? this.stage,
+      serviceName: merged.serviceName ?? this.serviceName,
+      role: merged.role ?? this.sharedRole
     })
 
     if (this.sharedRole) {
-      if (resolved.importExistingLogGroup) {
+      if (merged.importExistingLogGroup) {
         throw new Error(
-          `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${resolved.functionName}". ` +
+          `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${functionName}". ` +
             'Migration mode requires explicit log groups to override their logical IDs.'
         )
       }
-      overrideFunctionLogicalIds(fn.function, resolved.functionName)
+      overrideFunctionLogicalIds(fn.function, functionName)
     }
 
     return fn
+  }
+
+  /**
+   * Create a Lambda function with an SQS queue consumer pattern.
+   * Defaults `stage`, `serviceName`, and `role` from the stack.
+   *
+   * When `useSharedRole: true` (Serverless migration mode), also:
+   * - Uses the shared role (skips per-function role creation)
+   * - Overrides Lambda + log group logical IDs to match Serverless Framework naming
+   *
+   * @example
+   * ```typescript
+   * const consumer = this.createQueueConsumer('ProcessJobs', {
+   *   handlerPath: 'src/handlers/process-jobs',
+   *   queueName: 'dev-my-service-queue-jobs',
+   *   memorySize: 512,
+   *   timeout: Duration.seconds(30),
+   *   enableTracing: true,
+   *   alarmTopic: this.alarmTopic,
+   * })
+   * ```
+   */
+  createQueueConsumer(id: string, config: CreateQueueConsumerConfig): LambdaWithQueue {
+    const { functionName } = resolveHandlerPath(config)
+
+    return new LambdaWithQueue(this, id, {
+      ...config,
+      stage: config.stage ?? this.stage,
+      serviceName: config.serviceName ?? this.serviceName,
+      role: config.role ?? this.sharedRole,
+      ...(this.sharedRole && {
+        serverlessFunctionName: config.serverlessFunctionName ?? functionName
+      })
+    })
   }
 
   /**
@@ -266,4 +273,13 @@ export class EmStack extends cdk.Stack {
       description: options?.description
     })
   }
+}
+
+/**
+ * Config for `EmStack.createQueueConsumer()`. Stage, serviceName, and role
+ * are optional — they default to the stack's values.
+ */
+export type CreateQueueConsumerConfig = Omit<LambdaWithQueueProps, 'stage' | 'serviceName'> & {
+  stage?: LambdaWithQueueProps['stage']
+  serviceName?: LambdaWithQueueProps['serviceName']
 }

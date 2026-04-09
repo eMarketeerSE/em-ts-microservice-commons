@@ -1,5 +1,6 @@
 import { App, Duration, Stack } from 'aws-cdk-lib'
 import { Match, Template } from 'aws-cdk-lib/assertions'
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
 import { LambdaWithQueue, LambdaWithQueueProps } from '../constructs/lambda-with-queue'
@@ -283,6 +284,124 @@ describe('LambdaWithQueue', () => {
           ])
         }
       })
+    })
+  })
+
+  describe('handlerPath', () => {
+    it('derives functionName, handler, and codePath from handlerPath', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        functionName: undefined,
+        handlerPath: 'src/handlers/process-jobs',
+        codePath: CODE_PATH,
+        roleName: 'my-role'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'process-jobs',
+        Handler: 'index.handler'
+      })
+    })
+
+    it('throws when neither handlerPath nor functionName is provided', () => {
+      const stack = makeStack()
+      expect(
+        () =>
+          new LambdaWithQueue(stack, 'Subject', {
+            ...defaultProps(stack),
+            functionName: undefined,
+            codePath: undefined
+          })
+      ).toThrow('Either `handlerPath` or `functionName` must be provided.')
+    })
+  })
+
+  describe('role injection', () => {
+    it('uses provided role instead of creating one', () => {
+      const stack = makeStack()
+      const externalRole = new Role(stack, 'SharedRole', {
+        roleName: 'shared-role',
+        assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+      })
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        role: externalRole,
+        roleName: undefined
+      })
+      // Only 1 IAM role (the external one), not 2
+      Template.fromStack(stack).resourceCountIs('AWS::IAM::Role', 1)
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Role', {
+        RoleName: 'shared-role'
+      })
+    })
+
+    it('throws when neither role nor roleName is provided', () => {
+      const stack = makeStack()
+      expect(
+        () =>
+          new LambdaWithQueue(stack, 'Subject', {
+            ...defaultProps(stack),
+            roleName: undefined,
+            role: undefined
+          })
+      ).toThrow('LambdaWithQueue requires either `role` or `roleName` to be provided.')
+    })
+  })
+
+  describe('serverless migration', () => {
+    it('overrides Lambda logical ID when serverlessFunctionName is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        serverlessFunctionName: 'process-jobs'
+      })
+      const template = Template.fromStack(stack)
+      const functions = template.findResources('AWS::Lambda::Function')
+      expect(functions).toHaveProperty('ProcessDashjobsLambdaFunction')
+    })
+
+    it('overrides log group logical ID when serverlessFunctionName is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        serverlessFunctionName: 'process-jobs'
+      })
+      const template = Template.fromStack(stack)
+      const logGroups = template.findResources('AWS::Logs::LogGroup')
+      expect(logGroups).toHaveProperty('ProcessDashjobsLogGroup')
+    })
+
+    it('overrides queue logical ID when overrideLogicalIds.queue is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        overrideLogicalIds: { queue: 'SQSQueueProcessJobs' }
+      })
+      const template = Template.fromStack(stack)
+      const queues = template.findResources('AWS::SQS::Queue')
+      expect(queues).toHaveProperty('SQSQueueProcessJobs')
+    })
+
+    it('overrides DLQ logical ID when overrideLogicalIds.dlq is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        overrideLogicalIds: { dlq: 'SQSQueueProcessJobsDLQ' }
+      })
+      const template = Template.fromStack(stack)
+      const queues = template.findResources('AWS::SQS::Queue')
+      expect(queues).toHaveProperty('SQSQueueProcessJobsDLQ')
+    })
+
+    it('overrides alarm logical ID when overrideLogicalIds.alarm is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        overrideLogicalIds: { alarm: 'ProcessJobsDLQAlarm' }
+      })
+      const template = Template.fromStack(stack)
+      const alarms = template.findResources('AWS::CloudWatch::Alarm')
+      expect(alarms).toHaveProperty('ProcessJobsDLQAlarm')
     })
   })
 })

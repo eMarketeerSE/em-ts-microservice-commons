@@ -1,5 +1,6 @@
 import { App, Duration } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
+import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmStack, EmStackProps } from '../constructs/stack'
 
 const CODE_PATH = __dirname
@@ -339,13 +340,11 @@ describe('EmStack', () => {
       })
     })
 
-    it('throws when neither handlerPath nor required fields are provided', () => {
+    it('throws when neither handlerPath nor functionName are provided', () => {
       const stack = makeStack()
       expect(() => {
         stack.createFunction('Handler', {} as any)
-      }).toThrow(
-        'createFunction() requires either `handlerPath` or all of `functionName`, `handler`, and `codePath`.'
-      )
+      }).toThrow('Either `handlerPath` or `functionName` must be provided.')
     })
   })
 
@@ -438,6 +437,91 @@ describe('EmStack', () => {
       const outputs = template.toJSON().Outputs
       const output = Object.values(outputs as Record<string, { Export: { Name: string } }>)[0]
       expect(output.Export.Name).toBe('sls-test-service-dev-ServiceEndpoint')
+    })
+  })
+
+  describe('createQueueConsumer', () => {
+    it('creates Lambda, queue, DLQ, and alarm', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-jobs-role'
+      })
+
+      const template = Template.fromStack(stack)
+      template.resourceCountIs('AWS::Lambda::Function', 1)
+      template.resourceCountIs('AWS::SQS::Queue', 2)
+      template.resourceCountIs('AWS::CloudWatch::Alarm', 1)
+    })
+
+    it('defaults stage and serviceName from the stack', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-jobs-role'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::CloudWatch::Alarm', {
+        AlarmName: 'dev-test-service-process-jobs-dlq-alarm'
+      })
+    })
+
+    it('uses shared role and overrides logical IDs in migration mode', () => {
+      const stack = makeStack({ useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic
+      })
+
+      const template = Template.fromStack(stack)
+      // Shared role — only 1 IAM role (the shared one), not 2
+      template.resourceCountIs('AWS::IAM::Role', 1)
+      // Lambda logical ID overridden to Serverless naming
+      const functions = template.findResources('AWS::Lambda::Function')
+      expect(functions).toHaveProperty('ProcessDashjobsLambdaFunction')
+    })
+
+    it('resolves handlerPath', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        handlerPath: 'src/handlers/process-jobs',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-jobs-role'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'process-jobs',
+        Handler: 'index.handler'
+      })
     })
   })
 })
