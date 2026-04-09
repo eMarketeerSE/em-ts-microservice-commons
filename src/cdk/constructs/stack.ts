@@ -198,8 +198,8 @@ export class EmStack extends cdk.Stack {
     const fn = new EmLambdaFunction(this, id, {
       ...merged,
       functionName,
-      handler: handler as string,
-      codePath: codePath as string,
+      handler,
+      codePath,
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
       role: merged.role ?? this.sharedRole
@@ -239,15 +239,16 @@ export class EmStack extends cdk.Stack {
    * ```
    */
   createQueueConsumer(id: string, config: CreateQueueConsumerConfig): LambdaWithQueue {
-    const { functionName } = resolveHandlerPath(config)
+    const merged = { ...this.defaultFunctionConfig, ...config }
+    const { functionName } = resolveHandlerPath(merged)
 
     return new LambdaWithQueue(this, id, {
-      ...config,
-      stage: config.stage ?? this.stage,
-      serviceName: config.serviceName ?? this.serviceName,
-      role: config.role ?? this.sharedRole,
+      ...merged,
+      stage: merged.stage ?? this.stage,
+      serviceName: merged.serviceName ?? this.serviceName,
+      role: merged.role ?? this.sharedRole,
       ...(this.sharedRole && {
-        serverlessFunctionName: config.serverlessFunctionName ?? functionName
+        serverlessFunctionName: merged.serverlessFunctionName ?? functionName
       })
     })
   }

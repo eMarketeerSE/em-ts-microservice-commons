@@ -4,7 +4,7 @@ import { generateLambdaName, generateQueueName, generateRoleName } from '../util
 import { resolveHandlerPath } from '../utils/handler-path'
 
 export interface ServiceLambdaWithQueueProps
-  extends Omit<LambdaWithQueueProps, 'queueName' | 'resourceName'> {
+  extends Omit<LambdaWithQueueProps, 'queueName' | 'roleName' | 'resourceName'> {
   queueBaseName: string
 }
 

@@ -1,5 +1,5 @@
 import { App, Duration } from 'aws-cdk-lib'
-import { Template } from 'aws-cdk-lib/assertions'
+import { Match, Template } from 'aws-cdk-lib/assertions'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmStack, EmStackProps } from '../constructs/stack'
 
@@ -521,6 +521,32 @@ describe('EmStack', () => {
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
         FunctionName: 'process-jobs',
         Handler: 'index.handler'
+      })
+    })
+
+    it('applies defaultFunctionConfig environment to queue consumers', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          environment: { DEFAULT_VAR: 'from-defaults' }
+        }
+      })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-jobs-role'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ DEFAULT_VAR: 'from-defaults' })
+        }
       })
     })
   })
