@@ -54,7 +54,7 @@ export class EmLambdaFunction extends Construct {
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
       role,
-      architecture: config.architecture ?? Architecture.ARM_64,
+      architecture: config.architecture ?? Architecture.X86_64,
       tracing: config.enableTracing ? Tracing.ACTIVE : Tracing.DISABLED,
       reservedConcurrentExecutions: config.reservedConcurrentExecutions,
       retryAttempts: config.retryAttempts,
