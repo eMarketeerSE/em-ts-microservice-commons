@@ -412,12 +412,38 @@ const queue = createQueueWithDLQ(this, 'ProcessQueue', {
 const topic = new EmSnsTopic(this, 'Events', {
   stage: 'dev',
   serviceName: 'contacts',
-  topicName: 'events'
+  topicName: 'events',
+  overrideLogicalId: 'EventsTopic',  // optional — for migration
 })
 
 topic.addLambdaSubscription(fn.function)
 topic.addSqsSubscription(queue.getQueue())
 ```
+
+Import an external topic by name convention:
+
+```typescript
+const contactEventTopic = EmSnsTopic.fromName(this, 'ContactEvent', {
+  stage: 'dev',
+  topicName: 'emarketeer-event-contact-event',
+})
+// ARN: arn:aws:sns:{region}:{account}:dev-emarketeer-event-contact-event
+```
+
+### TopicQueueConsumer
+
+Wires up SNS subscription → SQS queue → DLQ + alarm → Lambda consumer in one construct:
+
+```typescript
+const consumer = new TopicQueueConsumer(this, 'ContactEvents', {
+  topic: contactEventTopic,  // ITopic or ARN string
+  handlerPath: 'src/handlers/process-contact-event',
+  queueName: 'dev-my-service-contact-event-queue',
+  alarmTopic,
+})
+```
+
+Supports all `LambdaWithQueue` features: `handlerPath`, shared role, `overrideLogicalIds`, `serverlessFunctionName`, `visibilityTimeout`, `dlqName`, `alarmName`, etc.
 
 ### EmEventBridgeRule
 
