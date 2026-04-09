@@ -33,14 +33,11 @@ your-service/
 
 ### cdk.json
 
+No feature flags needed — `createEmApp()` automatically applies all CDK recommended feature flags (`CURRENTLY_RECOMMENDED_FLAGS` from `aws-cdk-lib/cx-api`).
+
 ```json
 {
-  "app": "ts-node cdk/bin/app.ts",
-  "context": {
-    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
-    "@aws-cdk/core:checkSecretUsage": true,
-    "@aws-cdk/core:target-partitions": ["aws", "aws-cn"]
-  }
+  "app": "ts-node cdk/bin/app.ts"
 }
 ```
 
@@ -139,6 +136,21 @@ cdk deploy -c stage=prod    # Deploys prod
 ```
 
 Pass `validStages` to restrict which values are accepted — anything else throws an error.
+
+### Feature flags
+
+`createEmApp()` automatically applies all CDK recommended feature flags (`CURRENTLY_RECOMMENDED_FLAGS` from `aws-cdk-lib/cx-api`). Services don't need to list them in `cdk.json`.
+
+To override a specific flag or add custom context:
+
+```typescript
+const { app, stage } = createEmApp({
+  context: {
+    '@aws-cdk/aws-lambda:recognizeLayerVersion': false,
+    'my-custom-key': 'my-value',
+  }
+})
+```
 
 ### CLI commands
 
