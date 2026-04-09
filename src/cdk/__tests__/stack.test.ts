@@ -1,4 +1,4 @@
-import { App } from 'aws-cdk-lib'
+import { App, Duration } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
 import { EmStack, EmStackProps } from '../constructs/stack'
 
@@ -346,6 +346,66 @@ describe('EmStack', () => {
       }).toThrow(
         'createFunction() requires either `handlerPath` or all of `functionName`, `handler`, and `codePath`.'
       )
+    })
+  })
+
+  describe('defaultFunctionConfig', () => {
+    it('applies default config to all functions', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          memorySize: 1536,
+          timeout: Duration.seconds(30),
+          enableTracing: true
+        }
+      })
+      stack.createFunction('Handler', {
+        functionName: 'my-handler',
+        handler: 'index.handler',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: 1536,
+        Timeout: 30,
+        TracingConfig: { Mode: 'Active' }
+      })
+    })
+
+    it('per-function config overrides defaults', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          memorySize: 1536,
+          timeout: Duration.seconds(30)
+        }
+      })
+      stack.createFunction('Handler', {
+        functionName: 'my-handler',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        memorySize: 512
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: 512,
+        Timeout: 30
+      })
+    })
+
+    it('works with handlerPath', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          memorySize: 2048
+        }
+      })
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/get-data',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: 2048,
+        FunctionName: 'dev-test-service-get-data'
+      })
     })
   })
 

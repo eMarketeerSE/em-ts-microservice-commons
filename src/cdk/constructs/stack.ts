@@ -35,6 +35,24 @@ export interface EmStackProps extends cdk.StackProps {
    * Defaults to CloudWatchLambdaInsightsExecutionRolePolicy.
    */
   readonly sharedRoleManagedPolicies?: IManagedPolicy[]
+  /**
+   * Default config applied to every function created via `createFunction()`.
+   * Per-function config takes precedence over these defaults.
+   *
+   * @example
+   * ```typescript
+   * super(scope, id, {
+   *   ...props,
+   *   defaultFunctionConfig: {
+   *     memorySize: 1536,
+   *     timeout: Duration.seconds(30),
+   *     enableTracing: true,
+   *     layers: [insightsLayer],
+   *   }
+   * })
+   * ```
+   */
+  readonly defaultFunctionConfig?: Partial<CreateFunctionConfig>
 }
 
 /**
@@ -151,6 +169,7 @@ export class EmStack extends cdk.Stack {
    * Pinned to logical ID `IamRoleLambdaExecution` for Serverless migration.
    */
   public readonly sharedRole?: Role
+  private readonly defaultFunctionConfig: Partial<CreateFunctionConfig>
 
   constructor(scope: Construct, id: string, props: EmStackProps) {
     super(scope, id, {
@@ -166,6 +185,7 @@ export class EmStack extends cdk.Stack {
 
     this.stage = props.stage
     this.serviceName = props.serviceName
+    this.defaultFunctionConfig = props.defaultFunctionConfig ?? {}
 
     applyStandardTags(this, {
       stage: props.stage,
@@ -202,7 +222,8 @@ export class EmStack extends cdk.Stack {
    * logical ID overrides needed.
    */
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
-    const resolved = resolveHandlerPath(config)
+    const merged = { ...this.defaultFunctionConfig, ...config }
+    const resolved = resolveHandlerPath(merged)
 
     const fn = new EmLambdaFunction(this, id, {
       ...resolved,
