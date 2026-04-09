@@ -119,7 +119,7 @@ export class LambdaWithQueue extends Construct {
       runtime: props.runtime ?? DEFAULT_LAMBDA_RUNTIME,
       handler: props.handler ?? 'index.handler',
       code: Code.fromAsset(props.codePath ?? `./dist/handlers/${resourceName}`),
-      architecture: props.architecture ?? Architecture.X86_64,
+      architecture: props.architecture ?? Architecture.ARM_64,
       memorySize: props.memorySize,
       timeout: props.timeout,
       environment: {

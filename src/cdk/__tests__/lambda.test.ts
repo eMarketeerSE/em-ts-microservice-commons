@@ -40,11 +40,11 @@ describe('EmLambdaFunction', () => {
   })
 
   describe('defaults', () => {
-    it('defaults to X86_64 architecture', () => {
+    it('defaults to ARM_64 architecture', () => {
       const stack = makeStack()
       new EmLambdaFunction(stack, 'Subject', defaultConfig())
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        Architectures: ['x86_64']
+        Architectures: ['arm64']
       })
     })
 
