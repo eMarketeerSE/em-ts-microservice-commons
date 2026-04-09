@@ -61,6 +61,8 @@ export interface LambdaWithQueueProps {
   readonly alarmName?: string
   readonly additionalQueues?: IQueue[]
   readonly maxReceiveCount?: number
+  /** Override queue visibility timeout. Defaults to `max(30s, timeout * 3)`. */
+  readonly visibilityTimeout?: Duration
   readonly maxBatchingWindow?: Duration
   readonly maxConcurrency?: number
   readonly vpcConfig?: VpcConfig
@@ -125,7 +127,8 @@ export class LambdaWithQueue extends Construct {
 
     this.queue = new Queue(this, 'Queue', {
       queueName: props.queueName,
-      visibilityTimeout: Duration.seconds(Math.max(30, timeout.toSeconds() * 3)),
+      visibilityTimeout:
+        props.visibilityTimeout ?? Duration.seconds(Math.max(30, timeout.toSeconds() * 3)),
       retentionPeriod: Duration.days(4),
       deadLetterQueue: {
         queue: this.dlq,

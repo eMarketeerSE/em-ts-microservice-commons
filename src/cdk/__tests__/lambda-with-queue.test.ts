@@ -198,6 +198,18 @@ describe('LambdaWithQueue', () => {
       })
     })
 
+    it('uses custom visibilityTimeout when provided', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        visibilityTimeout: Duration.seconds(1440)
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'my-queue',
+        VisibilityTimeout: 1440
+      })
+    })
+
     it('uses custom maxReceiveCount', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), maxReceiveCount: 5 })
