@@ -70,7 +70,7 @@ export class EmRestApi extends Construct {
       },
       defaultCorsPreflightOptions: config.defaultCorsOptions
         ? {
-            allowOrigins: config.defaultCorsOptions.allowOrigins,
+            allowOrigins: config.defaultCorsOptions.allowOrigins ?? Cors.ALL_ORIGINS,
             allowMethods: config.defaultCorsOptions.allowMethods || Cors.ALL_METHODS,
             allowHeaders: config.defaultCorsOptions.allowHeaders || Cors.DEFAULT_HEADERS,
             allowCredentials: config.defaultCorsOptions.allowCredentials
@@ -215,7 +215,7 @@ export class EmHttpApi extends Construct {
       createDefaultStage: false,
       corsPreflight: config.corsOptions
         ? {
-            allowOrigins: config.corsOptions.allowOrigins,
+            allowOrigins: config.corsOptions.allowOrigins ?? ['*'],
             allowMethods: config.corsOptions.allowMethods?.map(m => this.parseHttpMethod(m)) || [
               CorsHttpMethod.GET,
               CorsHttpMethod.POST,

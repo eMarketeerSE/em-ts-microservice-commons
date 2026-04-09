@@ -136,7 +136,7 @@ export interface RestApiConfig extends BaseConstructConfig {
     metricsEnabled?: boolean
   }
   readonly defaultCorsOptions?: {
-    allowOrigins: string[]
+    allowOrigins?: string[]
     allowMethods?: string[]
     allowHeaders?: string[]
     allowCredentials?: boolean
@@ -150,7 +150,7 @@ export interface HttpApiConfig extends BaseConstructConfig {
   readonly apiName: string
   readonly description?: string
   readonly corsOptions?: {
-    allowOrigins: string[]
+    allowOrigins?: string[]
     allowMethods?: string[]
     allowHeaders?: string[]
     allowCredentials?: boolean
