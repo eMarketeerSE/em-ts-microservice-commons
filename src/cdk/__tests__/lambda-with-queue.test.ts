@@ -78,6 +78,33 @@ describe('LambdaWithQueue', () => {
       })
     })
 
+    it('defaults memorySize to 1024', () => {
+      const stack = makeStack()
+      const { memorySize: _, ...propsWithoutMemory } = defaultProps(stack)
+      new LambdaWithQueue(stack, 'Subject', propsWithoutMemory)
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: 1024
+      })
+    })
+
+    it('defaults timeout to 15 seconds', () => {
+      const stack = makeStack()
+      const { timeout: _, ...propsWithoutTimeout } = defaultProps(stack)
+      new LambdaWithQueue(stack, 'Subject', propsWithoutTimeout)
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Timeout: 15
+      })
+    })
+
+    it('defaults enableTracing to true', () => {
+      const stack = makeStack()
+      const { enableTracing: _, ...propsWithoutTracing } = defaultProps(stack)
+      new LambdaWithQueue(stack, 'Subject', propsWithoutTracing)
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        TracingConfig: { Mode: 'Active' }
+      })
+    })
+
     it('enables X-Ray tracing when enableTracing is true', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), enableTracing: true })
@@ -89,7 +116,7 @@ describe('LambdaWithQueue', () => {
     it('disables X-Ray tracing when enableTracing is false', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
-      // CDK omits TracingConfig entirely when tracing is disabled — assert key is absent
+      // defaultProps has enableTracing: false — CDK omits TracingConfig when disabled
       const template = Template.fromStack(stack).findResources('AWS::Lambda::Function')
       const fn = Object.values(template)[0]
       expect(fn.Properties.TracingConfig).toBeUndefined()
