@@ -2,11 +2,11 @@
  * Common SQS queue construct with standard configurations
  */
 
-import { Duration } from 'aws-cdk-lib'
+import { Aws, Duration } from 'aws-cdk-lib'
 import { Queue, QueueEncryption, DeadLetterQueue } from 'aws-cdk-lib/aws-sqs'
 import { IGrantable } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
-import { SqsQueueConfig } from '../types'
+import { SqsQueueConfig, Stage } from '../types'
 import { generateQueueName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { getRemovalPolicy } from '../utils/logs'
@@ -115,6 +115,20 @@ export class EmSqsQueue extends Construct {
    */
   public grantConsumeMessages(grantee: IGrantable) {
     return this.queue.grantConsumeMessages(grantee)
+  }
+
+  /**
+   * Build an SQS queue URL by name convention.
+   * Returns `https://sqs.{region}.amazonaws.com/{account}/{stage}-{queueName}`.
+   *
+   * @example
+   * ```typescript
+   * const url = EmSqsQueue.urlFromName(this, 'dev', 'em-contacts-service-contact-source')
+   * ```
+   */
+  static urlFromName(scope: Construct, stage: Stage, queueName: string): string {
+    const fullName = `${stage}-${queueName}`
+    return `https://sqs.${Aws.REGION}.amazonaws.com/${Aws.ACCOUNT_ID}/${fullName}`
   }
 }
 

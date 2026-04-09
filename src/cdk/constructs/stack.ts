@@ -1,11 +1,15 @@
 import * as cdk from 'aws-cdk-lib'
+import { Aws } from 'aws-cdk-lib'
 import { Role, ServicePrincipal, ManagedPolicy, IManagedPolicy } from 'aws-cdk-lib/aws-iam'
+import { ITopic, Topic } from 'aws-cdk-lib/aws-sns'
+import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { resolveHandlerPath } from '../utils/handler-path'
 import { EmLambdaFunction } from './lambda'
+import { EmEventBridgeRule } from './eventbridge'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
 import {
   overrideFunctionLogicalIds,
@@ -254,6 +258,58 @@ export class EmStack extends cdk.Stack {
   }
 
   /**
+   * Create a scheduled Lambda function with an EventBridge rule.
+   * Combines `createFunction()` + `EmEventBridgeRule` + `addLambdaTarget()` in one call.
+   *
+   * @example
+   * ```typescript
+   * this.createScheduledFunction('DailyReport', {
+   *   handlerPath: 'src/handlers/daily-report',
+   *   schedule: 'cron(0 8 * * ? *)',
+   * })
+   * ```
+   */
+  createScheduledFunction(
+    id: string,
+    config: CreateScheduledFunctionConfig
+  ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
+    const { schedule, ruleName, ruleDescription, ...functionConfig } = config
+    const fn = this.createFunction(id, functionConfig)
+
+    const resolved = resolveHandlerPath({ ...this.defaultFunctionConfig, ...functionConfig })
+
+    const rule = new EmEventBridgeRule(this, `${id}Rule`, {
+      stage: config.stage ?? this.stage,
+      serviceName: config.serviceName ?? this.serviceName,
+      ruleName: ruleName ?? resolved.functionName,
+      description: ruleDescription,
+      schedule
+    })
+
+    rule.addLambdaTarget(fn.function)
+
+    return { function: fn, rule }
+  }
+
+  /**
+   * Import an SSM parameter by name convention.
+   * Resolves `/{stage}/{serviceName}/{paramName}`.
+   */
+  ssmParam(paramName: string, options?: { serviceName?: string }): string {
+    const svcName = options?.serviceName ?? this.serviceName
+    return StringParameter.valueForStringParameter(this, `/${this.stage}/${svcName}/${paramName}`)
+  }
+
+  /**
+   * Import the alarm email topic by convention.
+   * ARN: `arn:{partition}:sns:{region}:{account}:{stage}-alarm-email`
+   */
+  alarmTopic(): ITopic {
+    const arn = `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-alarm-email`
+    return Topic.fromTopicArn(this, 'AlarmTopic', arn)
+  }
+
+  /**
    * Create a CfnOutput with a stable export name.
    * Export pattern: `sls-{serviceName}-{stage}-{outputKey}`
    *
@@ -283,4 +339,16 @@ export class EmStack extends cdk.Stack {
 export type CreateQueueConsumerConfig = Omit<LambdaWithQueueProps, 'stage' | 'serviceName'> & {
   stage?: LambdaWithQueueProps['stage']
   serviceName?: LambdaWithQueueProps['serviceName']
+}
+
+/**
+ * Config for `EmStack.createScheduledFunction()`.
+ */
+export type CreateScheduledFunctionConfig = CreateFunctionConfig & {
+  /** Schedule expression (e.g. `'cron(5 * * * ? *)'` or `'rate(1 day)'`). */
+  readonly schedule: string
+  /** Override the EventBridge rule name. Defaults to the function name. */
+  readonly ruleName?: string
+  /** Description for the EventBridge rule. */
+  readonly ruleDescription?: string
 }

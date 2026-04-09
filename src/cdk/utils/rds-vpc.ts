@@ -6,6 +6,13 @@ export interface RdsVpcConfiguration {
   readonly vpcId: string
   readonly privateSubnetIds: string[]
   readonly dbSecurityGroupId: string
+  /** Override CloudFormation logical IDs for migration. */
+  readonly overrideLogicalIds?: {
+    readonly securityGroup?: string
+    readonly ingress?: string
+  }
+  /** DB port. Defaults to 3306 (MySQL). */
+  readonly dbPort?: number
 }
 
 export function createRdsVpcConfig(
@@ -21,23 +28,30 @@ export function createRdsVpcConfig(
     ec2.Subnet.fromSubnetId(scope, `RdsPrivateSubnet${index}-${stage}`, subnetId)
   )
 
-  const dbSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(
-    scope,
-    `RdsDbSecurityGroup-${stage}`,
-    config.dbSecurityGroupId
-  )
-
   const lambdaSecurityGroup = new ec2.SecurityGroup(scope, `RdsLambdaSecurityGroup-${stage}`, {
     vpc,
     description: 'Lambda security group for RDS access',
     allowAllOutbound: true
   })
 
-  dbSecurityGroup.addIngressRule(
-    lambdaSecurityGroup,
-    ec2.Port.tcp(3306),
-    'Allow Lambda to access RDS'
-  )
+  if (config.overrideLogicalIds?.securityGroup) {
+    ;(lambdaSecurityGroup.node.defaultChild as ec2.CfnSecurityGroup).overrideLogicalId(
+      config.overrideLogicalIds.securityGroup
+    )
+  }
+
+  const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {
+    groupId: config.dbSecurityGroupId,
+    ipProtocol: 'tcp',
+    fromPort: config.dbPort ?? 3306,
+    toPort: config.dbPort ?? 3306,
+    sourceSecurityGroupId: lambdaSecurityGroup.securityGroupId,
+    description: 'Allow Lambda to access RDS'
+  })
+
+  if (config.overrideLogicalIds?.ingress) {
+    ingress.overrideLogicalId(config.overrideLogicalIds.ingress)
+  }
 
   return {
     vpc,

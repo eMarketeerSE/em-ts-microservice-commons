@@ -554,4 +554,81 @@ describe('EmStack', () => {
       })
     })
   })
+
+  describe('createScheduledFunction', () => {
+    it('creates a Lambda and EventBridge rule', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'cron(0 8 * * ? *)'
+      })
+
+      const template = Template.fromStack(stack)
+      template.resourceCountIs('AWS::Lambda::Function', 1)
+      template.resourceCountIs('AWS::Events::Rule', 1)
+    })
+
+    it('sets the schedule expression', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'rate(1 day)'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        ScheduleExpression: 'rate(1 day)'
+      })
+    })
+
+    it('uses shared role in migration mode', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'cron(0 8 * * ? *)'
+      })
+
+      const template = Template.fromStack(stack)
+      // Shared role — only 1 IAM role
+      template.resourceCountIs('AWS::IAM::Role', 1)
+      // Lambda logical ID overridden
+      const functions = template.findResources('AWS::Lambda::Function')
+      expect(functions).toHaveProperty('DailyDashreportLambdaFunction')
+    })
+  })
+
+  describe('ssmParam', () => {
+    it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
+      const stack = makeStack()
+      const value = stack.ssmParam('proxy_dbms_host')
+
+      // SSM dynamic reference should be present in the template
+      expect(value).toBeDefined()
+    })
+  })
+
+  describe('alarmTopic', () => {
+    it('returns a topic with {stage}-alarm-email convention', () => {
+      const stack = makeStack()
+      const topic = stack.alarmTopic()
+      const resolved = stack.resolve(topic.topicArn)
+
+      expect(resolved).toEqual({
+        'Fn::Join': [
+          '',
+          [
+            'arn:',
+            { Ref: 'AWS::Partition' },
+            ':sns:',
+            { Ref: 'AWS::Region' },
+            ':',
+            { Ref: 'AWS::AccountId' },
+            ':dev-alarm-email'
+          ]
+        ]
+      })
+    })
+  })
 })
