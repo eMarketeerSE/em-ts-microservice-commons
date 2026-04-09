@@ -6,7 +6,17 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-const supportedCommands = ['lint', 'deploy', 'dev', 'tsc', 'jest', 'invoke-local', 'build-handlers']
+const supportedCommands = [
+  'lint',
+  'deploy',
+  'dev',
+  'tsc',
+  'jest',
+  'invoke-local',
+  'build-handlers',
+  'cdk-deploy',
+  'cdk-synth'
+]
 
 const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
@@ -59,6 +69,30 @@ try {
       'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
       scriptArgs
     )
+  }
+
+  if (script === 'cdk-deploy') {
+    const buildResult = runCommand(
+      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
+      []
+    )
+    if (buildResult && buildResult.status !== 0) {
+      console.log('build-handlers failed, aborting cdk deploy')
+      process.exit(buildResult.status!)
+    }
+    result = runCommand('npx cdk deploy', scriptArgs)
+  }
+
+  if (script === 'cdk-synth') {
+    const buildResult = runCommand(
+      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
+      []
+    )
+    if (buildResult && buildResult.status !== 0) {
+      console.log('build-handlers failed, aborting cdk synth')
+      process.exit(buildResult.status!)
+    }
+    result = runCommand('npx cdk synth', scriptArgs)
   }
 
   if (script === 'jest') {
