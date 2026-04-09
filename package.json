@@ -19,6 +19,9 @@
     "./cdk/jest.config": "./dist/cdk/jest.config.js",
     "./cdk/tsconfig.json": "./dist/cdk/tsconfig.json",
     "./cdk/.eslintrc": "./dist/cdk/.eslintrc",
+    "./jest.config": "./dist/lib/jest.config.js",
+    "./.eslintrc": "./dist/.eslintrc",
+    "./tsconfig.json": "./dist/tsconfig.json",
     "./esbuild-plugins": "./dist/esbuild-plugins.js",
     "./build-handlers": "./dist/build-handlers.js"
   },
@@ -130,6 +133,7 @@
     "yaml": "^1.7.2"
   },
   "devDependencies": {
+    "@emarketeer/ts-microservice-commons": "file:../em-ts-microservice-commons",
     "@robmarr/rollup-plugin-shebang": "^1.0.1",
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
