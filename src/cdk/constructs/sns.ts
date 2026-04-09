@@ -2,7 +2,8 @@
  * Common SNS topic construct with standard configurations
  */
 
-import { Topic, TopicProps } from 'aws-cdk-lib/aws-sns'
+import { Aws } from 'aws-cdk-lib'
+import { CfnTopic, ITopic, Topic } from 'aws-cdk-lib/aws-sns'
 import {
   EmailSubscription,
   LambdaSubscription,
@@ -12,10 +13,9 @@ import { Queue } from 'aws-cdk-lib/aws-sqs'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { IGrantable } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
-import { SnsTopicConfig } from '../types'
+import { SnsTopicConfig, Stage } from '../types'
 import { generateTopicName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
-import { getRemovalPolicy } from '../utils/logs'
 
 /**
  * Standard SNS topic construct with eMarketeer defaults
@@ -36,12 +36,41 @@ export class EmSnsTopic extends Construct {
       contentBasedDeduplication: config.fifo ? config.contentBasedDeduplication : undefined
     })
 
+    if (config.overrideLogicalId) {
+      ;(this.topic.node.defaultChild as CfnTopic).overrideLogicalId(config.overrideLogicalId)
+    }
+
     // Apply standard tags
     applyStandardTags(this.topic, {
       stage: config.stage,
       serviceName: config.serviceName,
       ...config.tags
     })
+  }
+
+  /**
+   * Import an external SNS topic by name convention.
+   *
+   * Builds the ARN as `arn:{partition}:sns:{region}:{account}:{stage}-{topicName}`
+   * and returns an `ITopic` reference.
+   *
+   * @example
+   * ```typescript
+   * const contactEventTopic = EmSnsTopic.fromName(this, 'ContactEvent', {
+   *   stage: 'dev',
+   *   topicName: 'emarketeer-event-contact-event',
+   * })
+   * // ARN: arn:aws:sns:eu-west-1:123456789012:dev-emarketeer-event-contact-event
+   * ```
+   */
+  static fromName(
+    scope: Construct,
+    id: string,
+    config: { stage: Stage; topicName: string }
+  ): ITopic {
+    const fullName = `${config.stage}-${config.topicName}`
+    const arn = `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${fullName}`
+    return Topic.fromTopicArn(scope, id, arn)
   }
 
   /**

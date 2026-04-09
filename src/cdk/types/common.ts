@@ -185,6 +185,8 @@ export interface SnsTopicConfig extends BaseConstructConfig {
   readonly displayName?: string
   readonly fifo?: boolean
   readonly contentBasedDeduplication?: boolean
+  /** Override the CloudFormation logical ID of the topic (for migration). */
+  readonly overrideLogicalId?: string
 }
 
 /**
