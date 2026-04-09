@@ -65,6 +65,27 @@ new MyServiceStack(app, `my-service-${stage}`, {
 app.synth()
 ```
 
+### Shared configs
+
+Commons provides shared configs for CDK services:
+
+```json
+// cdk/tsconfig.json
+{ "extends": "@emarketeer/ts-microservice-commons/cdk/tsconfig.json" }
+```
+
+```json
+// cdk/.eslintrc
+{ "extends": "@emarketeer/ts-microservice-commons/cdk/.eslintrc" }
+```
+
+```js
+// jest.config.js
+module.exports = require('@emarketeer/ts-microservice-commons/cdk/jest.config')
+```
+
+The CDK eslintrc includes `no-new: off` (CDK constructs use side-effect `new`) and all `aws-cdk-lib/*` submodules as core-modules.
+
 ### Stack
 
 ```typescript
@@ -88,10 +109,9 @@ export class MyServiceStack extends EmStack {
       partitionKey: { name: 'id', type: AttributeType.STRING }
     })
 
+    // Short form — derives codePath, handler, and functionName from handlerPath
     const getHandler = this.createFunction('GetHandler', {
-      functionName: 'get-data',
-      handler: 'index.handler',
-      codePath: './dist/handlers/get-data',
+      handlerPath: 'src/handlers/get-data',
       environment: { TABLE_NAME: table.getTableName() }
     })
 
@@ -123,9 +143,16 @@ Pass `validStages` to restrict which values are accepted — anything else throw
 ### Deploy
 
 ```bash
-cdk synth -c stage=dev      # Generate template
-cdk diff -c stage=dev       # Review changes
-cdk deploy -c stage=dev     # Deploy
+em-commons cdk-synth -- -c stage=dev    # Build handlers + generate template
+em-commons cdk-deploy -- -c stage=dev   # Build handlers + deploy
+```
+
+Both commands automatically run `build-handlers` before executing the CDK command. You can also run the steps manually:
+
+```bash
+em-commons build-handlers
+cdk diff -c stage=dev
+cdk deploy -c stage=dev
 ```
 
 ## EmStack
@@ -137,6 +164,35 @@ Base stack class. Provides:
 - `createFunction()` — creates Lambdas (with Serverless-compatible logical IDs when `useSharedRole: true`)
 - `addOutput()` — creates exports with `sls-{service}-{stage}-{key}` pattern
 - Optional shared IAM role via `useSharedRole: true` (enables migration mode)
+
+### createFunction() with handlerPath
+
+`createFunction()` accepts a `handlerPath` to reduce boilerplate:
+
+```typescript
+// Instead of:
+this.createFunction('CaptureScreenshot', {
+  functionName: 'capture-screenshot-from-url',
+  handler: 'index.handler',
+  codePath: 'dist/handlers/capture-screenshot/capture-screenshot-from-url',
+})
+
+// You can write:
+this.createFunction('CaptureScreenshot', {
+  handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url',
+})
+```
+
+`handlerPath` resolves:
+- `codePath` to `dist/handlers/<relative-path>` (matching build-handlers output)
+- `handler` to `index.handler`
+- `functionName` to the last segment of the path
+
+All three can still be overridden explicitly alongside `handlerPath`.
+
+### Auto-injected environment variables
+
+`EmLambdaFunction` automatically injects `STAGE`, `NODE_ENV`, and `REGION` into every Lambda's environment. Explicit values in `environment` take precedence.
 
 ## Serverless Framework Migration
 
@@ -153,9 +209,7 @@ export class ScreenshotServiceStack extends EmStack {
     //   Lambda:   CaptureDashscreenshotDashfromDashurlLambdaFunction
     //   LogGroup: CaptureDashscreenshotDashfromDashurlLogGroup (RETAIN)
     const captureScreenshot = this.createFunction('CaptureScreenshot', {
-      functionName: 'capture-screenshot-from-url',
-      handler: 'index.handler',
-      codePath: './dist/handlers/capture-screenshot-from-url'
+      handlerPath: 'src/handlers/capture-screenshot-from-url',
     })
 
     overrideLayerLogicalId(chromiumLayer, 'ChromiumLayerLambdaLayer')
@@ -266,6 +320,12 @@ const api = new EmRestApi(this, 'Api', {
 })
 
 api.addLambdaIntegration('/contacts', 'GET', fn.function)
+
+// Base path mapping to an existing custom domain (e.g. from serverless-domain-manager)
+api.addBasePathMapping('api.example.com', {
+  basePath: 'contacts',
+  logicalId: 'ContactsBasePathMapping',  // for Serverless migration
+})
 ```
 
 ### EmSqsQueue
