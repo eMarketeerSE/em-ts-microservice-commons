@@ -15,8 +15,20 @@ const supportedCommands = [
   'invoke-local',
   'build-handlers',
   'cdk-deploy',
-  'cdk-synth'
+  'cdk-synth',
+  'cdk-test',
+  'cdk-lint'
 ]
+
+const BUILD_HANDLERS_CMD =
+  'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js'
+
+function buildHandlersOrExit() {
+  const buildResult = runCommand(BUILD_HANDLERS_CMD, [])
+  if (buildResult && buildResult.status !== 0) {
+    process.exit(buildResult.status!)
+  }
+}
 
 const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
@@ -65,34 +77,32 @@ try {
   }
 
   if (script === 'build-handlers') {
-    result = runCommand(
-      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
-      scriptArgs
-    )
+    result = runCommand(BUILD_HANDLERS_CMD, scriptArgs)
   }
 
   if (script === 'cdk-deploy') {
-    const buildResult = runCommand(
-      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
-      []
-    )
-    if (buildResult && buildResult.status !== 0) {
-      console.log('build-handlers failed, aborting cdk deploy')
-      process.exit(buildResult.status!)
-    }
+    buildHandlersOrExit()
     result = runCommand('npx cdk deploy', scriptArgs)
   }
 
   if (script === 'cdk-synth') {
-    const buildResult = runCommand(
-      'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js',
-      []
-    )
-    if (buildResult && buildResult.status !== 0) {
-      console.log('build-handlers failed, aborting cdk synth')
-      process.exit(buildResult.status!)
-    }
+    buildHandlersOrExit()
     result = runCommand('npx cdk synth', scriptArgs)
+  }
+
+  if (script === 'cdk-test') {
+    buildHandlersOrExit()
+    result = runCommand(
+      'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js',
+      scriptArgs
+    )
+  }
+
+  if (script === 'cdk-lint') {
+    result = runCommand(
+      'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/cdk/.eslintrc',
+      scriptArgs
+    )
   }
 
   if (script === 'jest') {

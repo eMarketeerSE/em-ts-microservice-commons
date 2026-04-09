@@ -140,14 +140,26 @@ cdk deploy -c stage=prod    # Deploys prod
 
 Pass `validStages` to restrict which values are accepted — anything else throws an error.
 
-### Deploy
+### CLI commands
 
 ```bash
+em-commons cdk-test                     # Build handlers + run CDK tests
+em-commons cdk-lint                     # Lint CDK code
 em-commons cdk-synth -- -c stage=dev    # Build handlers + generate template
 em-commons cdk-deploy -- -c stage=dev   # Build handlers + deploy
 ```
 
-Both commands automatically run `build-handlers` before executing the CDK command. You can also run the steps manually:
+`cdk-test`, `cdk-synth`, and `cdk-deploy` automatically run `build-handlers` first. Typical `package.json` scripts:
+
+```json
+{
+  "test:cdk": "em-commons cdk-test",
+  "lint:cdk": "em-commons cdk-lint",
+  "deploy:cdk": "em-commons cdk-deploy"
+}
+```
+
+You can also run the steps manually:
 
 ```bash
 em-commons build-handlers
