@@ -250,6 +250,43 @@ export class ScreenshotServiceStack extends EmStack {
 | Layer logical IDs | `overrideLayerLogicalId(layer, logicalId)` |
 | Cross-stack exports | `this.addOutput(id, value)` |
 
+### createQueueConsumer()
+
+For Lambda functions consuming SQS queues. Works like `createFunction()` — defaults stage, serviceName, and role from the stack.
+
+```typescript
+const consumer = this.createQueueConsumer('ProcessJobs', {
+  handlerPath: 'src/handlers/process-jobs',
+  queueName: `${stage}-${serviceName}-jobs-queue`,
+  alarmTopic,
+  timeout: Duration.seconds(60),
+})
+```
+
+In migration mode (`useSharedRole: true`), Lambda and log group logical IDs are overridden automatically. Queue/DLQ/alarm logical IDs can be overridden explicitly:
+
+```typescript
+this.createQueueConsumer('ProcessFormSubmit', {
+  handlerPath: 'src/handlers/process-form-submit/process-form-submit',
+  queueName: `${stage}-${serviceName}-form-submit-queue`,
+  dlqName: `${stage}-${serviceName}-form-submit-dead-letter-queue`,
+  alarmName: 'FormSubmitDeadLetterQueueAlarm',
+  timeout: Duration.seconds(240),
+  batchSize: 100,
+  maxBatchingWindow: Duration.seconds(2),
+  maxConcurrency: 6,
+  alarmTopic,
+  environment: { ...baseEnvironment },
+  overrideLogicalIds: {
+    queue: 'FormSubmitQueue',
+    dlq: 'FormSubmitDeadLetterQueue',
+    alarm: 'FormSubmitDeadLetterQueueAlarm',
+  },
+})
+```
+
+Defaults: memorySize=1024, timeout=15s, enableTracing=true, batchSize=10, maxReceiveCount=3.
+
 New services omit `useSharedRole` — each function gets its own role and CDK default logical IDs.
 
 ### Migration checklist
@@ -340,15 +377,21 @@ const api = new EmRestApi(this, 'Api', {
   stage: 'dev',
   serviceName: 'contacts',
   apiName: 'main',
-  defaultCorsOptions: { allowOrigins: ['*'] }
+  defaultCorsOptions: {}  // allowOrigins defaults to ['*']
 })
 
 api.addLambdaIntegration('/contacts', 'GET', fn.function)
 
-// Base path mapping to an existing custom domain (e.g. from serverless-domain-manager)
+// V2 API mapping — use when the domain was set up by serverless-domain-manager
+api.addApiMapping('api.example.com', {
+  basePath: 'contacts',
+  logicalId: 'ContactsApiMapping',
+})
+
+// V1 base path mapping — use for domains managed via API Gateway V1
 api.addBasePathMapping('api.example.com', {
   basePath: 'contacts',
-  logicalId: 'ContactsBasePathMapping',  // for Serverless migration
+  logicalId: 'ContactsBasePathMapping',
 })
 ```
 
