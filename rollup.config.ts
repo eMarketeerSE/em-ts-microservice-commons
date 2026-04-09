@@ -90,6 +90,7 @@ export default [{
         { src: 'src/esbuild-plugins.js', dest: 'dist/' },
         { src: 'src/cdk/tsconfig.json', dest: 'dist/cdk/' },
         { src: 'src/cdk/.eslintrc', dest: 'dist/cdk/' },
+        { src: 'src/cdk/jest.config.js', dest: 'dist/cdk/' },
       ]
     }),
     // Allow json resolution
