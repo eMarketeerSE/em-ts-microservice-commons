@@ -19,6 +19,7 @@ import { applyStandardTags } from '../utils/tagging'
 import { getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
+import { generateLambdaName } from '../utils/naming'
 import { resolveHandlerPath } from '../utils/handler-path'
 import { overrideFunctionLogicalIds } from '../utils/serverless-migration'
 import { DlqAlarm } from './dlq-alarm'
@@ -51,6 +52,10 @@ export interface LambdaWithQueueProps {
   /** Provide an existing IAM role instead of creating one. When set, `roleName` is ignored. */
   readonly role?: IRole
   readonly alarmTopic: ITopic
+  /** Override DLQ name. Defaults to `{queueName}-dlq`. */
+  readonly dlqName?: string
+  /** Override alarm name. Defaults to `{stage}-{serviceName}-{resourceName}-dlq-alarm`. */
+  readonly alarmName?: string
   readonly additionalQueues?: IQueue[]
   readonly maxReceiveCount?: number
   readonly maxBatchingWindow?: Duration
@@ -86,14 +91,15 @@ export class LambdaWithQueue extends Construct {
     super(scope, id)
 
     const resolved = resolveHandlerPath(props)
-    const functionName = resolved.functionName
-    const resourceName = props.resourceName ?? functionName
+    const shortName = resolved.functionName
+    const resourceName = props.resourceName ?? shortName
+    const functionName = generateLambdaName(props.stage, props.serviceName, shortName)
     const handler = resolved.handler ?? props.handler ?? 'index.handler'
     const codePath = resolved.codePath ?? props.codePath ?? `./dist/handlers/${resourceName}`
 
     if (props.reservedConcurrency === 0) {
       throw new Error(
-        `reservedConcurrency:0 disables the Lambda entirely for ${functionName}. Omit the prop to use account-level concurrency.`
+        `reservedConcurrency:0 disables the Lambda entirely for ${shortName}. Omit the prop to use account-level concurrency.`
       )
     }
 
@@ -105,7 +111,7 @@ export class LambdaWithQueue extends Construct {
     } = props
 
     this.dlq = new Queue(this, 'DLQ', {
-      queueName: `${props.queueName}-dlq`,
+      queueName: props.dlqName ?? `${props.queueName}-dlq`,
       retentionPeriod: Duration.days(14),
       removalPolicy: getRemovalPolicy(props.stage)
     })
@@ -181,7 +187,7 @@ export class LambdaWithQueue extends Construct {
 
     this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
       dlq: this.dlq,
-      alarmName: `${props.stage}-${props.serviceName}-${resourceName}-dlq-alarm`,
+      alarmName: props.alarmName ?? `${props.stage}-${props.serviceName}-${resourceName}-dlq-alarm`,
       alarmTopic: props.alarmTopic
     })
 

@@ -54,11 +54,11 @@ describe('LambdaWithQueue', () => {
       Template.fromStack(stack).resourceCountIs('AWS::Lambda::Function', 1)
     })
 
-    it('uses the provided functionName', () => {
+    it('prefixes functionName with stage and serviceName', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        FunctionName: 'my-handler'
+        FunctionName: 'dev-test-service-my-handler'
       })
     })
 
@@ -135,6 +135,17 @@ describe('LambdaWithQueue', () => {
       new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
       Template.fromStack(stack).hasResourceProperties('AWS::SQS::Queue', {
         QueueName: 'my-queue-dlq'
+      })
+    })
+
+    it('uses custom dlqName when provided', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        dlqName: 'my-queue-dead-letter-queue'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'my-queue-dead-letter-queue'
       })
     })
 
@@ -239,6 +250,17 @@ describe('LambdaWithQueue', () => {
         AlarmName: 'dev-test-service-short-name-dlq-alarm'
       })
     })
+
+    it('uses custom alarmName when provided', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        alarmName: 'custom-alarm-name'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::CloudWatch::Alarm', {
+        AlarmName: 'custom-alarm-name'
+      })
+    })
   })
 
   describe('event source mapping', () => {
@@ -298,7 +320,7 @@ describe('LambdaWithQueue', () => {
         roleName: 'my-role'
       })
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        FunctionName: 'process-jobs',
+        FunctionName: 'dev-test-service-process-jobs',
         Handler: 'index.handler'
       })
     })

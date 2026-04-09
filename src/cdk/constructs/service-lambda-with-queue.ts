@@ -1,6 +1,6 @@
 import { Construct } from 'constructs'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
-import { generateLambdaName, generateQueueName, generateRoleName } from '../utils/naming'
+import { generateQueueName, generateRoleName } from '../utils/naming'
 import { resolveHandlerPath } from '../utils/handler-path'
 
 export interface ServiceLambdaWithQueueProps
@@ -16,7 +16,7 @@ export class ServiceLambdaWithQueue extends LambdaWithQueue {
     super(scope, id, {
       ...rest,
       resourceName: functionName,
-      functionName: generateLambdaName(props.stage, props.serviceName, functionName),
+      functionName,
       queueName: generateQueueName(props.stage, props.serviceName, queueBaseName),
       roleName: rest.role
         ? undefined

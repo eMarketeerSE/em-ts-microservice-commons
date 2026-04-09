@@ -519,7 +519,7 @@ describe('EmStack', () => {
       })
 
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        FunctionName: 'process-jobs',
+        FunctionName: 'dev-test-service-process-jobs',
         Handler: 'index.handler'
       })
     })
