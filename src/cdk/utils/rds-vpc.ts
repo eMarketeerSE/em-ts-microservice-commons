@@ -1,5 +1,6 @@
 import { Construct } from 'constructs'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
+import { Role, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { Stage, VpcConfig } from '../types'
 
 export interface RdsVpcConfiguration {
@@ -13,6 +14,8 @@ export interface RdsVpcConfiguration {
   }
   /** DB port. Defaults to 3306 (MySQL). */
   readonly dbPort?: number
+  /** When provided, auto-attaches AWSLambdaVPCAccessExecutionRole to the role. */
+  readonly sharedRole?: Role
 }
 
 export function createRdsVpcConfig(
@@ -51,6 +54,12 @@ export function createRdsVpcConfig(
 
   if (config.overrideLogicalIds?.ingress) {
     ingress.overrideLogicalId(config.overrideLogicalIds.ingress)
+  }
+
+  if (config.sharedRole) {
+    config.sharedRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+    )
   }
 
   return {

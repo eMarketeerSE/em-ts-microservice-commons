@@ -184,10 +184,54 @@ cdk deploy -c stage=dev
 Base stack class. Provides:
 
 - Auto-generated stack name (`{stage}-{serviceName}-stack`) and description
-- Standard tags on all resources (Stage, Service, ManagedBy)
+- Standard tags on all resources (Stage, Service, ManagedBy, `em-microservice`)
 - `createFunction()` — creates Lambdas (with Serverless-compatible logical IDs when `useSharedRole: true`)
+- `createQueueConsumer()` — Lambda + SQS queue + DLQ + alarm
+- `createScheduledFunction()` — Lambda + EventBridge rule
 - `addOutput()` — creates exports with `sls-{service}-{stage}-{key}` pattern
+- `ssmParam()`, `alarmTopic()` — convention-based helpers
+- IAM policy helpers (`addLambdaInvokePolicy`, `addKinesisPolicy`, `addSnsPublishPolicy`, `addSqsSendPolicy`)
 - Optional shared IAM role via `useSharedRole: true` (enables migration mode)
+
+### defaultFunctionConfig
+
+Set shared defaults once in the stack constructor. `environment` is deep-merged (per-function values override matching keys):
+
+```typescript
+super(scope, id, {
+  ...props,
+  useSharedRole: true,
+  defaultFunctionConfig: {
+    environment: sharedEnvironment,
+    vpcConfig,
+    memorySize: 1024,
+    enableTracing: true,
+    timeout: Duration.seconds(60),
+  }
+})
+
+// Functions inherit defaults — only specify overrides:
+this.createFunction('GetData', { handlerPath: 'src/handlers/get-data' })
+
+// Per-function environment merges with defaults:
+this.createQueueConsumer('ProcessJobs', {
+  handlerPath: 'src/handlers/process-jobs',
+  queueName: '...',
+  alarmTopic,
+  environment: { EXTRA_VAR: 'value' },  // merged with sharedEnvironment
+})
+```
+
+### IAM policy helpers
+
+Add policies to the shared role (requires `useSharedRole: true`):
+
+```typescript
+this.addLambdaInvokePolicy()                                    // lambda:InvokeFunction (account-scoped)
+this.addKinesisPolicy('signals')                                 // kinesis:PutRecord/PutRecords → {stage}-signals
+this.addSnsPublishPolicy(topic)                                  // sns:Publish → topic ARN
+this.addSqsSendPolicy('em-contacts-service-contact-source')      // sqs:SendMessage → {stage}-{name}
+```
 
 ### createFunction() with handlerPath
 
@@ -404,6 +448,10 @@ const queue = createQueueWithDLQ(this, 'ProcessQueue', {
   queueName: 'process',
   maxReceiveCount: 3
 })
+
+// Import an external queue URL by name convention:
+const queueUrl = EmSqsQueue.urlFromName(this, 'dev', 'em-contacts-service-contact-source')
+// → https://sqs.{region}.amazonaws.com/{account}/dev-em-contacts-service-contact-source
 ```
 
 ### EmSnsTopic

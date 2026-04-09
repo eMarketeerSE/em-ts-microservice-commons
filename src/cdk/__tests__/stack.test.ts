@@ -631,4 +631,135 @@ describe('EmStack', () => {
       })
     })
   })
+
+  describe('em-microservice tag', () => {
+    it('auto-adds em-microservice tag to all resources', () => {
+      const stack = makeStack()
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/test',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Tags: Match.arrayWith([
+          Match.objectLike({ Key: 'em-microservice', Value: 'dev-test-service' })
+        ])
+      })
+    })
+  })
+
+  describe('environment merge in defaultFunctionConfig', () => {
+    it('merges default environment with per-function environment', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          environment: { SHARED_VAR: 'shared', OVERRIDE_ME: 'default' }
+        }
+      })
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/test',
+        codePath: CODE_PATH,
+        environment: { EXTRA_VAR: 'extra', OVERRIDE_ME: 'overridden' }
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({
+            SHARED_VAR: 'shared',
+            EXTRA_VAR: 'extra',
+            OVERRIDE_ME: 'overridden'
+          })
+        }
+      })
+    })
+
+    it('uses default environment when per-function has none', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          environment: { DEFAULT_VAR: 'hello' }
+        }
+      })
+      stack.createFunction('Handler', {
+        handlerPath: 'src/handlers/test',
+        codePath: CODE_PATH
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ DEFAULT_VAR: 'hello' })
+        }
+      })
+    })
+  })
+
+  describe('IAM policy helpers', () => {
+    it('addLambdaInvokePolicy adds lambda:InvokeFunction', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addLambdaInvokePolicy()
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'lambda:InvokeFunction',
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
+    it('addKinesisPolicy adds kinesis:PutRecord/PutRecords', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addKinesisPolicy('signals')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: ['kinesis:PutRecord', 'kinesis:PutRecords'],
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
+    it('addSnsPublishPolicy adds sns:Publish', () => {
+      const stack = makeStack({ useSharedRole: true })
+      const topic = new Topic(stack, 'TestTopic')
+      stack.addSnsPublishPolicy(topic)
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'sns:Publish',
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
+    it('addSqsSendPolicy adds sqs:SendMessage', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSqsSendPolicy('em-contacts-service-contact-source')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
+              Effect: 'Allow'
+            })
+          ])
+        }
+      })
+    })
+
+    it('throws when shared role is not enabled', () => {
+      const stack = makeStack()
+      expect(() => stack.addLambdaInvokePolicy()).toThrow('requires useSharedRole: true')
+    })
+  })
 })

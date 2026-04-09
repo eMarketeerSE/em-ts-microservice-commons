@@ -1,10 +1,17 @@
 import * as cdk from 'aws-cdk-lib'
-import { Aws } from 'aws-cdk-lib'
-import { Role, ServicePrincipal, ManagedPolicy, IManagedPolicy } from 'aws-cdk-lib/aws-iam'
+import { Aws, Tags } from 'aws-cdk-lib'
+import {
+  Effect,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+  ManagedPolicy,
+  IManagedPolicy
+} from 'aws-cdk-lib/aws-iam'
 import { ITopic, Topic } from 'aws-cdk-lib/aws-sns'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
-import { LambdaConfig, Stage } from '../types'
+import { LambdaConfig, Stage, VpcConfig } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { resolveHandlerPath } from '../utils/handler-path'
@@ -160,6 +167,8 @@ export class EmStack extends cdk.Stack {
       customTags: props.tags
     })
 
+    Tags.of(this).add('em-microservice', `${props.stage}-${props.serviceName}`)
+
     if (props.useSharedRole) {
       this.sharedRole = new Role(this, 'LambdaExecutionRole', {
         roleName: `${props.serviceName}-${props.stage}-${this.region}-lambdaRole`,
@@ -186,8 +195,27 @@ export class EmStack extends cdk.Stack {
    * This means existing Serverless stacks are migrated in-place — no manual
    * logical ID overrides needed.
    */
+  /**
+   * Merge per-call config with defaultFunctionConfig.
+   * Environment is deep-merged (per-call values override matching keys).
+   * All other fields use per-call values when provided.
+   */
+  private mergeConfig<T extends { environment?: Record<string, string> }>(config: T): T {
+    const defaults = this.defaultFunctionConfig
+    const merged = { ...defaults, ...config }
+
+    if (defaults.environment || config.environment) {
+      merged.environment = {
+        ...(defaults.environment ?? {}),
+        ...(config.environment ?? {})
+      }
+    }
+
+    return merged as T
+  }
+
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
-    const merged = { ...this.defaultFunctionConfig, ...config }
+    const merged = this.mergeConfig(config)
     const resolved = resolveHandlerPath(merged)
     const functionName = resolved.functionName
     const handler = resolved.handler ?? merged.handler
@@ -243,7 +271,7 @@ export class EmStack extends cdk.Stack {
    * ```
    */
   createQueueConsumer(id: string, config: CreateQueueConsumerConfig): LambdaWithQueue {
-    const merged = { ...this.defaultFunctionConfig, ...config }
+    const merged = this.mergeConfig(config)
     const { functionName } = resolveHandlerPath(merged)
 
     return new LambdaWithQueue(this, id, {
@@ -276,7 +304,7 @@ export class EmStack extends cdk.Stack {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
     const fn = this.createFunction(id, functionConfig)
 
-    const resolved = resolveHandlerPath({ ...this.defaultFunctionConfig, ...functionConfig })
+    const resolved = resolveHandlerPath(this.mergeConfig(functionConfig))
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
       stage: config.stage ?? this.stage,
@@ -307,6 +335,74 @@ export class EmStack extends cdk.Stack {
   alarmTopic(): ITopic {
     const arn = `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-alarm-email`
     return Topic.fromTopicArn(this, 'AlarmTopic', arn)
+  }
+
+  /**
+   * Add a Lambda invoke policy to the shared role (account-scoped).
+   * Requires `useSharedRole: true`.
+   */
+  addLambdaInvokePolicy(): void {
+    this.requireSharedRole('addLambdaInvokePolicy')
+    this.sharedRole!.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: [`arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:*`]
+      })
+    )
+  }
+
+  /**
+   * Add a Kinesis PutRecord/PutRecords policy to the shared role.
+   * @param streamName - Short stream name (prefixed with `{stage}-`).
+   */
+  addKinesisPolicy(streamName: string): void {
+    this.requireSharedRole('addKinesisPolicy')
+    const arn = `arn:${Aws.PARTITION}:kinesis:${Aws.REGION}:${Aws.ACCOUNT_ID}:stream/${this.stage}-${streamName}`
+    this.sharedRole!.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['kinesis:PutRecord', 'kinesis:PutRecords'],
+        resources: [arn]
+      })
+    )
+  }
+
+  /**
+   * Add an SNS Publish policy to the shared role.
+   * @param topic - An ITopic reference.
+   */
+  addSnsPublishPolicy(topic: ITopic): void {
+    this.requireSharedRole('addSnsPublishPolicy')
+    this.sharedRole!.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['sns:Publish'],
+        resources: [topic.topicArn]
+      })
+    )
+  }
+
+  /**
+   * Add an SQS SendMessage policy to the shared role.
+   * @param queueName - Short queue name (prefixed with `{stage}-`).
+   */
+  addSqsSendPolicy(queueName: string): void {
+    this.requireSharedRole('addSqsSendPolicy')
+    const arn = `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${queueName}`
+    this.sharedRole!.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
+        resources: [arn]
+      })
+    )
+  }
+
+  private requireSharedRole(methodName: string): void {
+    if (!this.sharedRole) {
+      throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)
+    }
   }
 
   /**
