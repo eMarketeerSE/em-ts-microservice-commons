@@ -1,24 +1,6 @@
 {
-  "extends": [
-    "airbnb-base",
-    "plugin:sonarjs/recommended"
-  ],
-  "parser": "@typescript-eslint/parser",
-  "plugins": [
-    "jest",
-    "@typescript-eslint",
-    "sonarjs"
-  ],
-  "env": {
-    "node": true,
-    "jest/globals": true
-  },
+  "extends": "../.eslintrc",
   "settings": {
-    "import/resolver": {
-      "node": {
-        "extensions": [".js", ".jsx", ".ts", ".tsx"]
-      }
-    },
     "import/core-modules": [
       "aws-cdk-lib",
       "constructs",
@@ -41,88 +23,12 @@
       "aws-cdk-lib/aws-cloudwatch",
       "aws-cdk-lib/aws-cloudwatch-actions",
       "aws-cdk-lib/aws-lambda-event-sources",
-      "@aws-sdk/client-lambda",
-      "@aws-sdk/client-dynamodb",
-      "@aws-sdk/client-sqs",
-      "@aws-sdk/client-sns",
-      "@aws-sdk/client-ses",
-      "@aws-sdk/client-sts",
-      "@aws-sdk/client-s3",
-      "@aws-sdk/client-cloudfront",
-      "@aws-sdk/lib-dynamodb",
-      "@aws-sdk/credential-providers",
+      "aws-cdk-lib/cx-api",
       "@emarketeer/ts-microservice-commons/cdk"
     ]
   },
   "rules": {
-    "curly": ["error", "all"],
     "no-new": "off",
-    "@typescript-eslint/semi": ["error", "never"],
-    "@typescript-eslint/member-delimiter-style": [
-      "error",
-      {
-        "multiline": {
-          "delimiter": "none",
-          "requireLast": false
-        },
-        "singleline": {
-          "delimiter": "semi",
-          "requireLast": false
-        }
-      }
-    ],
-    "semi": "off",
-    "prefer-template": "off",
-    "max-len": ["warn", { "code": 120 }],
-    "no-console": "off",
-    "no-restricted-syntax": "off",
-    "import/prefer-default-export": "off",
-    "object-curly-newline": ["error", { "consistent": true }],
-    "import/no-extraneous-dependencies": [
-      "error",
-      {
-        "devDependencies": [
-          "**/*.test.ts",
-          "**/*.spec.ts"
-        ]
-      }
-    ],
-    "no-undef": "off",
-    "no-shadow": "off",
-    "@typescript-eslint/no-shadow": ["error"],
-    "no-await-in-loop": "off",
-    "prefer-destructuring": "off",
-    "sonarjs/no-duplicate-string": "off",
-    "arrow-body-style": "warn",
-    "no-useless-constructor": "off",
-    "@typescript-eslint/no-useless-constructor": "off",
-    "no-empty-function": "off",
-    "@typescript-eslint/no-empty-function": ["error"],
-    "default-param-last": "off",
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "varsIgnorePattern": "^_",
-        "argsIgnorePattern": "^_"
-      }
-    ],
-    "no-unused-vars": [
-      "error",
-      {
-        "varsIgnorePattern": "^_",
-        "argsIgnorePattern": "^_"
-      }
-    ],
-    "class-methods-use-this": "off",
-    "import/extensions": [
-      "error",
-      "ignorePackages",
-      {
-        "js": "never",
-        "jsx": "never",
-        "ts": "never",
-        "tsx": "never"
-      }
-    ]
+    "@typescript-eslint/no-useless-constructor": "off"
   }
 }
