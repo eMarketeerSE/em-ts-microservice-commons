@@ -20,7 +20,8 @@ import {
   HttpMethod,
   PayloadFormatVersion,
   DomainName,
-  ApiMapping
+  ApiMapping,
+  CfnApiMapping
 } from 'aws-cdk-lib/aws-apigatewayv2'
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations'
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
@@ -160,6 +161,48 @@ export class EmRestApi extends Construct {
       restApiId: this.api.restApiId,
       stage: this.api.deploymentStage.stageName,
       basePath: basePath || undefined
+    })
+
+    mapping.node.addDependency(this.api)
+
+    if (options?.logicalId) {
+      mapping.overrideLogicalId(options.logicalId)
+    }
+
+    return mapping
+  }
+
+  /**
+   * Add a V2 API mapping to an existing custom domain.
+   *
+   * Use this instead of `addBasePathMapping` when the domain was created by
+   * serverless-domain-manager (which uses API Gateway V2 API mappings, not
+   * V1 base path mappings).
+   *
+   * @param domainName - The custom domain name (e.g. `'api.example.com'`)
+   * @param options - Optional basePath and logical ID override
+   * @returns The CfnApiMapping resource
+   *
+   * @example
+   * ```typescript
+   * restApi.addApiMapping('api.example.com', {
+   *   basePath: 'forms',
+   *   logicalId: 'FormsApiMapping',
+   * })
+   * ```
+   */
+  public addApiMapping(
+    domainName: string,
+    options?: { basePath?: string; logicalId?: string }
+  ): CfnApiMapping {
+    const basePath = options?.basePath ?? ''
+    const id = options?.logicalId ?? `${domainName.replace(/\./g, '')}ApiMapping`
+
+    const mapping = new CfnApiMapping(this, id, {
+      apiId: this.api.restApiId,
+      domainName,
+      stage: this.api.deploymentStage.stageName,
+      apiMappingKey: basePath || undefined
     })
 
     mapping.node.addDependency(this.api)

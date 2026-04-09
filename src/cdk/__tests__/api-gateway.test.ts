@@ -157,6 +157,50 @@ describe('EmRestApi', () => {
       expect(mappings).toHaveProperty('ScreenshotBasePathMapping')
     })
   })
+
+  describe('addApiMapping', () => {
+    it('creates a V2 ApiMapping resource', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addApiMapping('api.example.com')
+
+      Template.fromStack(stack).resourceCountIs('AWS::ApiGatewayV2::ApiMapping', 1)
+    })
+
+    it('sets the domain name on the mapping', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addApiMapping('api.example.com')
+
+      Template.fromStack(stack).hasResourceProperties('AWS::ApiGatewayV2::ApiMapping', {
+        DomainName: 'api.example.com'
+      })
+    })
+
+    it('sets apiMappingKey when basePath is provided', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addApiMapping('api.example.com', { basePath: 'forms' })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::ApiGatewayV2::ApiMapping', {
+        DomainName: 'api.example.com',
+        ApiMappingKey: 'forms'
+      })
+    })
+
+    it('overrides logical ID when logicalId is provided', () => {
+      const stack = makeStack()
+      const api = makeApiWithRoute(stack)
+      api.addApiMapping('api.example.com', {
+        basePath: 'forms',
+        logicalId: 'FormsApiMapping'
+      })
+
+      const template = Template.fromStack(stack)
+      const mappings = template.findResources('AWS::ApiGatewayV2::ApiMapping')
+      expect(mappings).toHaveProperty('FormsApiMapping')
+    })
+  })
 })
 
 describe('EmHttpApi', () => {
