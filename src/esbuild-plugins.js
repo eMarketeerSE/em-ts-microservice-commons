@@ -70,5 +70,33 @@ const recapDevHandlerWrapper = {
   },
 }
 
-const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTsc()]
+const excludeUnusedTypeormDrivers = {
+  name: 'exclude-unused-typeorm-drivers',
+  setup(build) {
+    const unusedDrivers = [
+      'postgres',
+      'sqlserver',
+      'cockroachdb',
+      'oracle',
+      'sap',
+      'aurora-mysql',
+      'aurora-postgres',
+      'react-native',
+      'nativescript',
+      'expo',
+      'mongodb',
+      'spanner',
+    ]
+    const filter = new RegExp(`^\\.\/(${unusedDrivers.join('|')})\/`)
+    build.onResolve({ filter }, (args) => {
+      if (!args.resolveDir.includes('typeorm/driver')) return
+      return { path: 'typeorm-unused-driver', namespace: 'typeorm-excluded' }
+    })
+    build.onLoad({ filter: /.*/, namespace: 'typeorm-excluded' }, () => ({
+      contents: 'module.exports = {}',
+    }))
+  },
+}
+
+const defaultPlugins = [recapDevAutoWrapper, excludeUnusedTypeormDrivers, esbuildPluginTsc()]
 module.exports = { defaultPlugins, recapDevHandlerWrapper }
