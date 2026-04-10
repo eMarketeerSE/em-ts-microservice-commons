@@ -89,13 +89,14 @@ const excludeUnusedTypeormDrivers = {
       'mongodb',
       'spanner',
     ]
-    const filter = new RegExp(
-      `typeorm/driver/(${unusedDrivers.join('|')})`
-    )
-    build.onResolve({ filter }, () => ({
-      path: 'typeorm-unused-driver',
-      namespace: 'typeorm-excluded',
-    }))
+    const filter = new RegExp(`^\\.\/(${unusedDrivers.join('|')})\/`)
+    build.onResolve({ filter }, (args) => {
+      if (!args.resolveDir.includes('typeorm/driver')) return
+      return {
+        path: 'typeorm-unused-driver',
+        namespace: 'typeorm-excluded',
+      }
+    })
     build.onLoad({ filter: /.*/, namespace: 'typeorm-excluded' }, () => ({
       contents: 'module.exports = {}',
     }))

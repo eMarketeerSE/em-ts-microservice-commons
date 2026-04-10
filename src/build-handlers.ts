@@ -71,6 +71,8 @@ esbuild
     sourcemap: false,
     minify: true,
     external: [
+      '@aws-sdk/*',
+      'aws-sdk',
       // Unused Knex/DB drivers — matches serverless-esbuild external list
       'mysql',
       'pg',
@@ -83,13 +85,7 @@ esbuild
       'tedious',
       'pg-query-stream',
       'libsql',
-      'mariadb',
-      // Unused AWS SDK credential providers — Lambda only needs the default provider chain
-      '@aws-sdk/credential-provider-ini',
-      '@aws-sdk/credential-provider-process',
-      '@aws-sdk/credential-provider-sso',
-      '@aws-sdk/credential-provider-web-identity',
-      '@smithy/credential-provider-imds'
+      'mariadb'
     ],
     plugins: [recapDevHandlerWrapper, ...defaultPlugins]
   })
