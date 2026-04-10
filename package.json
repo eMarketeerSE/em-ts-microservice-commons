@@ -27,7 +27,8 @@
     "./build-handlers": "./dist/build-handlers.js",
     "./dist/lib/*": "./dist/lib/*",
     "./dist/cdk/*": "./dist/cdk/*",
-    "./dist/*": "./dist/*"
+    "./dist/*": "./dist/*",
+    "./*": "./*"
   },
   "peerDependencies": {
     "@recap.dev/client": "^4.3.0",
