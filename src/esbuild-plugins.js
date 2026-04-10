@@ -70,5 +70,10 @@ const recapDevHandlerWrapper = {
   },
 }
 
-const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTsc()]
+const defaultPlugins = [
+  recapDevAutoWrapper,
+  esbuildPluginTsc({
+    tsconfigPath: path.join(__dirname, 'tsconfig.esbuild.json')
+  })
+]
 module.exports = { defaultPlugins, recapDevHandlerWrapper }
