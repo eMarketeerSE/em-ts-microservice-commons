@@ -70,44 +70,5 @@ const recapDevHandlerWrapper = {
   },
 }
 
-/**
- * esbuild-plugin-tsc wrapper that forces "module": "CommonJS".
- *
- * The service tsconfig uses "module": "NodeNext" which causes the tsc
- * plugin to emit ESM helpers that esbuild then converts to CJS — double
- * conversion adds ~2MB per bundle. This wrapper writes a temporary
- * tsconfig that extends the service's config with module: CommonJS.
- */
-const esbuildPluginTscCjs = () => {
-  const tmpConfig = path.join(process.cwd(), 'tsconfig.esbuild-tmp.json')
-  const baseConfig = path.join(process.cwd(), 'tsconfig.json')
-
-  if (fs.existsSync(baseConfig)) {
-    fs.writeFileSync(tmpConfig, JSON.stringify({
-      extends: './tsconfig.json',
-      compilerOptions: { module: 'CommonJS' }
-    }))
-    console.log('[esbuild-plugin-tsc] Using CJS override tsconfig:', tmpConfig)
-  } else {
-    console.log('[esbuild-plugin-tsc] No tsconfig.json found at', baseConfig, '— using defaults')
-  }
-
-  const plugin = esbuildPluginTsc({
-    tsconfigPath: fs.existsSync(tmpConfig) ? tmpConfig : undefined
-  })
-
-  return {
-    name: 'tsc-cjs',
-    setup(build) {
-      plugin.setup(build)
-
-      // Clean up temp file after build
-      build.onEnd(() => {
-        try { fs.unlinkSync(tmpConfig) } catch (e) { /* ignore */ }
-      })
-    }
-  }
-}
-
-const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTscCjs()]
+const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTsc()]
 module.exports = { defaultPlugins, recapDevHandlerWrapper }
