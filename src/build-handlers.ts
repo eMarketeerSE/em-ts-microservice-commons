@@ -70,7 +70,23 @@ esbuild
     format: 'cjs',
     sourcemap: false,
     minify: true,
-    external: ['@aws-sdk/*'],
+    external: [
+      '@aws-sdk/*',
+      'aws-sdk',
+      // Unused Knex/DB drivers — matches serverless-esbuild external list
+      'mysql',
+      'pg',
+      'pg-native',
+      'sqlite3',
+      'mssql',
+      'oracledb',
+      'better-sqlite3',
+      'pg-sqlite3',
+      'tedious',
+      'pg-query-stream',
+      'libsql',
+      'mariadb'
+    ],
     plugins: [recapDevHandlerWrapper, ...defaultPlugins]
   })
   .then(() => {
