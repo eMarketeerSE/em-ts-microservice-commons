@@ -148,10 +148,12 @@ export class EmStack extends cdk.Stack {
       ...props,
       stackName:
         props.stackName ??
-        generateStackName({
-          stage: props.stage,
-          serviceName: props.serviceName
-        }),
+        (props.useSharedRole
+          ? `${props.serviceName}-${props.stage}`
+          : generateStackName({
+              stage: props.stage,
+              serviceName: props.serviceName
+            })),
       description: props.description ?? `${props.serviceName} (${props.stage})`
     })
 
@@ -338,12 +340,25 @@ export class EmStack extends cdk.Stack {
   }
 
   /**
-   * Import an SSM parameter by name convention.
-   * Resolves `/{stage}/{serviceName}/{paramName}`.
+   * Import an SSM parameter value.
+   *
+   * By default resolves `/{stage}/{serviceName}/{paramName}`.
+   * Pass `{ raw: true }` to use the name as-is (for root-level params from Serverless).
+   *
+   * @example
+   * ```typescript
+   * // Convention-based:
+   * this.ssmParam('db_host') // → /{stage}/{serviceName}/db_host
+   *
+   * // Raw (root-level SSM params):
+   * this.ssmParam('proxy_dbms_host', { raw: true }) // → proxy_dbms_host
+   * ```
    */
-  ssmParam(paramName: string, options?: { serviceName?: string }): string {
-    const svcName = options?.serviceName ?? this.serviceName
-    return StringParameter.valueForStringParameter(this, `/${this.stage}/${svcName}/${paramName}`)
+  ssmParam(paramName: string, options?: { serviceName?: string; raw?: boolean }): string {
+    const path = options?.raw
+      ? paramName
+      : `/${this.stage}/${options?.serviceName ?? this.serviceName}/${paramName}`
+    return StringParameter.valueForStringParameter(this, path)
   }
 
   /**

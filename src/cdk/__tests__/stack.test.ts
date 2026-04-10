@@ -31,6 +31,11 @@ describe('EmStack', () => {
       expect(stack.stackName).toBe('dev-test-service-stack')
     })
 
+    it('uses {serviceName}-{stage} when useSharedRole is true', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(stack.stackName).toBe('test-service-dev')
+    })
+
     it('allows overriding stackName', () => {
       const stack = makeStack({ stackName: 'custom-name' })
       expect(stack.stackName).toBe('custom-name')
@@ -603,8 +608,12 @@ describe('EmStack', () => {
     it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
       const stack = makeStack()
       const value = stack.ssmParam('proxy_dbms_host')
+      expect(value).toBeDefined()
+    })
 
-      // SSM dynamic reference should be present in the template
+    it('uses raw parameter name when raw: true', () => {
+      const stack = makeStack()
+      const value = stack.ssmParam('proxy_dbms_host', { raw: true })
       expect(value).toBeDefined()
     })
   })
