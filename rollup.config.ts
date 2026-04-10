@@ -87,7 +87,6 @@ export default [{
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
         { src: 'src/esbuild-plugins.js', dest: 'dist/' },
-        { src: 'src/tsconfig.esbuild.json', dest: 'dist/' },
         { src: 'src/cdk/tsconfig.json', dest: 'dist/cdk/' },
         { src: 'src/cdk/.eslintrc', dest: 'dist/cdk/' },
         { src: 'src/cdk/jest.config.js', dest: 'dist/cdk/' },
