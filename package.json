@@ -20,6 +20,7 @@
     "./cdk/tsconfig.json": "./dist/cdk/tsconfig.json",
     "./cdk/.eslintrc": "./dist/cdk/.eslintrc",
     "./jest.config": "./dist/lib/jest.config.js",
+    "./dist/lib/jest.config.js": "./dist/lib/jest.config.js",
     "./.eslintrc": "./dist/.eslintrc",
     "./tsconfig.json": "./dist/tsconfig.json",
     "./esbuild-plugins": "./dist/esbuild-plugins.js",
