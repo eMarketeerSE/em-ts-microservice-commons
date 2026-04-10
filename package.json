@@ -23,7 +23,8 @@
     "./.eslintrc": "./dist/.eslintrc",
     "./tsconfig.json": "./dist/tsconfig.json",
     "./esbuild-plugins": "./dist/esbuild-plugins.js",
-    "./build-handlers": "./dist/build-handlers.js"
+    "./build-handlers": "./dist/build-handlers.js",
+    "./dist/*": "./dist/*"
   },
   "peerDependencies": {
     "@recap.dev/client": "^4.3.0",
