@@ -49,7 +49,7 @@ try {
     generateServerlessConfig()
 
     result = runCommand(
-      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.yml',
+      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.json',
       scriptArgs
     )
   }
@@ -58,7 +58,7 @@ try {
     generateServerlessConfig()
 
     result = runCommand(
-      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless dev --config generated.serverless.yml',
+      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless dev --config generated.serverless.json',
       scriptArgs
     )
   }
@@ -67,7 +67,7 @@ try {
     generateServerlessConfig()
 
     result = runCommand(
-      'npx cross-env DISABLE_EPSAGON=TRUE NODE_OPTIONS=--max_old_space_size=4096 npx serverless invoke local --config generated.serverless.yml',
+      'npx cross-env DISABLE_EPSAGON=TRUE NODE_OPTIONS=--max_old_space_size=4096 npx serverless invoke local --config generated.serverless.json',
       scriptArgs
     )
   }
@@ -116,7 +116,7 @@ try {
     generateServerlessConfig()
 
     result = runCommand(
-      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless --config generated.serverless.yml',
+      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless --config generated.serverless.json',
       scriptArgs
     )
   }
