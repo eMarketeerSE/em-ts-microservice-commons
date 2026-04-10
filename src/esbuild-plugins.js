@@ -87,6 +87,9 @@ const esbuildPluginTscCjs = () => {
       extends: './tsconfig.json',
       compilerOptions: { module: 'CommonJS' }
     }))
+    console.log('[esbuild-plugin-tsc] Using CJS override tsconfig:', tmpConfig)
+  } else {
+    console.log('[esbuild-plugin-tsc] No tsconfig.json found at', baseConfig, '— using defaults')
   }
 
   const plugin = esbuildPluginTsc({
