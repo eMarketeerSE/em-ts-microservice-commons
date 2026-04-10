@@ -15,7 +15,7 @@ const externalPkgs = [
 
 export default [{
   input: `src/cdk/index.ts`,
-  external: (id) => id === 'crypto' || externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
+  external: (id) => id === 'crypto' || id === 'path' || externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
   output: [
     { dir: 'dist/cdk', format: 'esm', sourcemap: true },
     { dir: 'dist/cdk/cjs', format: 'cjs', sourcemap: true },
@@ -43,7 +43,7 @@ export default [{
     // Allow json resolution
     json(),
     // Compile TypeScript files
-    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
+    typescript({ useTsconfigDeclarationDir: true }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     commonjs(),
     // Allow node_modules resolution, so you can use 'external' to control
@@ -63,7 +63,6 @@ export default [{
   plugins: [
     typescript({
       useTsconfigDeclarationDir: true,
-      objectHashIgnoreUnknownHack: true,
       tsconfigOverride: {
         compilerOptions: {
           target: 'ES2020'
@@ -95,7 +94,7 @@ export default [{
     }),
     // Allow json resolution
     json(),
-    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
+    typescript({ useTsconfigDeclarationDir: true }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     resolve(),
     commonjs({ transformMixedEsModules: true }),
