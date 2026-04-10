@@ -1,3 +1,4 @@
+const esbuildPluginTsc = require('@emarketeer/esbuild-plugin-tsc')
 const fs = require('fs')
 const path = require('path')
 const { dirname } = path
@@ -69,5 +70,5 @@ const recapDevHandlerWrapper = {
   },
 }
 
-const defaultPlugins = [recapDevAutoWrapper]
+const defaultPlugins = [recapDevAutoWrapper, esbuildPluginTsc()]
 module.exports = { defaultPlugins, recapDevHandlerWrapper }
