@@ -26,11 +26,11 @@ import {
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations'
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager'
 import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
-import { LogGroup } from 'aws-cdk-lib/aws-logs'
+import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { createHash } from 'crypto'
 import { Construct } from 'constructs'
 import { RestApiConfig, HttpApiConfig } from '../types'
-import { generateApiName } from '../utils/naming'
+import { generateApiName, generateLogGroupName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { createApiGatewayLogGroup } from '../utils/logs'
 
@@ -39,21 +39,25 @@ import { createApiGatewayLogGroup } from '../utils/logs'
  */
 export class EmRestApi extends Construct {
   public readonly api: RestApi
-  public readonly logGroup: LogGroup
+  public readonly logGroup: ILogGroup
 
   constructor(scope: Construct, id: string, config: RestApiConfig) {
     super(scope, id)
 
     const apiName = generateApiName(config.stage, config.serviceName, config.apiName)
 
-    // Create log group
-    this.logGroup = createApiGatewayLogGroup(
-      this,
-      'LogGroup',
-      config.stage,
-      config.serviceName,
-      config.apiName
-    )
+    // Create or import log group
+    this.logGroup = config.importExistingLogGroup
+      ? LogGroup.fromLogGroupName(
+          this,
+          'LogGroup',
+          `/aws/apigateway/${generateLogGroupName(
+            config.stage,
+            config.serviceName,
+            config.apiName
+          )}`
+        )
+      : createApiGatewayLogGroup(this, 'LogGroup', config.stage, config.serviceName, config.apiName)
 
     // Create REST API
     this.api = new RestApi(this, 'Api', {

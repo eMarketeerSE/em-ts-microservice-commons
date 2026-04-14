@@ -127,6 +127,7 @@ export interface RestApiConfig extends BaseConstructConfig {
   readonly description?: string
   readonly endpointType?: 'EDGE' | 'REGIONAL' | 'PRIVATE'
   readonly binaryMediaTypes?: string[]
+  readonly importExistingLogGroup?: boolean
   readonly deployOptions?: {
     stageName?: string
     throttleRateLimit?: number
