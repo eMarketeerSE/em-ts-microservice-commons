@@ -25,8 +25,8 @@ const BUILD_HANDLERS_CMD =
 
 function buildHandlersOrExit() {
   const buildResult = runCommand(BUILD_HANDLERS_CMD, [])
-  if (buildResult && buildResult.status !== 0) {
-    process.exit(buildResult.status!)
+  if (!buildResult || buildResult.status !== 0) {
+    process.exit(buildResult?.status ?? 1)
   }
 }
 
@@ -139,7 +139,7 @@ if (result && result.signal) {
     )
   }
 
-  process.exit(result.status!)
+  process.exit(result.status ?? 1)
 }
 
-process.exit(result?.status!)
+process.exit(result?.status ?? 1)

@@ -212,17 +212,33 @@ export class LambdaWithQueue extends Construct {
     }
 
     if (props.overrideLogicalIds?.queue) {
-      ;(this.queue.node.defaultChild as CfnQueue).overrideLogicalId(props.overrideLogicalIds.queue)
+      const cfnQueue = this.queue.node.defaultChild
+      if (!(cfnQueue instanceof CfnQueue)) {
+        throw new Error(
+          `Cannot override queue logical ID to "${props.overrideLogicalIds.queue}": queue does not have a CfnQueue default child.`
+        )
+      }
+      cfnQueue.overrideLogicalId(props.overrideLogicalIds.queue)
     }
 
     if (props.overrideLogicalIds?.dlq) {
-      ;(this.dlq.node.defaultChild as CfnQueue).overrideLogicalId(props.overrideLogicalIds.dlq)
+      const cfnDlq = this.dlq.node.defaultChild
+      if (!(cfnDlq instanceof CfnQueue)) {
+        throw new Error(
+          `Cannot override DLQ logical ID to "${props.overrideLogicalIds.dlq}": DLQ does not have a CfnQueue default child.`
+        )
+      }
+      cfnDlq.overrideLogicalId(props.overrideLogicalIds.dlq)
     }
 
     if (props.overrideLogicalIds?.alarm) {
-      ;(this.dlqAlarm.alarm.node.defaultChild as CfnAlarm).overrideLogicalId(
-        props.overrideLogicalIds.alarm
-      )
+      const cfnAlarm = this.dlqAlarm.alarm.node.defaultChild
+      if (!(cfnAlarm instanceof CfnAlarm)) {
+        throw new Error(
+          `Cannot override alarm logical ID to "${props.overrideLogicalIds.alarm}": alarm does not have a CfnAlarm default child.`
+        )
+      }
+      cfnAlarm.overrideLogicalId(props.overrideLogicalIds.alarm)
     }
   }
 

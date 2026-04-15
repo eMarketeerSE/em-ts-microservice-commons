@@ -38,9 +38,14 @@ export function createRdsVpcConfig(
   })
 
   if (config.overrideLogicalIds?.securityGroup) {
-    ;(lambdaSecurityGroup.node.defaultChild as ec2.CfnSecurityGroup).overrideLogicalId(
-      config.overrideLogicalIds.securityGroup
-    )
+    const cfnSg = lambdaSecurityGroup.node.defaultChild
+    if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
+      throw new Error(
+        `Cannot override security group logical ID to "${config.overrideLogicalIds.securityGroup}": ` +
+          'security group does not have a CfnSecurityGroup default child.'
+      )
+    }
+    cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
   }
 
   const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {

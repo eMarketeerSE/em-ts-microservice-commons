@@ -52,7 +52,13 @@ export const convertRetentionDays = (days?: number): RetentionDays | undefined =
     3653: RetentionDays.TEN_YEARS
   }
 
-  return retentionMap[days]
+  const result = retentionMap[days]
+  if (!result) {
+    throw new Error(
+      `Unsupported logRetentionDays value: ${days}. Supported values: ${Object.keys(retentionMap).join(', ')}`
+    )
+  }
+  return result
 }
 
 /**

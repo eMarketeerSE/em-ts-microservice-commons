@@ -26,8 +26,13 @@ export const cleanup = () => {
   }
 }
 
+const escapeShellArg = (arg: string): string => {
+  return "'" + arg.replace(/'/g, "'\\''") + "'"
+}
+
 export const runCommand = (command: string, additionalArgs: string[] = []) => {
-  const fullCommand = command + ' ' + additionalArgs.join(' ')
+  const escapedArgs = additionalArgs.map(escapeShellArg).join(' ')
+  const fullCommand = additionalArgs.length > 0 ? command + ' ' + escapedArgs : command
 
   console.log('running ', fullCommand)
 

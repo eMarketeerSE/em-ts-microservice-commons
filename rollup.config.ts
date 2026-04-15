@@ -10,8 +10,8 @@ import shebang from '@robmarr/rollup-plugin-shebang'
 const externalPkgs = [
   /^aws-cdk-lib(\/.*)?$/,
   /^constructs(\/.*)?$/,
-  /^@aws-cdk(\/.*)?$/, // if you have any v1 deps lingering
-];
+  /^@aws-cdk(\/.*)?$/
+]
 
 export default [{
   input: `src/cdk/index.ts`,
