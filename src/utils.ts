@@ -27,12 +27,9 @@ export const cleanup = () => {
 }
 
 export const runCommand = (command: string, additionalArgs: string[] = []) => {
-  const commandParts = command.split(' ')
+  const fullCommand = command + ' ' + additionalArgs.join(' ')
 
-  const program = commandParts[0]
-  const args = commandParts.slice(1).concat(additionalArgs)
+  console.log('running ', fullCommand)
 
-  console.log('running ', program, args.join(' '))
-
-  return spawn.sync(program, args, { stdio: 'inherit' })
+  return spawn.sync(fullCommand, [], { stdio: 'inherit', shell: true })
 }
