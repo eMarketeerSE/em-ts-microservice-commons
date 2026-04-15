@@ -367,7 +367,7 @@ export class EmHttpApi extends Construct {
    * Returns the full base URL (e.g. https://api.example.com/mypath).
    */
   public addCustomDomain(domainName: string, certificateArn: string, basePath: string): string {
-    const normalisedPath = basePath.trim().replace(/^\/+|\/+$/g, '')
+    const normalisedPath = basePath.trim().replace(/^\/+/, '').replace(/\/+$/, '')
     const mappingHash = createHash('sha256')
       .update(domainName + normalisedPath)
       .digest('hex')
