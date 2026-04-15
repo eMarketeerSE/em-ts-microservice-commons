@@ -90,7 +90,7 @@ export class EmRestApi extends Construct {
     applyStandardTags(this.api, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 
@@ -293,7 +293,7 @@ export class EmHttpApi extends Construct {
     applyStandardTags(this.api, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 

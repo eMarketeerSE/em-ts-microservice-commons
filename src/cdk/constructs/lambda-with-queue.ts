@@ -180,19 +180,19 @@ export class LambdaWithQueue extends Construct {
     applyStandardTags(this.function, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     applyStandardTags(this.queue, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     applyStandardTags(this.dlq, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {

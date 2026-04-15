@@ -45,7 +45,7 @@ export class EmEventBridgeRule extends Construct {
     applyStandardTags(this.rule, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 
