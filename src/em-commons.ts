@@ -1,4 +1,4 @@
-import { cleanup, generateServerlessConfig, runCommand } from './utils'
+import { runCommand } from './utils'
 
 process.on('unhandledRejection', err => {
   throw err
@@ -6,7 +6,26 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-const supportedCommands = ['lint', 'deploy', 'dev', 'tsc', 'jest', 'invoke-local']
+const supportedCommands = [
+  'lint',
+  'tsc',
+  'jest',
+  'build-handlers',
+  'cdk-deploy',
+  'cdk-synth',
+  'cdk-test',
+  'cdk-lint'
+]
+
+const BUILD_HANDLERS_CMD =
+  'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js'
+
+function buildHandlersOrExit() {
+  const buildResult = runCommand(BUILD_HANDLERS_CMD, [])
+  if (!buildResult || buildResult.status !== 0) {
+    process.exit(buildResult?.status ?? 1)
+  }
+}
 
 const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
 
@@ -15,62 +34,58 @@ const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
 const scriptArgs = args.slice(scriptIndex + 1)
 
 let result
-try {
-  if (script === 'lint') {
-    result = runCommand(
-      'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/.eslintrc',
-      scriptArgs
-    )
-  }
 
-  if (script === 'deploy') {
-    generateServerlessConfig()
+if (script === 'lint') {
+  result = runCommand(
+    'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/.eslintrc',
+    scriptArgs
+  )
+}
 
-    result = runCommand(
-      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless deploy --config generated.serverless.json',
-      scriptArgs
-    )
-  }
+if (script === 'tsc') {
+  result = runCommand('npx tsc --noEmit', scriptArgs)
+}
 
-  if (script === 'dev') {
-    generateServerlessConfig()
+if (script === 'build-handlers') {
+  result = runCommand(BUILD_HANDLERS_CMD, scriptArgs)
+}
 
-    result = runCommand(
-      'npx cross-env AWS_SDK_LOAD_CONFIG=1 NODE_OPTIONS=--max_old_space_size=4096 npx serverless dev --config generated.serverless.json',
-      scriptArgs
-    )
-  }
+if (script === 'cdk-deploy') {
+  buildHandlersOrExit()
+  result = runCommand('npx cdk deploy --require-approval never', scriptArgs)
+}
 
-  if (script === 'invoke-local') {
-    generateServerlessConfig()
+if (script === 'cdk-synth') {
+  buildHandlersOrExit()
+  result = runCommand('npx cdk synth', scriptArgs)
+}
 
-    result = runCommand(
-      'npx cross-env DISABLE_EPSAGON=TRUE NODE_OPTIONS=--max_old_space_size=4096 npx serverless invoke local --config generated.serverless.json',
-      scriptArgs
-    )
-  }
+if (script === 'cdk-test') {
+  buildHandlersOrExit()
+  result = runCommand(
+    'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js --rootDir cdk',
+    scriptArgs
+  )
+}
 
-  if (script === 'tsc') {
-    result = runCommand('npx tsc --noEmit', scriptArgs)
-  }
+if (script === 'cdk-lint') {
+  result = runCommand(
+    'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/cdk/.eslintrc',
+    scriptArgs
+  )
+}
 
-  if (script === 'jest') {
-    result = runCommand(
-      'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
-      scriptArgs
-    )
-  }
+if (script === 'jest') {
+  result = runCommand(
+    'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
+    scriptArgs
+  )
+}
 
-  if (!supportedCommands.includes(script)) {
-    generateServerlessConfig()
-
-    result = runCommand(
-      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 npx serverless --config generated.serverless.json',
-      scriptArgs
-    )
-  }
-} finally {
-  cleanup()
+if (!supportedCommands.includes(script)) {
+  console.error(`Unknown command: ${script}`)
+  console.error(`Supported commands: ${supportedCommands.join(', ')}`)
+  process.exit(1)
 }
 
 if (result && result.signal) {
@@ -88,7 +103,7 @@ if (result && result.signal) {
     )
   }
 
-  process.exit(result.status!)
+  process.exit(result.status ?? 1)
 }
 
-process.exit(result?.status!)
+process.exit(result?.status ?? 1)

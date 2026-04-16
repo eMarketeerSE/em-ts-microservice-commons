@@ -7,7 +7,34 @@ import copy from 'rollup-plugin-copy'
 import executable from 'rollup-plugin-executable'
 import shebang from '@robmarr/rollup-plugin-shebang'
 
+const externalPkgs = [
+  /^aws-cdk-lib(\/.*)?$/,
+  /^constructs(\/.*)?$/,
+  /^@aws-cdk(\/.*)?$/
+]
+
 export default [{
+  input: `src/cdk/index.ts`,
+  external: (id) => id === 'crypto' || id === 'path' || externalPkgs.some((x) => (x instanceof RegExp ? x.test(id) : x === id)),
+  output: [
+    { dir: 'dist/cdk', format: 'esm', sourcemap: true },
+    { dir: 'dist/cdk/cjs', format: 'cjs', sourcemap: true },
+  ],
+  plugins: [
+    json(),
+    resolve({ preferBuiltins: true }),
+    commonjs(),
+    typescript({
+      useTsconfigDeclarationDir: true,
+      tsconfigOverride: {
+        compilerOptions: {
+          target: 'ES2020'
+        },
+      },
+    }),
+    sourceMaps(),
+  ],
+}, {
   input: `src/jest.config.ts`,
   output: [
     { dir: 'dist/lib', name: 'jest.config.js', format: 'umd' },
@@ -16,7 +43,7 @@ export default [{
     // Allow json resolution
     json(),
     // Compile TypeScript files
-    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
+    typescript({ useTsconfigDeclarationDir: true }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     commonjs(),
     // Allow node_modules resolution, so you can use 'external' to control
@@ -26,6 +53,25 @@ export default [{
 
     // Resolve source maps to the original source
     sourceMaps()
+  ],
+}, {
+  input: `src/build-handlers.ts`,
+  output: [
+    { file: 'dist/build-handlers.js', format: 'commonjs' },
+  ],
+  external: ['path', 'fs', 'esbuild', './esbuild-plugins'],
+  plugins: [
+    typescript({
+      useTsconfigDeclarationDir: true,
+      tsconfigOverride: {
+        compilerOptions: {
+          target: 'ES2020'
+        }
+      }
+    }),
+    resolve({ preferBuiltins: true }),
+    commonjs(),
+    sourceMaps(),
   ],
 }, {
   input: `src/em-commons.ts`,
@@ -41,11 +87,14 @@ export default [{
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
         { src: 'src/esbuild-plugins.js', dest: 'dist/' },
+        { src: 'src/cdk/tsconfig.json', dest: 'dist/cdk/' },
+        { src: 'src/cdk/.eslintrc', dest: 'dist/cdk/' },
+        { src: 'src/cdk/jest.config.js', dest: 'dist/cdk/' },
       ]
     }),
     // Allow json resolution
     json(),
-    typescript({ useTsconfigDeclarationDir: true, objectHashIgnoreUnknownHack: true }),
+    typescript({ useTsconfigDeclarationDir: true }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     resolve(),
     commonjs({ transformMixedEsModules: true }),
