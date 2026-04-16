@@ -21,7 +21,11 @@ import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/conf
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { generateLambdaName } from '../utils/naming'
 import { resolveHandlerPath } from '../utils/handler-path'
+<<<<<<< HEAD
 import { makeSnsToSqsSubscription, overrideFunctionLogicalIds } from '../utils/serverless-migration'
+=======
+import { overrideFunctionLogicalIds } from '../utils/serverless-migration'
+>>>>>>> origin/master
 import { DlqAlarm } from './dlq-alarm'
 
 export interface LambdaWithQueueProps {
@@ -266,6 +270,7 @@ export class LambdaWithQueue extends Construct {
     return role
   }
 
+<<<<<<< HEAD
   /**
    * Subscribe the queue to an SNS topic.
    *
@@ -293,5 +298,9 @@ export class LambdaWithQueue extends Construct {
     } else {
       topic.addSubscription(new SqsSubscription(this.queue, options))
     }
+=======
+  public subscribeToTopic(topic: ITopic, options?: SqsSubscriptionProps) {
+    topic.addSubscription(new SqsSubscription(this.queue, options))
+>>>>>>> origin/master
   }
 }

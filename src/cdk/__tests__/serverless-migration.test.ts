@@ -2,15 +2,22 @@ import { App, Stack } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
 import { Code, Runtime, LayerVersion } from 'aws-cdk-lib/aws-lambda'
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+<<<<<<< HEAD
 import { Topic } from 'aws-cdk-lib/aws-sns'
+=======
+>>>>>>> origin/master
 import {
   toServerlessLogicalIdPrefix,
   overrideLayerLogicalId,
   overrideRoleLogicalId,
+<<<<<<< HEAD
   createServerlessCompatibleOutput,
   makeServerlessQueue,
   makeSnsToSqsSubscription,
   makeServerlessQueuePolicy
+=======
+  createServerlessCompatibleOutput
+>>>>>>> origin/master
 } from '../utils/serverless-migration'
 
 const CODE_PATH = __dirname
@@ -106,6 +113,7 @@ describe('createServerlessCompatibleOutput', () => {
     expect(output.Description).toBe('URL of the service endpoint')
   })
 })
+<<<<<<< HEAD
 
 describe('makeServerlessQueue', () => {
   it('creates queue and DLQ with specified logical IDs', () => {
@@ -226,3 +234,5 @@ describe('makeServerlessQueuePolicy', () => {
     )
   })
 })
+=======
+>>>>>>> origin/master

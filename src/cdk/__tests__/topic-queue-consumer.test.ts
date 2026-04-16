@@ -76,6 +76,7 @@ describe('TopicQueueConsumer', () => {
     })
   })
 
+<<<<<<< HEAD
   it('pins the subscription logical ID when serverlessSubscriptionLogicalId is provided', () => {
     const stack = makeStack()
     const eventTopic = new Topic(stack, 'EventTopic')
@@ -97,6 +98,8 @@ describe('TopicQueueConsumer', () => {
     expect(subscriptions).toHaveProperty('ProcessEventSnsSubscription')
   })
 
+=======
+>>>>>>> origin/master
   it('supports handlerPath', () => {
     const stack = makeStack()
     const eventTopic = new Topic(stack, 'EventTopic')

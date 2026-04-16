@@ -23,7 +23,10 @@ import {
   overrideRoleLogicalId,
   createServerlessCompatibleOutput
 } from '../utils/serverless-migration'
+<<<<<<< HEAD
 import { createXRayTracingPolicy } from '../utils/iam'
+=======
+>>>>>>> origin/master
 
 export interface EmStackProps extends cdk.StackProps {
   readonly stage: Stage
@@ -43,6 +46,7 @@ export interface EmStackProps extends cdk.StackProps {
    */
   readonly useSharedRole?: boolean
   /**
+<<<<<<< HEAD
    * Replaces the default managed policies on the shared role.
    * Only used when `useSharedRole` is true.
    *
@@ -52,6 +56,11 @@ export interface EmStackProps extends cdk.StackProps {
    *
    * For VPC services, prefer passing `sharedRole` to `createRdsVpcConfig` instead.
    * That appends `AWSLambdaVPCAccessExecutionRole` without replacing the defaults.
+=======
+   * Managed policies to attach to the shared role.
+   * Only used when `useSharedRole` is true.
+   * Defaults to CloudWatchLambdaInsightsExecutionRolePolicy.
+>>>>>>> origin/master
    */
   readonly sharedRoleManagedPolicies?: IManagedPolicy[]
   /**
@@ -385,15 +394,24 @@ export class EmStack extends cdk.Stack {
   addLambdaInvokePolicy(functionPattern?: string): void {
     this.requireSharedRole('addLambdaInvokePolicy')
     const pattern = functionPattern ?? `${this.stage}-${this.serviceName}-*`
+<<<<<<< HEAD
     const resources =
       pattern === '*'
         ? ['*']
         : [`arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`]
+=======
+>>>>>>> origin/master
     this.sharedRole!.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['lambda:InvokeFunction'],
+<<<<<<< HEAD
         resources
+=======
+        resources: [
+          `arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`
+        ]
+>>>>>>> origin/master
       })
     )
   }
@@ -449,6 +467,7 @@ export class EmStack extends cdk.Stack {
     )
   }
 
+<<<<<<< HEAD
   /** Add an XRay tracing policy to the shared role. */
   addXRayPolicy(): void {
     this.requireSharedRole('addXRayPolicy')
@@ -563,6 +582,8 @@ export class EmStack extends cdk.Stack {
     )
   }
 
+=======
+>>>>>>> origin/master
   private requireSharedRole(methodName: string): void {
     if (!this.sharedRole) {
       throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)

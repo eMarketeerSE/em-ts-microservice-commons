@@ -71,6 +71,7 @@ export function createRdsVpcConfig(
     cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
   }
 
+
   const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {
     groupId: config.dbSecurityGroupId,
     ipProtocol: 'tcp',
@@ -89,6 +90,7 @@ export function createRdsVpcConfig(
       Ref: config.overrideLogicalIds.securityGroup
     })
   }
+
 
   if (config.sharedRole) {
     config.sharedRole.addManagedPolicy(

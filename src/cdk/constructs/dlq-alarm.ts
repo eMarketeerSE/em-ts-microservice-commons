@@ -1,6 +1,10 @@
 import { Construct } from 'constructs'
 import { IQueue } from 'aws-cdk-lib/aws-sqs'
+<<<<<<< HEAD
 import { Alarm, CfnAlarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
+=======
+import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
+>>>>>>> origin/master
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
 
@@ -8,9 +12,12 @@ export interface DlqAlarmProps {
   dlq: IQueue
   alarmName: string
   alarmTopic: ITopic
+<<<<<<< HEAD
   /** Override the CloudFormation logical ID of the underlying CfnAlarm. Use during
    *  Serverless-to-CDK migrations to match the existing stack's alarm resource name. */
   alarmLogicalId?: string
+=======
+>>>>>>> origin/master
 }
 
 export class DlqAlarm extends Construct {
@@ -29,6 +36,7 @@ export class DlqAlarm extends Construct {
     })
 
     this.alarm.addAlarmAction(new SnsAction(props.alarmTopic))
+<<<<<<< HEAD
 
     if (props.alarmLogicalId) {
       const cfnAlarm = this.alarm.node.defaultChild
@@ -39,5 +47,7 @@ export class DlqAlarm extends Construct {
       }
       cfnAlarm.overrideLogicalId(props.alarmLogicalId)
     }
+=======
+>>>>>>> origin/master
   }
 }

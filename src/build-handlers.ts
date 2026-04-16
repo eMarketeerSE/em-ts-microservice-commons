@@ -45,6 +45,7 @@ if (!fs.existsSync(absoluteHandlersDir)) {
 }
 
 const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as any) as string[])
+<<<<<<< HEAD
   .filter(f => {
     if (!f.endsWith('.ts') || f.endsWith('.d.ts') || f.includes('.test.') || f.includes('.spec.')) {
       return false
@@ -52,6 +53,11 @@ const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as 
     const content = fs.readFileSync(path.join(absoluteHandlersDir, f), 'utf8')
     return /export\s+(const|function|async\s+function)\s+handler\b/.test(content)
   })
+=======
+  .filter(
+    f => f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.includes('.test.') && !f.includes('.spec.')
+  )
+>>>>>>> origin/master
   .map(f => ({
     in: path.join(absoluteHandlersDir, f),
     out: path.join(path.dirname(f), path.basename(f, '.ts'), 'index')
