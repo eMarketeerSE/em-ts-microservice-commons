@@ -4,13 +4,7 @@ const escapeShellArg = (arg: string): string => {
   return "'" + arg.replace(/'/g, "'\\''") + "'"
 }
 
-<<<<<<< HEAD
-const escapeShellArg = (arg: string): string => {
-  return "'" + arg.replace(/'/g, "'\\''") + "'"
-}
 
-=======
->>>>>>> origin/master
 export const runCommand = (command: string, additionalArgs: string[] = []) => {
   const escapedArgs = additionalArgs.map(escapeShellArg).join(' ')
   const fullCommand = additionalArgs.length > 0 ? command + ' ' + escapedArgs : command

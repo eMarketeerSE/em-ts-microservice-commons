@@ -8,16 +8,8 @@ const args = process.argv.slice(2)
 
 const supportedCommands = [
   'lint',
-<<<<<<< HEAD
-  'deploy',
-  'dev',
   'tsc',
   'jest',
-  'invoke-local',
-=======
-  'tsc',
-  'jest',
->>>>>>> origin/master
   'build-handlers',
   'cdk-deploy',
   'cdk-synth',
@@ -83,50 +75,12 @@ if (script === 'cdk-lint') {
   )
 }
 
-<<<<<<< HEAD
-  if (script === 'build-handlers') {
-    result = runCommand(BUILD_HANDLERS_CMD, scriptArgs)
-  }
-
-  if (script === 'cdk-deploy') {
-    buildHandlersOrExit()
-    result = runCommand('npx cdk deploy --require-approval never', scriptArgs)
-  }
-
-  if (script === 'cdk-synth') {
-    buildHandlersOrExit()
-    result = runCommand('npx cdk synth', scriptArgs)
-  }
-
-  if (script === 'cdk-test') {
-    buildHandlersOrExit()
-    result = runCommand(
-      'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js --rootDir cdk',
-      scriptArgs
-    )
-  }
-
-  if (script === 'cdk-lint') {
-    result = runCommand(
-      'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/cdk/.eslintrc',
-      scriptArgs
-    )
-  }
-
-  if (script === 'jest') {
-    result = runCommand(
-      'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
-      scriptArgs
-    )
-  }
-=======
 if (script === 'jest') {
   result = runCommand(
     'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
     scriptArgs
   )
 }
->>>>>>> origin/master
 
 if (!supportedCommands.includes(script)) {
   console.error(`Unknown command: ${script}`)

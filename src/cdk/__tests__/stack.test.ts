@@ -605,7 +605,6 @@ describe('EmStack', () => {
   })
 
   describe('ssmParam', () => {
-<<<<<<< HEAD
     // valueForStringParameter creates a CloudFormation Parameter with
     // Type: AWS::SSM::Parameter::Value<String> and Default set to the SSM path.
     // The path is only visible in the synthesized template, not in the CDK token itself.
@@ -643,18 +642,6 @@ describe('EmStack', () => {
       const stack = makeStack()
       stack.ssmParam('api-key', { serviceName: 'em-form-service' })
       expect(getSsmParameterDefaults(stack)).toContain('/dev/em-form-service/api-key')
-=======
-    it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
-      const stack = makeStack()
->>>>>>> origin/master
-      const value = stack.ssmParam('proxy_dbms_host')
-      expect(value).toBeDefined()
-    })
-
-    it('uses raw parameter name when raw: true', () => {
-      const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host', { raw: true })
-      expect(value).toBeDefined()
     })
   })
 
