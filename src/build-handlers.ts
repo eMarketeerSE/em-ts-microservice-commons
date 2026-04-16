@@ -49,9 +49,6 @@ const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as 
     if (!f.endsWith('.ts') || f.endsWith('.d.ts') || f.includes('.test.') || f.includes('.spec.')) {
       return false
     }
-    // Only treat files that actually export `handler` as Lambda entry points.
-    // This prevents DTOs, shared utilities, and other non-handler files that happen
-    // to live inside handler directories from being bundled as spurious Lambda targets.
     const content = fs.readFileSync(path.join(absoluteHandlersDir, f), 'utf8')
     return /export\s+(const|function|async\s+function)\s+handler\b/.test(content)
   })
@@ -77,21 +74,20 @@ esbuild
     format: 'cjs',
     sourcemap: false,
     minify: true,
-    // @aws-sdk/* is provided by the Lambda runtime.
-    // The knex entries are optional dialect drivers — only mysql2 is used in practice,
-    // but knex imports all dialects dynamically. Marking them external prevents esbuild
-    // from erroring when these dev-only packages are not installed.
     external: [
       '@aws-sdk/*',
+      'aws-sdk',
+      // Unused Knex/DB drivers — matches serverless-esbuild external list
       'mysql',
       'pg',
       'pg-native',
-      'pg-query-stream',
       'sqlite3',
-      'better-sqlite3',
-      'oracledb',
-      'tedious',
       'mssql',
+      'oracledb',
+      'better-sqlite3',
+      'pg-sqlite3',
+      'tedious',
+      'pg-query-stream',
       'libsql',
       'mariadb'
     ],

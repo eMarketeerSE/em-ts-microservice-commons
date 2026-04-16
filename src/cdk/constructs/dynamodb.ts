@@ -52,7 +52,7 @@ export class EmDynamoDBTable extends Construct {
     applyStandardTags(this.table, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 

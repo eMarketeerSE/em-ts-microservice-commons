@@ -25,8 +25,8 @@ const BUILD_HANDLERS_CMD =
 
 function buildHandlersOrExit() {
   const buildResult = runCommand(BUILD_HANDLERS_CMD, [])
-  if (buildResult && buildResult.status !== 0) {
-    process.exit(buildResult.status!)
+  if (!buildResult || buildResult.status !== 0) {
+    process.exit(buildResult?.status ?? 1)
   }
 }
 
@@ -107,7 +107,7 @@ try {
 
   if (script === 'jest') {
     result = runCommand(
-      'npx cross-env NODE_OPTIONS=--max_old_space_size=4096 jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
+      'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
       scriptArgs
     )
   }
@@ -139,7 +139,7 @@ if (result && result.signal) {
     )
   }
 
-  process.exit(result.status!)
+  process.exit(result.status ?? 1)
 }
 
-process.exit(result?.status!)
+process.exit(result?.status ?? 1)

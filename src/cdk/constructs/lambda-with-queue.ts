@@ -180,19 +180,19 @@ export class LambdaWithQueue extends Construct {
     applyStandardTags(this.function, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     applyStandardTags(this.queue, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     applyStandardTags(this.dlq, {
       stage: props.stage,
       serviceName: props.serviceName,
-      ...props.tags
+      customTags: props.tags
     })
 
     this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
@@ -215,7 +215,7 @@ export class LambdaWithQueue extends Construct {
       const cfnQueue = this.queue.node.defaultChild
       if (!(cfnQueue instanceof CfnQueue)) {
         throw new Error(
-          `Cannot override queue logical ID "${props.overrideLogicalIds.queue}": defaultChild is not a CfnQueue.`
+          `Cannot override queue logical ID to "${props.overrideLogicalIds.queue}": queue does not have a CfnQueue default child.`
         )
       }
       cfnQueue.overrideLogicalId(props.overrideLogicalIds.queue)
@@ -225,7 +225,7 @@ export class LambdaWithQueue extends Construct {
       const cfnDlq = this.dlq.node.defaultChild
       if (!(cfnDlq instanceof CfnQueue)) {
         throw new Error(
-          `Cannot override DLQ logical ID "${props.overrideLogicalIds.dlq}": defaultChild is not a CfnQueue.`
+          `Cannot override DLQ logical ID to "${props.overrideLogicalIds.dlq}": DLQ does not have a CfnQueue default child.`
         )
       }
       cfnDlq.overrideLogicalId(props.overrideLogicalIds.dlq)
@@ -235,7 +235,7 @@ export class LambdaWithQueue extends Construct {
       const cfnAlarm = this.dlqAlarm.alarm.node.defaultChild
       if (!(cfnAlarm instanceof CfnAlarm)) {
         throw new Error(
-          `Cannot override alarm logical ID "${props.overrideLogicalIds.alarm}": defaultChild is not a CfnAlarm.`
+          `Cannot override alarm logical ID to "${props.overrideLogicalIds.alarm}": alarm does not have a CfnAlarm default child.`
         )
       }
       cfnAlarm.overrideLogicalId(props.overrideLogicalIds.alarm)

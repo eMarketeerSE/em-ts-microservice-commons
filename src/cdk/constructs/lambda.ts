@@ -71,7 +71,7 @@ export class EmLambdaFunction extends Construct {
     applyStandardTags(this.function, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 }

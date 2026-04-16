@@ -45,7 +45,7 @@ export class EmSnsTopic extends Construct {
     applyStandardTags(this.topic, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 

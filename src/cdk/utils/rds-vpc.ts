@@ -50,18 +50,24 @@ export function createRdsVpcConfig(
     allowAllOutbound: true
   })
 
-  const cfnSg = lambdaSecurityGroup.node.defaultChild
-  if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
-    throw new Error(
-      'Cannot override security group logical ID: defaultChild is not a CfnSecurityGroup.'
-    )
-  }
-
   if (config.overrideLogicalIds?.securityGroup) {
+    const cfnSg = lambdaSecurityGroup.node.defaultChild
+    if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
+      throw new Error(
+        `Cannot override security group logical ID to "${config.overrideLogicalIds.securityGroup}": ` +
+          'security group does not have a CfnSecurityGroup default child.'
+      )
+    }
     cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
   }
 
   if (config.manageSgEgress === false) {
+    const cfnSg = lambdaSecurityGroup.node.defaultChild
+    if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
+      throw new Error(
+        'Cannot strip SecurityGroupEgress: security group does not have a CfnSecurityGroup default child.'
+      )
+    }
     cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
   }
 
@@ -78,10 +84,6 @@ export function createRdsVpcConfig(
     ingress.overrideLogicalId(config.overrideLogicalIds.ingress)
   }
 
-  // When the SG logical ID is overridden, use { Ref: securityGroupLogicalId } for SourceSecurityGroupId.
-  // CDK generates Fn::GetAtt[GroupId]; Serverless used Ref. Both resolve identically at runtime but
-  // CFN changesets treat them as different expressions and plan a replacement. Auto-apply when
-  // overrideLogicalIds.securityGroup is set so service code never needs a Cfn* escape hatch.
   if (config.overrideLogicalIds?.securityGroup) {
     ingress.addPropertyOverride('SourceSecurityGroupId', {
       Ref: config.overrideLogicalIds.securityGroup

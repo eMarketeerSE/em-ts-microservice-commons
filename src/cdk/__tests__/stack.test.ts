@@ -31,6 +31,11 @@ describe('EmStack', () => {
       expect(stack.stackName).toBe('dev-test-service-stack')
     })
 
+    it('uses {serviceName}-{stage} when useSharedRole is true', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(stack.stackName).toBe('test-service-dev')
+    })
+
     it('allows overriding stackName', () => {
       const stack = makeStack({ stackName: 'custom-name' })
       expect(stack.stackName).toBe('custom-name')
@@ -616,18 +621,18 @@ describe('EmStack', () => {
       expect(getSsmParameterDefaults(stack)).toContain('/dev/test-service/db-timeout')
     })
 
-    it('resolves shared param using paramName as-is when shared: true', () => {
+    it('resolves raw param using paramName as-is when raw: true', () => {
       const stack = makeStack()
-      stack.ssmParam('proxy_dbms_host', { shared: true })
+      stack.ssmParam('proxy_dbms_host', { raw: true })
       const defaults = getSsmParameterDefaults(stack)
       expect(defaults).toContain('proxy_dbms_host')
       expect(defaults.join()).not.toContain('/dev/')
       expect(defaults.join()).not.toContain('test-service')
     })
 
-    it('ignores serviceName when shared: true', () => {
+    it('ignores serviceName when raw: true', () => {
       const stack = makeStack()
-      stack.ssmParam('proxy_dbms_host', { shared: true, serviceName: 'other-service' })
+      stack.ssmParam('proxy_dbms_host', { raw: true })
       const defaults = getSsmParameterDefaults(stack)
       expect(defaults).toContain('proxy_dbms_host')
       expect(defaults.join()).not.toContain('other-service')
@@ -637,6 +642,14 @@ describe('EmStack', () => {
       const stack = makeStack()
       stack.ssmParam('api-key', { serviceName: 'em-form-service' })
       expect(getSsmParameterDefaults(stack)).toContain('/dev/em-form-service/api-key')
+      const value = stack.ssmParam('proxy_dbms_host')
+      expect(value).toBeDefined()
+    })
+
+    it('uses raw parameter name when raw: true', () => {
+      const stack = makeStack()
+      const value = stack.ssmParam('proxy_dbms_host', { raw: true })
+      expect(value).toBeDefined()
     })
   })
 

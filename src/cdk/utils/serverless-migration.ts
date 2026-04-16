@@ -36,13 +36,15 @@ export const toServerlessLogicalIdPrefix = (functionName: string): string => {
 const overrideLambdaLogicalId = (fn: LambdaFunction, serverlessFunctionName: string): void => {
   const prefix = toServerlessLogicalIdPrefix(serverlessFunctionName)
   const cfnFunction = fn.node.defaultChild
+
   if (!(cfnFunction instanceof CfnFunction)) {
     throw new Error(
-      `Cannot override Lambda function logical ID for "${serverlessFunctionName}": ` +
-        'defaultChild is not a CfnFunction. ' +
-        'Imported functions cannot have their logical IDs overridden.'
+      `Cannot override Lambda logical ID for "${serverlessFunctionName}": ` +
+        'the function does not have a CfnFunction default child. ' +
+        'Imported functions (e.g. via Function.fromFunctionArn) cannot have their logical IDs overridden.'
     )
   }
+
   cfnFunction.overrideLogicalId(`${prefix}LambdaFunction`)
 }
 

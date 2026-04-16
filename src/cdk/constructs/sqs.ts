@@ -38,7 +38,7 @@ export class EmSqsQueue extends Construct {
       applyStandardTags(this.deadLetterQueue, {
         stage: config.stage,
         serviceName: config.serviceName,
-        ...config.tags
+        customTags: config.tags
       })
     }
 
@@ -64,7 +64,7 @@ export class EmSqsQueue extends Construct {
     applyStandardTags(this.queue, {
       stage: config.stage,
       serviceName: config.serviceName,
-      ...config.tags
+      customTags: config.tags
     })
   }
 

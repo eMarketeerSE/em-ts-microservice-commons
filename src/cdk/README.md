@@ -183,13 +183,13 @@ cdk deploy -c stage=dev
 
 Base stack class. Provides:
 
-- Auto-generated stack name (`{stage}-{serviceName}-stack`) and description
+- Auto-generated stack name: `{stage}-{serviceName}-stack` (or `{serviceName}-{stage}` when `useSharedRole: true` for Serverless compatibility)
 - Standard tags on all resources (Stage, Service, ManagedBy, `em-microservice`)
 - `createFunction()` — creates Lambdas (with Serverless-compatible logical IDs when `useSharedRole: true`)
 - `createQueueConsumer()` — Lambda + SQS queue + DLQ + alarm
 - `createScheduledFunction()` — Lambda + EventBridge rule
 - `addOutput()` — creates exports with `sls-{service}-{stage}-{key}` pattern
-- `ssmParam()`, `alarmTopic()` — convention-based helpers
+- `ssmParam()` — SSM parameter lookup (convention-based or raw), `alarmTopic()` — alarm topic by convention
 - IAM policy helpers (`addLambdaInvokePolicy`, `addKinesisPolicy`, `addSnsPublishPolicy`, `addSqsSendPolicy`)
 - Optional shared IAM role via `useSharedRole: true` (enables migration mode)
 
