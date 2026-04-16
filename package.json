@@ -49,7 +49,7 @@
     "prebuild": "rimraf dist",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 rollup -c rollup.config.ts",
     "start": "NODE_OPTIONS=--max-old-space-size=4096 rollup -c rollup.config.ts -w",
-    "test": "jest --coverage",
+    "test": "jest --coverage --passWithNoTests",
     "test:watch": "jest --coverage --watch",
     "test:prod": "npm run lint && npm run test -- --no-cache",
     "deploy-docs": "ts-node tools/gh-pages-publish",
@@ -76,6 +76,11 @@
     },
     "testEnvironment": "node",
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/src/cdk/__tests__/"
+    ],
     "moduleFileExtensions": [
       "ts",
       "tsx",
