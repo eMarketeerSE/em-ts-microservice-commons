@@ -76,6 +76,27 @@ describe('TopicQueueConsumer', () => {
     })
   })
 
+  it('pins the subscription logical ID when serverlessSubscriptionLogicalId is provided', () => {
+    const stack = makeStack()
+    const eventTopic = new Topic(stack, 'EventTopic')
+    const alarmTopic = new Topic(stack, 'AlarmTopic')
+
+    new TopicQueueConsumer(stack, 'Subject', {
+      topic: eventTopic,
+      stage: 'dev',
+      serviceName: 'test-service',
+      functionName: 'process-event',
+      queueName: 'dev-test-service-event-queue',
+      alarmTopic,
+      codePath: CODE_PATH,
+      roleName: 'test-role',
+      serverlessSubscriptionLogicalId: 'ProcessEventSnsSubscription'
+    })
+
+    const subscriptions = Template.fromStack(stack).findResources('AWS::SNS::Subscription')
+    expect(subscriptions).toHaveProperty('ProcessEventSnsSubscription')
+  })
+
   it('supports handlerPath', () => {
     const stack = makeStack()
     const eventTopic = new Topic(stack, 'EventTopic')

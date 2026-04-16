@@ -21,7 +21,7 @@ import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/conf
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { generateLambdaName } from '../utils/naming'
 import { resolveHandlerPath } from '../utils/handler-path'
-import { overrideFunctionLogicalIds } from '../utils/serverless-migration'
+import { makeSnsToSqsSubscription, overrideFunctionLogicalIds } from '../utils/serverless-migration'
 import { DlqAlarm } from './dlq-alarm'
 
 export interface LambdaWithQueueProps {
@@ -212,17 +212,33 @@ export class LambdaWithQueue extends Construct {
     }
 
     if (props.overrideLogicalIds?.queue) {
-      ;(this.queue.node.defaultChild as CfnQueue).overrideLogicalId(props.overrideLogicalIds.queue)
+      const cfnQueue = this.queue.node.defaultChild
+      if (!(cfnQueue instanceof CfnQueue)) {
+        throw new Error(
+          `Cannot override queue logical ID "${props.overrideLogicalIds.queue}": defaultChild is not a CfnQueue.`
+        )
+      }
+      cfnQueue.overrideLogicalId(props.overrideLogicalIds.queue)
     }
 
     if (props.overrideLogicalIds?.dlq) {
-      ;(this.dlq.node.defaultChild as CfnQueue).overrideLogicalId(props.overrideLogicalIds.dlq)
+      const cfnDlq = this.dlq.node.defaultChild
+      if (!(cfnDlq instanceof CfnQueue)) {
+        throw new Error(
+          `Cannot override DLQ logical ID "${props.overrideLogicalIds.dlq}": defaultChild is not a CfnQueue.`
+        )
+      }
+      cfnDlq.overrideLogicalId(props.overrideLogicalIds.dlq)
     }
 
     if (props.overrideLogicalIds?.alarm) {
-      ;(this.dlqAlarm.alarm.node.defaultChild as CfnAlarm).overrideLogicalId(
-        props.overrideLogicalIds.alarm
-      )
+      const cfnAlarm = this.dlqAlarm.alarm.node.defaultChild
+      if (!(cfnAlarm instanceof CfnAlarm)) {
+        throw new Error(
+          `Cannot override alarm logical ID "${props.overrideLogicalIds.alarm}": defaultChild is not a CfnAlarm.`
+        )
+      }
+      cfnAlarm.overrideLogicalId(props.overrideLogicalIds.alarm)
     }
   }
 
@@ -250,7 +266,32 @@ export class LambdaWithQueue extends Construct {
     return role
   }
 
-  public subscribeToTopic(topic: ITopic, options?: SqsSubscriptionProps) {
-    topic.addSubscription(new SqsSubscription(this.queue, options))
+  /**
+   * Subscribe the queue to an SNS topic.
+   *
+   * **Migration note:** Pass `serverlessSubscriptionLogicalId` for Serverless→CDK migrations.
+   * Without it, L2 `addSubscription()` generates a hash-suffixed logical ID that does not match
+   * the existing Serverless stack resource, causing subscription deletion and recreation —
+   * silently dropping in-flight messages during deploy.
+   *
+   * @param serverlessSubscriptionLogicalId - When set, uses `makeSnsToSqsSubscription` (L1)
+   *   instead of `addSubscription()` and pins the CloudFormation logical ID to this value.
+   *   Must match the logical ID of the existing `AWS::SNS::Subscription` in the live stack.
+   */
+  public subscribeToTopic(
+    topic: ITopic,
+    options?: SqsSubscriptionProps,
+    serverlessSubscriptionLogicalId?: string
+  ): void {
+    if (serverlessSubscriptionLogicalId) {
+      makeSnsToSqsSubscription(this, serverlessSubscriptionLogicalId, {
+        topicArn: topic.topicArn,
+        endpoint: this.queue.queueArn,
+        protocol: 'sqs',
+        rawMessageDelivery: options?.rawMessageDelivery
+      })
+    } else {
+      topic.addSubscription(new SqsSubscription(this.queue, options))
+    }
   }
 }

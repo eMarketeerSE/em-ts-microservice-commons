@@ -2,11 +2,15 @@ import { App, Stack } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
 import { Code, Runtime, LayerVersion } from 'aws-cdk-lib/aws-lambda'
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+import { Topic } from 'aws-cdk-lib/aws-sns'
 import {
   toServerlessLogicalIdPrefix,
   overrideLayerLogicalId,
   overrideRoleLogicalId,
-  createServerlessCompatibleOutput
+  createServerlessCompatibleOutput,
+  makeServerlessQueue,
+  makeSnsToSqsSubscription,
+  makeServerlessQueuePolicy
 } from '../utils/serverless-migration'
 
 const CODE_PATH = __dirname
@@ -100,5 +104,125 @@ describe('createServerlessCompatibleOutput', () => {
     expect(output.Export.Name).toBe('sls-screenshot-service-dev-ServiceEndpoint')
     expect(output.Value).toBe('https://example.com')
     expect(output.Description).toBe('URL of the service endpoint')
+  })
+})
+
+describe('makeServerlessQueue', () => {
+  it('creates queue and DLQ with specified logical IDs', () => {
+    const stack = makeStack()
+
+    makeServerlessQueue(
+      stack,
+      'MqlEventsQueue',
+      'MqlEventsQueueDLQ',
+      'dev-em-contacts-service-mql-event-queue',
+      'dev-em-contacts-service-mql-event-queue-dlq',
+      'dev'
+    )
+
+    const template = Template.fromStack(stack)
+    const queues = template.findResources('AWS::SQS::Queue')
+    expect(queues).toHaveProperty('MqlEventsQueue')
+    expect(queues).toHaveProperty('MqlEventsQueueDLQ')
+  })
+
+  it('sets DLQ retention to 14 days', () => {
+    const stack = makeStack()
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'dev')
+    const template = Template.fromStack(stack)
+    const queues = template.findResources('AWS::SQS::Queue')
+    expect(queues.QDLQ.Properties.MessageRetentionPeriod).toBe(14 * 24 * 60 * 60)
+  })
+
+  it('sets default visibility timeout to 900 seconds', () => {
+    const stack = makeStack()
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'dev')
+    const template = Template.fromStack(stack)
+    const queues = template.findResources('AWS::SQS::Queue')
+    expect(queues.Q.Properties.VisibilityTimeout).toBe(900)
+  })
+
+  it('creates DlqAlarm when alarm opt provided', () => {
+    const stack = makeStack()
+    const alarmTopic = new Topic(stack, 'AlarmTopic')
+
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'dev', {
+      alarm: { name: 'QDLQAlarm', topic: alarmTopic }
+    })
+
+    const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      AlarmName: 'QDLQAlarm'
+    })
+  })
+
+  it('overrides alarm logical ID when opts.alarm.logicalId is provided', () => {
+    const stack = makeStack()
+    const alarmTopic = new Topic(stack, 'AlarmTopic')
+
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'dev', {
+      alarm: { name: 'QDLQAlarm', topic: alarmTopic, logicalId: 'MyCustomAlarmId' }
+    })
+
+    const template = Template.fromStack(stack)
+    expect(template.findResources('AWS::CloudWatch::Alarm')).toHaveProperty('MyCustomAlarmId')
+  })
+
+  it('does not create DlqAlarm when alarm opt omitted', () => {
+    const stack = makeStack()
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'dev')
+    const template = Template.fromStack(stack)
+    expect(template.findResources('AWS::CloudWatch::Alarm')).toEqual({})
+  })
+
+  it('applies RETAIN removal policy for prod', () => {
+    const stack = makeStack()
+    makeServerlessQueue(stack, 'Q', 'QDLQ', 'q', 'qdlq', 'prod')
+    const template = Template.fromStack(stack)
+    const queues = template.findResources('AWS::SQS::Queue')
+    Object.values(queues).forEach(q => {
+      expect((q as { DeletionPolicy?: string }).DeletionPolicy).toBe('Retain')
+    })
+  })
+})
+
+describe('makeSnsToSqsSubscription', () => {
+  it('creates subscription with specified logical ID and properties', () => {
+    const stack = makeStack()
+
+    makeSnsToSqsSubscription(stack, 'TenantPurgeSubscription', {
+      topicArn: 'arn:aws:sns:eu-west-1:123456789012:dev-emarketeer-event-purge-tenant-data',
+      endpoint: 'arn:aws:sqs:eu-west-1:123456789012:dev-em-contacts-service-tenant-purge',
+      protocol: 'sqs',
+      rawMessageDelivery: true
+    })
+
+    const template = Template.fromStack(stack)
+    const subs = template.findResources('AWS::SNS::Subscription')
+    expect(subs).toHaveProperty('TenantPurgeSubscription')
+    expect(subs.TenantPurgeSubscription.Properties.Protocol).toBe('sqs')
+    expect(subs.TenantPurgeSubscription.Properties.RawMessageDelivery).toBe(true)
+  })
+})
+
+describe('makeServerlessQueuePolicy', () => {
+  it('creates queue policy with specified logical ID', () => {
+    const stack = makeStack()
+
+    makeServerlessQueuePolicy(stack, 'MqlEventSQSPolicy', {
+      queues: ['https://sqs.eu-west-1.amazonaws.com/123456789012/dev-mql-event-queue'],
+      policyDocument: {
+        Version: '2012-10-17',
+        Statement: [{ Effect: 'Allow', Principal: '*', Action: 'sqs:SendMessage', Resource: '*' }]
+      }
+    })
+
+    const template = Template.fromStack(stack)
+    const policies = template.findResources('AWS::SQS::QueuePolicy')
+    expect(policies).toHaveProperty('MqlEventSQSPolicy')
+    expect(policies.MqlEventSQSPolicy.Properties.PolicyDocument.Statement[0].Effect).toBe('Allow')
+    expect(policies.MqlEventSQSPolicy.Properties.PolicyDocument.Statement[0].Action).toBe(
+      'sqs:SendMessage'
+    )
   })
 })

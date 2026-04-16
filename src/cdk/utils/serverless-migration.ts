@@ -1,4 +1,4 @@
-import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib'
+import { CfnOutput, Duration, RemovalPolicy } from 'aws-cdk-lib'
 import {
   Function as LambdaFunction,
   CfnFunction,
@@ -7,7 +7,13 @@ import {
 } from 'aws-cdk-lib/aws-lambda'
 import { CfnLogGroup } from 'aws-cdk-lib/aws-logs'
 import { CfnRole } from 'aws-cdk-lib/aws-iam'
+import { CfnSubscription, CfnSubscriptionProps, ITopic } from 'aws-cdk-lib/aws-sns'
+import { Queue, CfnQueue, CfnQueuePolicy, CfnQueuePolicyProps } from 'aws-cdk-lib/aws-sqs'
+import { Table, CfnTable, TableProps, BillingMode } from 'aws-cdk-lib/aws-dynamodb'
 import { Construct } from 'constructs'
+import { DlqAlarm } from '../constructs/dlq-alarm'
+import { Stage } from '../types'
+import { getRemovalPolicy } from './logs'
 
 /**
  * Convert a Serverless Framework function name to its CloudFormation logical ID prefix.
@@ -29,7 +35,14 @@ export const toServerlessLogicalIdPrefix = (functionName: string): string => {
  */
 const overrideLambdaLogicalId = (fn: LambdaFunction, serverlessFunctionName: string): void => {
   const prefix = toServerlessLogicalIdPrefix(serverlessFunctionName)
-  const cfnFunction = fn.node.defaultChild as CfnFunction
+  const cfnFunction = fn.node.defaultChild
+  if (!(cfnFunction instanceof CfnFunction)) {
+    throw new Error(
+      `Cannot override Lambda function logical ID for "${serverlessFunctionName}": ` +
+        'defaultChild is not a CfnFunction. ' +
+        'Imported functions cannot have their logical IDs overridden.'
+    )
+  }
   cfnFunction.overrideLogicalId(`${prefix}LambdaFunction`)
 }
 
@@ -77,7 +90,15 @@ export const overrideFunctionLogicalIds = (
   serverlessFunctionName: string
 ): void => {
   overrideLambdaLogicalId(fn, serverlessFunctionName)
-  overrideLogGroupLogicalId(fn.logGroup as Construct, serverlessFunctionName)
+  const logGroup = fn.logGroup
+  if (!(logGroup instanceof Construct)) {
+    throw new Error(
+      `Cannot override log group logical ID for "${serverlessFunctionName}": ` +
+        'fn.logGroup is not a Construct. ' +
+        'Imported log groups (importExistingLogGroup: true) cannot have their logical IDs overridden.'
+    )
+  }
+  overrideLogGroupLogicalId(logGroup, serverlessFunctionName)
 }
 
 /**
@@ -112,7 +133,16 @@ export const overrideLayerLogicalId = (layer: ILayerVersion, logicalId: string):
  */
 export const overrideRoleLogicalId = (
   role: Construct,
-  logicalId = 'IamRoleLambdaExecution'
+  logicalId = 'IamRoleLambdaExecution',
+  options?: {
+    /** Override RoleName. Required when live Serverless stack used a specific role name. */
+    readonly roleName?: string
+    /**
+     * Delete Path from the template. Serverless never emits Path; CDK always writes Path: "/".
+     * A mismatch causes role replacement. Set true to prevent it.
+     */
+    readonly deletePath?: boolean
+  }
 ): void => {
   const defaultChild = role.node.defaultChild
 
@@ -124,6 +154,14 @@ export const overrideRoleLogicalId = (
   }
 
   defaultChild.overrideLogicalId(logicalId)
+
+  if (options?.roleName) {
+    defaultChild.addPropertyOverride('RoleName', options.roleName)
+  }
+
+  if (options?.deletePath) {
+    defaultChild.addPropertyDeletionOverride('Path')
+  }
 }
 
 export interface ServerlessCompatibleOutputProps {
@@ -142,10 +180,226 @@ export const createServerlessCompatibleOutput = (
   scope: Construct,
   id: string,
   props: ServerlessCompatibleOutputProps
-): CfnOutput => {
-  return new CfnOutput(scope, id, {
+): CfnOutput =>
+  new CfnOutput(scope, id, {
     value: props.value,
     description: props.description,
     exportName: `sls-${props.serviceName}-${props.stage}-${props.outputKey}`
   })
+
+// ─── Serverless Migration Queue / Subscription / Policy Helpers ───────────────
+
+export interface MakeServerlessQueueOpts {
+  /** Override visibility timeout. Defaults to 900 seconds (Serverless convention). */
+  readonly visibilityTimeout?: Duration
+  /** Max times a message is received before moving to DLQ. Defaults to 3. */
+  readonly maxReceiveCount?: number
+  /**
+   * When provided, creates a DlqAlarm on the DLQ.
+   * Uses the DlqAlarm commons construct.
+   */
+  readonly alarm?: {
+    readonly name: string
+    readonly topic: ITopic
+    /** CloudFormation logical ID override for the alarm. Use during Serverless-to-CDK migrations. */
+    readonly logicalId?: string
+  }
+}
+
+/**
+ * Create a Queue + DLQ pair with explicit physical names and Serverless Framework-
+ * compatible logical IDs.
+ *
+ * This is the primary helper for Serverless-to-CDK migrations. Serverless Framework
+ * generates separate CloudFormation resources for every queue and DLQ using the
+ * YAML resource key as the logical ID (e.g. `MqlEventsQueue`, `MqlEventsQueueDLQ`).
+ * Matching those IDs exactly is required for a zero-downtime in-place migration —
+ * any mismatch causes CloudFormation to delete and recreate the queue, losing
+ * in-flight messages.
+ *
+ * `stage` drives the removal policy: RETAIN in prod, DESTROY everywhere else —
+ * matching the `getRemovalPolicy()` convention from `logs.ts`.
+ * The DLQ retains messages for 14 days (Serverless default).
+ *
+ * @example
+ * ```typescript
+ * const alarmTopic = (scope as EmStack).alarmTopic()
+ * const { queue, dlq } = makeServerlessQueue(
+ *   scope, 'MqlEventsQueue', 'MqlEventsQueueDLQ',
+ *   `${svc}-mql-event-queue`, `${svc}-mql-event-queue-dlq`,
+ *   stage,
+ *   { alarm: { name: 'MqlEventsQueueDLQAlarm', topic: alarmTopic } },
+ * )
+ * ```
+ */
+export function makeServerlessQueue(
+  scope: Construct,
+  queueLogicalId: string,
+  dlqLogicalId: string,
+  queueName: string,
+  dlqName: string,
+  stage: Stage,
+  opts: MakeServerlessQueueOpts = {}
+): { queue: Queue; dlq: Queue } {
+  const removalPolicy = getRemovalPolicy(stage)
+
+  const dlq = new Queue(scope, dlqLogicalId, {
+    queueName: dlqName,
+    retentionPeriod: Duration.days(14),
+    removalPolicy
+  })
+  const cfnDlq = dlq.node.defaultChild
+  if (!(cfnDlq instanceof CfnQueue)) {
+    throw new Error(
+      `Cannot override DLQ logical ID "${dlqLogicalId}": defaultChild is not a CfnQueue.`
+    )
+  }
+  cfnDlq.overrideLogicalId(dlqLogicalId)
+
+  const queue = new Queue(scope, queueLogicalId, {
+    queueName,
+    visibilityTimeout: opts.visibilityTimeout ?? Duration.seconds(900),
+    deadLetterQueue: { queue: dlq, maxReceiveCount: opts.maxReceiveCount ?? 3 },
+    removalPolicy
+  })
+  const cfnQueue = queue.node.defaultChild
+  if (!(cfnQueue instanceof CfnQueue)) {
+    throw new Error(
+      `Cannot override queue logical ID "${queueLogicalId}": defaultChild is not a CfnQueue.`
+    )
+  }
+  cfnQueue.overrideLogicalId(queueLogicalId)
+
+  if (opts.alarm) {
+    new DlqAlarm(scope, `${queueLogicalId}DLQAlarm`, {
+      dlq,
+      alarmName: opts.alarm.name,
+      alarmTopic: opts.alarm.topic,
+      alarmLogicalId: opts.alarm.logicalId
+    })
+  }
+
+  return { queue, dlq }
+}
+
+/**
+ * Create an SNS→SQS subscription (AWS::SNS::Subscription) with a Serverless
+ * Framework-compatible logical ID.
+ *
+ * Use this instead of `topic.addSubscription(new SqsSubscription(queue))` for
+ * Serverless-to-CDK migrations. The L2 `addSubscription()` generates CDK hash-suffixed
+ * logical IDs that don't match the existing Serverless stack's subscription resources —
+ * causing subscription deletion and recreation during deploy, which disrupts in-flight
+ * message delivery.
+ *
+ * The construct ID and the CloudFormation logical ID are both set to `logicalId`.
+ *
+ * @example
+ * ```typescript
+ * makeSnsToSqsSubscription(scope, 'TenantPurgeSubscription', {
+ *   topicArn: `arn:aws:sns:${region}:${accountId}:${stage}-emarketeer-event-purge-tenant-data`,
+ *   endpoint: queues.tenantPurgeQueue.queue.queueArn,
+ *   protocol: 'sqs',
+ *   rawMessageDelivery: true,
+ * })
+ * ```
+ */
+export function makeSnsToSqsSubscription(
+  scope: Construct,
+  logicalId: string,
+  props: Omit<CfnSubscriptionProps, 'protocol'> & { readonly protocol: 'sqs' }
+): CfnSubscription {
+  const sub = new CfnSubscription(scope, logicalId, props)
+  sub.overrideLogicalId(logicalId)
+  return sub
+}
+
+/**
+ * Create an SQS queue policy (AWS::SQS::QueuePolicy) with a Serverless
+ * Framework-compatible logical ID.
+ *
+ * Use this instead of `queue.addToResourcePolicy()` for Serverless-to-CDK migrations.
+ * The L2 method generates CDK hash-suffixed logical IDs that don't match the Serverless
+ * stack's existing AWS::SQS::QueuePolicy resources.
+ *
+ * The construct ID and the CloudFormation logical ID are both set to `logicalId`.
+ *
+ * @example
+ * ```typescript
+ * makeServerlessQueuePolicy(scope, 'MqlEventSQSPolicy', {
+ *   queues: [queues.mqlEventsQueue.queue.queueUrl],
+ *   policyDocument: {
+ *     Version: '2012-10-17',
+ *     Statement: [{
+ *       Effect: 'Allow', Principal: '*', Action: 'sqs:SendMessage', Resource: '*',
+ *       // Always include Condition to restrict to the subscribing SNS topic ARN
+ *       Condition: { ArnEquals: { 'aws:SourceArn': `arn:aws:sns:...` } },
+ *     }],
+ *   },
+ * })
+ * ```
+ */
+export function makeServerlessQueuePolicy(
+  scope: Construct,
+  logicalId: string,
+  props: CfnQueuePolicyProps
+): CfnQueuePolicy {
+  const policy = new CfnQueuePolicy(scope, logicalId, props)
+  policy.overrideLogicalId(logicalId)
+  return policy
+}
+
+/**
+ * Create a DynamoDB Table with an explicit physical name and a Serverless Framework-
+ * compatible logical ID.
+ *
+ * This is the primary helper for Serverless-to-CDK DynamoDB migrations. Serverless Framework
+ * generates CloudFormation resources using the YAML resource key as the logical ID
+ * (e.g. `ContactScoreItemTable`). Matching those IDs exactly is required for a
+ * zero-downtime in-place migration — any mismatch causes CloudFormation to delete and
+ * recreate the table, losing all data.
+ *
+ * Defaults applied:
+ * - BillingMode: PAY_PER_REQUEST
+ * - pointInTimeRecovery: enabled in prod, disabled elsewhere
+ * - removalPolicy: RETAIN in prod, DESTROY elsewhere
+ *
+ * @example
+ * ```typescript
+ * const table = makeServerlessDynamoTable(scope, 'LeadCountTable', `${stage}-em-my-service-lead-count`, stage, {
+ *   partitionKey: { name: 'streamId', type: AttributeType.STRING },
+ *   sortKey: { name: 'day', type: AttributeType.NUMBER },
+ * })
+ * ```
+ */
+export function makeServerlessDynamoTable(
+  scope: Construct,
+  logicalId: string,
+  tableName: string,
+  stage: Stage,
+  options: Omit<
+    TableProps,
+    | 'tableName'
+    | 'billingMode'
+    | 'pointInTimeRecovery'
+    | 'pointInTimeRecoverySpecification'
+    | 'removalPolicy'
+  >
+): Table {
+  const table = new Table(scope, logicalId, {
+    tableName,
+    billingMode: BillingMode.PAY_PER_REQUEST,
+    pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: stage === 'prod' },
+    removalPolicy: getRemovalPolicy(stage),
+    ...options
+  })
+  const cfnTable = table.node.defaultChild
+  if (!(cfnTable instanceof CfnTable)) {
+    throw new Error(
+      `Cannot override DynamoDB table logical ID "${logicalId}": defaultChild is not a CfnTable. ` +
+        'Imported tables cannot have their logical IDs overridden.'
+    )
+  }
+  cfnTable.overrideLogicalId(logicalId)
+  return table
 }

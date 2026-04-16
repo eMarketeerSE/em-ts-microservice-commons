@@ -80,6 +80,13 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly role?: IRole
   /** When true, imports the log group by name instead of creating a managed resource. Use when migrating existing functions where the log group was auto-created by Lambda. */
   readonly importExistingLogGroup?: boolean
+  /**
+   * Absolute physical function name, bypassing generateLambdaName.
+   * Use for Serverless migrations where the legacy naming convention
+   * (service-stage-fn) differs from the CDK convention (stage-service-fn).
+   * Both FunctionName and LogGroupName are derived from this value.
+   */
+  readonly physicalName?: string
 }
 
 /**

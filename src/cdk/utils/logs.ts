@@ -71,26 +71,6 @@ export const createLogGroup = (scope: Construct, id: string, config: LogGroupCon
 }
 
 /**
- * Create a Lambda function log group
- */
-export const createLambdaLogGroup = (
-  scope: Construct,
-  id: string,
-  stage: Stage,
-  serviceName: string,
-  functionName: string,
-  retentionDays?: number
-): LogGroup => {
-  const logGroupName = `/aws/lambda/${generateLogGroupName(stage, serviceName, functionName)}`
-
-  return createLogGroup(scope, id, {
-    logGroupName,
-    stage,
-    retentionDays
-  })
-}
-
-/**
  * Create an API Gateway log group
  */
 export const createApiGatewayLogGroup = (
@@ -115,11 +95,4 @@ export const createApiGatewayLogGroup = (
  */
 export const getRemovalPolicy = (stage: Stage): RemovalPolicy => {
   return stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
-}
-
-/**
- * Should enable log insights based on stage
- */
-export const shouldEnableLogInsights = (stage: Stage): boolean => {
-  return stage === 'prod' || stage === 'staging'
 }

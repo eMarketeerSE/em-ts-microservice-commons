@@ -600,12 +600,43 @@ describe('EmStack', () => {
   })
 
   describe('ssmParam', () => {
-    it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
-      const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host')
+    // valueForStringParameter creates a CloudFormation Parameter with
+    // Type: AWS::SSM::Parameter::Value<String> and Default set to the SSM path.
+    // The path is only visible in the synthesized template, not in the CDK token itself.
+    function getSsmParameterDefaults(stack: EmStack): string[] {
+      const params = Template.fromStack(stack).findParameters('*', {
+        Type: 'AWS::SSM::Parameter::Value<String>'
+      })
+      return Object.values(params).map((p: any) => p.Default as string)
+    }
 
-      // SSM dynamic reference should be present in the template
-      expect(value).toBeDefined()
+    it('resolves service-scoped param as /{stage}/{serviceName}/{paramName}', () => {
+      const stack = makeStack()
+      stack.ssmParam('db-timeout')
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/test-service/db-timeout')
+    })
+
+    it('resolves shared param using paramName as-is when shared: true', () => {
+      const stack = makeStack()
+      stack.ssmParam('proxy_dbms_host', { shared: true })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('/dev/')
+      expect(defaults.join()).not.toContain('test-service')
+    })
+
+    it('ignores serviceName when shared: true', () => {
+      const stack = makeStack()
+      stack.ssmParam('proxy_dbms_host', { shared: true, serviceName: 'other-service' })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('other-service')
+    })
+
+    it('respects serviceName option for service-scoped params', () => {
+      const stack = makeStack()
+      stack.ssmParam('api-key', { serviceName: 'em-form-service' })
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/em-form-service/api-key')
     })
   })
 

@@ -10,6 +10,17 @@ export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
   readonly subscriptionOptions?: Omit<SqsSubscriptionProps, 'rawMessageDelivery'> & {
     rawMessageDelivery?: boolean
   }
+  /**
+   * Pin the CloudFormation logical ID of the SNS subscription (migration mode).
+   *
+   * **Required for Serverless→CDK migrations.** Without this, L2 `addSubscription()`
+   * generates a hash-suffixed logical ID that does not match the existing Serverless stack
+   * resource, causing the subscription to be deleted and recreated — silently dropping
+   * in-flight messages during deploy.
+   *
+   * Set to the logical ID of the existing `AWS::SNS::Subscription` in the live stack.
+   */
+  readonly serverlessSubscriptionLogicalId?: string
 }
 
 /**
@@ -37,7 +48,12 @@ export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
  */
 export class TopicQueueConsumer extends LambdaWithQueue {
   constructor(scope: Construct, id: string, props: TopicQueueConsumerProps) {
-    const { topic: topicOrArn, subscriptionOptions, ...queueProps } = props
+    const {
+      topic: topicOrArn,
+      subscriptionOptions,
+      serverlessSubscriptionLogicalId,
+      ...queueProps
+    } = props
     super(scope, id, queueProps)
 
     const topic =
@@ -45,6 +61,6 @@ export class TopicQueueConsumer extends LambdaWithQueue {
         ? Topic.fromTopicArn(this, 'SubscribedTopic', topicOrArn)
         : topicOrArn
 
-    this.subscribeToTopic(topic, subscriptionOptions)
+    this.subscribeToTopic(topic, subscriptionOptions, serverlessSubscriptionLogicalId)
   }
 }
