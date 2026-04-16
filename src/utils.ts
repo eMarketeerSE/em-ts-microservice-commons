@@ -26,13 +26,15 @@ export const cleanup = () => {
   }
 }
 
+const escapeShellArg = (arg: string): string => {
+  return "'" + arg.replace(/'/g, "'\\''") + "'"
+}
+
 export const runCommand = (command: string, additionalArgs: string[] = []) => {
-  const commandParts = command.split(' ')
+  const escapedArgs = additionalArgs.map(escapeShellArg).join(' ')
+  const fullCommand = additionalArgs.length > 0 ? command + ' ' + escapedArgs : command
 
-  const program = commandParts[0]
-  const args = commandParts.slice(1).concat(additionalArgs)
+  console.log('running ', fullCommand)
 
-  console.log('running ', program, args.join(' '))
-
-  return spawn.sync(program, args, { stdio: 'inherit' })
+  return spawn.sync(fullCommand, [], { stdio: 'inherit', shell: true })
 }
