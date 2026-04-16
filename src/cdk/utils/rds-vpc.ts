@@ -16,6 +16,14 @@ export interface RdsVpcConfiguration {
   readonly dbPort?: number
   /** When provided, auto-attaches AWSLambdaVPCAccessExecutionRole to the role. */
   readonly sharedRole?: Role
+  /**
+   * Security group description. Defaults to `'Lambda security group for RDS access'`.
+   *
+   * Override when migrating from Serverless Framework — CloudFormation treats the
+   * description as immutable, so it must match the existing value to avoid a
+   * disruptive security-group replacement.
+   */
+  readonly securityGroupDescription?: string
 }
 
 export function createRdsVpcConfig(
@@ -33,7 +41,7 @@ export function createRdsVpcConfig(
 
   const lambdaSecurityGroup = new ec2.SecurityGroup(scope, `RdsLambdaSecurityGroup-${stage}`, {
     vpc,
-    description: 'Lambda security group for RDS access',
+    description: config.securityGroupDescription ?? 'Lambda security group for RDS access',
     allowAllOutbound: true
   })
 

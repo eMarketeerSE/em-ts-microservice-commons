@@ -6,6 +6,7 @@ import {
   Table,
   AttributeType,
   BillingMode,
+  CfnTable,
   StreamViewType,
   ProjectionType,
   TableEncryption
@@ -26,7 +27,8 @@ export class EmDynamoDBTable extends Construct {
   constructor(scope: Construct, id: string, config: DynamoDBTableConfig) {
     super(scope, id)
 
-    const tableName = generateTableName(config.stage, config.serviceName, config.tableName)
+    const tableName =
+      config.rawTableName ?? generateTableName(config.stage, config.serviceName, config.tableName)
 
     // Create DynamoDB table
     this.table = new Table(this, 'Table', {
@@ -40,6 +42,17 @@ export class EmDynamoDBTable extends Construct {
       encryption: TableEncryption.AWS_MANAGED,
       removalPolicy: getRemovalPolicy(config.stage)
     })
+
+    if (config.overrideLogicalId) {
+      const cfnTable = this.table.node.defaultChild
+      if (!(cfnTable instanceof CfnTable)) {
+        throw new Error(
+          `Cannot override table logical ID to "${config.overrideLogicalId}": ` +
+            'table does not have a CfnTable default child.'
+        )
+      }
+      cfnTable.overrideLogicalId(config.overrideLogicalId)
+    }
 
     // Add Global Secondary Indexes
     if (config.globalSecondaryIndexes) {

@@ -87,6 +87,15 @@ export interface LambdaConfig extends BaseConstructConfig {
  */
 export interface DynamoDBTableConfig extends BaseConstructConfig {
   readonly tableName: string
+  /**
+   * Use an exact physical table name instead of the generated
+   * `{stage}-{serviceName}-table-{tableName}` form. Required for Serverless
+   * Framework migrations where the existing physical name would otherwise change
+   * and force table replacement.
+   */
+  readonly rawTableName?: string
+  /** Override the CloudFormation logical ID of the table (for migration). */
+  readonly overrideLogicalId?: string
   readonly partitionKey: {
     name: string
     type: AttributeType
