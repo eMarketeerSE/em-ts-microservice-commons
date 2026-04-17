@@ -66,6 +66,22 @@ describe('EmDynamoDBTable', () => {
         PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
       })
     })
+
+    it('does not enable deletion protection on dev by default', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', baseConfig)
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        DeletionProtectionEnabled: false
+      })
+    })
+
+    it('enables deletion protection on prod by default', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', { ...baseConfig, stage: 'prod' })
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        DeletionProtectionEnabled: true
+      })
+    })
   })
 
   describe('overrides', () => {
@@ -86,6 +102,26 @@ describe('EmDynamoDBTable', () => {
       new EmDynamoDBTable(stack, 'Subject', { ...baseConfig, pointInTimeRecovery: true })
       Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
         PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+      })
+    })
+
+    it('respects explicit deletionProtection: true on dev', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', { ...baseConfig, deletionProtection: true })
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        DeletionProtectionEnabled: true
+      })
+    })
+
+    it('respects explicit deletionProtection: false on prod', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', {
+        ...baseConfig,
+        stage: 'prod',
+        deletionProtection: false
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        DeletionProtectionEnabled: false
       })
     })
 
@@ -140,6 +176,52 @@ describe('EmDynamoDBTable', () => {
       Template.fromStack(stack).hasResource('AWS::DynamoDB::Table', {
         DeletionPolicy: 'Delete'
       })
+    })
+  })
+
+  describe('rawTableName', () => {
+    it('uses rawTableName verbatim instead of the generated name', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', {
+        ...baseConfig,
+        rawTableName: 'legacy-sessions-table'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        TableName: 'legacy-sessions-table'
+      })
+    })
+
+    it('takes precedence over tableName when both are provided', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', {
+        ...baseConfig,
+        tableName: 'ignored',
+        rawTableName: 'legacy-sessions-table'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::DynamoDB::Table', {
+        TableName: 'legacy-sessions-table'
+      })
+    })
+  })
+
+  describe('overrideLogicalId', () => {
+    it('overrides the CloudFormation logical ID of the table', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', {
+        ...baseConfig,
+        overrideLogicalId: 'LegacySessionsTable'
+      })
+      const tables = Template.fromStack(stack).findResources('AWS::DynamoDB::Table')
+      expect(tables).toHaveProperty('LegacySessionsTable')
+      expect(Object.keys(tables)).toHaveLength(1)
+    })
+
+    it('uses default CDK logical ID when overrideLogicalId is not set', () => {
+      const stack = makeStack()
+      new EmDynamoDBTable(stack, 'Subject', baseConfig)
+      const tables = Template.fromStack(stack).findResources('AWS::DynamoDB::Table')
+      expect(tables).not.toHaveProperty('LegacySessionsTable')
+      expect(Object.keys(tables)).toHaveLength(1)
     })
   })
 })
