@@ -8,7 +8,7 @@
  * here avoids each service copy-pasting the same IDs.
  */
 
-export type InfraStage = 'dev' | 'prod'
+import { Stage } from '../types'
 
 export interface AccountInfraConfig {
   readonly vpcId: string
@@ -16,7 +16,7 @@ export interface AccountInfraConfig {
   readonly rdsSecurityGroupId: string
 }
 
-export function getAccountInfraConfig(stage: InfraStage): AccountInfraConfig {
+export function getAccountInfraConfig(stage: Stage): AccountInfraConfig {
   switch (stage) {
     case 'dev':
       return {
@@ -31,6 +31,8 @@ export function getAccountInfraConfig(stage: InfraStage): AccountInfraConfig {
         rdsSecurityGroupId: 'sg-427bda39'
       }
     default:
-      throw new Error(`Unsupported infrastructure stage: ${stage as string}`)
+      throw new Error(
+        `Unsupported infrastructure stage: ${stage as string}. Only 'dev' and 'prod' are supported.`
+      )
   }
 }

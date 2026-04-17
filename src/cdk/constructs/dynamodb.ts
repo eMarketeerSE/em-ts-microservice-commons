@@ -37,6 +37,7 @@ export class EmDynamoDBTable extends Construct {
       sortKey: config.sortKey,
       billingMode: config.billingMode || BillingMode.PAY_PER_REQUEST,
       pointInTimeRecovery: config.pointInTimeRecovery ?? config.stage === 'prod',
+      deletionProtection: config.deletionProtection ?? config.stage === 'prod',
       stream: config.stream ? StreamViewType.NEW_AND_OLD_IMAGES : undefined,
       timeToLiveAttribute: config.timeToLiveAttribute,
       encryption: TableEncryption.AWS_MANAGED,
