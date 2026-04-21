@@ -9,6 +9,7 @@ import {
   IManagedPolicy
 } from 'aws-cdk-lib/aws-iam'
 import { ITopic, Topic } from 'aws-cdk-lib/aws-sns'
+import { SqsSubscriptionProps } from 'aws-cdk-lib/aws-sns-subscriptions'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
@@ -18,6 +19,7 @@ import { resolveHandlerPath } from '../utils/handler-path'
 import { EmLambdaFunction } from './lambda'
 import { EmEventBridgeRule } from './eventbridge'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
+import { TopicQueueConsumer } from './topic-queue-consumer'
 import {
   overrideFunctionLogicalIds,
   overrideRoleLogicalId,
@@ -308,6 +310,46 @@ export class EmStack extends cdk.Stack {
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
       role: merged.role ?? this.sharedRole,
+      ...(this.sharedRole && {
+        serverlessFunctionName: merged.serverlessFunctionName ?? functionName
+      })
+    })
+  }
+
+  /**
+   * Create a Lambda function consuming messages from an SNS topic via SQS.
+   * Combines `createQueueConsumer()` + `subscribeToTopic()` in one call and
+   * inherits the stack's default function config (env vars, VPC, timeout).
+   *
+   * Prefer this over constructing `TopicQueueConsumer` directly — the raw
+   * constructor bypasses default-config merging.
+   *
+   * @example
+   * ```typescript
+   * this.createTopicQueueConsumer('ProcessInvoices', {
+   *   topic: invoiceTopic,
+   *   subscriptionOptions: { rawMessageDelivery: true },
+   *   handlerPath: 'src/handlers/process-invoices',
+   *   queueName: 'dev-my-service-invoice-queue',
+   *   alarmTopic,
+   * })
+   * ```
+   */
+  createTopicQueueConsumer(
+    id: string,
+    config: CreateTopicQueueConsumerConfig
+  ): TopicQueueConsumer {
+    const { topic, subscriptionOptions, ...queueConfig } = config
+    const merged = this.mergeConfig(queueConfig)
+    const { functionName } = resolveHandlerPath(merged)
+
+    return new TopicQueueConsumer(this, id, {
+      ...merged,
+      stage: merged.stage ?? this.stage,
+      serviceName: merged.serviceName ?? this.serviceName,
+      role: merged.role ?? this.sharedRole,
+      topic,
+      subscriptionOptions,
       ...(this.sharedRole && {
         serverlessFunctionName: merged.serverlessFunctionName ?? functionName
       })
@@ -611,4 +653,17 @@ export type CreateScheduledFunctionConfig = CreateFunctionConfig & {
   readonly ruleName?: string
   /** Description for the EventBridge rule. */
   readonly ruleDescription?: string
+}
+
+/**
+ * Config for `EmStack.createTopicQueueConsumer()`. Adds the SNS topic and
+ * subscription options on top of `CreateQueueConsumerConfig`.
+ */
+export type CreateTopicQueueConsumerConfig = CreateQueueConsumerConfig & {
+  /** The SNS topic to subscribe to. */
+  readonly topic: ITopic
+  /** Options for the SQS subscription (e.g. rawMessageDelivery, filterPolicy). */
+  readonly subscriptionOptions?: Omit<SqsSubscriptionProps, 'rawMessageDelivery'> & {
+    rawMessageDelivery?: boolean
+  }
 }

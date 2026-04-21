@@ -560,6 +560,129 @@ describe('EmStack', () => {
     })
   })
 
+  describe('createTopicQueueConsumer', () => {
+    it('creates Lambda, queue, DLQ, alarm, and SNS subscription', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        handlerPath: 'src/handlers/process-invoices',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role'
+      })
+
+      const template = Template.fromStack(stack)
+      template.resourceCountIs('AWS::Lambda::Function', 1)
+      template.resourceCountIs('AWS::SQS::Queue', 2)
+      template.resourceCountIs('AWS::CloudWatch::Alarm', 1)
+      template.resourceCountIs('AWS::SNS::Subscription', 1)
+      template.hasResourceProperties('AWS::SNS::Subscription', {
+        Protocol: 'sqs'
+      })
+    })
+
+    it('defaults stage and serviceName from the stack', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        functionName: 'process-invoices',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'dev-test-service-process-invoices'
+      })
+    })
+
+    it('applies defaultFunctionConfig environment', () => {
+      const stack = makeStack({
+        defaultFunctionConfig: {
+          environment: { DEFAULT_VAR: 'from-defaults' }
+        }
+      })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        handlerPath: 'src/handlers/process-invoices',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ DEFAULT_VAR: 'from-defaults' })
+        }
+      })
+    })
+
+    it('uses shared role and overrides logical IDs in migration mode', () => {
+      const stack = makeStack({ useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        functionName: 'process-invoices',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic
+      })
+
+      const template = Template.fromStack(stack)
+      template.resourceCountIs('AWS::IAM::Role', 1)
+      const functions = template.findResources('AWS::Lambda::Function')
+      expect(functions).toHaveProperty('ProcessDashinvoicesLambdaFunction')
+    })
+
+    it('forwards subscriptionOptions to the SNS subscription', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        handlerPath: 'src/handlers/process-invoices',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role',
+        subscriptionOptions: {
+          rawMessageDelivery: true
+        }
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::SNS::Subscription', {
+        RawMessageDelivery: true
+      })
+    })
+  })
+
   describe('createScheduledFunction', () => {
     it('creates a Lambda and EventBridge rule', () => {
       const stack = makeStack()
