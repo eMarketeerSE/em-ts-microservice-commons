@@ -47,7 +47,9 @@ const config: any = {
 }
 
 if (esmFriendly) {
-  config.extensionsToTreatAsEsm = ['.ts']
+  // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
+  // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
+  config.extensionsToTreatAsEsm = ['.ts', '.tsx']
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
