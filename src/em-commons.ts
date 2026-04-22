@@ -76,6 +76,8 @@ if (script === 'cdk-lint') {
 }
 
 if (script === 'jest') {
+  // --experimental-vm-modules is required for AWS SDK v3's credential-provider chain
+  // (uses dynamic import() internally, which Jest intercepts and needs this flag for).
   result = runCommand(
     'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js',
     scriptArgs
