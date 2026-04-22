@@ -106,4 +106,22 @@ export default [{
     shebang(),
     executable(),
   ],
+}, {
+  input: 'src/lib/jest-esm-warmup.ts',
+  external: ['@eMarketeerSE/runtime-commons'],
+  output: [
+    { file: 'dist/lib/jest-esm-warmup.js', format: 'esm', sourcemap: true },
+  ],
+  plugins: [
+    typescript({
+      useTsconfigDeclarationDir: true,
+      tsconfigOverride: {
+        compilerOptions: {
+          target: 'ES2022',
+          module: 'esnext',
+        },
+      },
+    }),
+    sourceMaps(),
+  ],
 }]
