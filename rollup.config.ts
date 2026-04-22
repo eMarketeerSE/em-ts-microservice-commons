@@ -110,7 +110,11 @@ export default [{
   input: 'src/lib/jest-esm-warmup.ts',
   external: ['@eMarketeerSE/runtime-commons'],
   output: [
-    { file: 'dist/lib/jest-esm-warmup.js', format: 'esm', sourcemap: true },
+    // .mjs so Node/Jest parse as ESM regardless of em-commons' CJS package
+    // scope — a .js file here would fail: em-commons' package.json has no
+    // "type": "module", so Node's nearest-package-scope rule treats .js as
+    // CJS and rejects `import` + top-level await.
+    { file: 'dist/lib/jest-esm-warmup.mjs', format: 'esm', sourcemap: true },
   ],
   plugins: [
     typescript({

@@ -53,7 +53,7 @@ if (esmFriendly) {
   // Preload runtime-commons' MikroORM modules during the worker's stable
   // module-load phase so lazy loaders short-circuit at test time — avoids
   // Jest's ESM teardown invariant racing dynamic imports in MikroORM.
-  config.setupFiles = [require.resolve('./jest-esm-warmup.js')]
+  config.setupFiles = [require.resolve('./jest-esm-warmup.mjs')]
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
