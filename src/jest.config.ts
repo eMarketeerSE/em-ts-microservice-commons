@@ -1,13 +1,21 @@
 const esModules = ['@eMarketeerSE/runtime-commons'].join('|')
 
-// Opt-in mode for services that depend on ESM-only packages (e.g. MikroORM v7).
+// Opt-in mode for services that depend on ESM-only packages (e.g. MikroORM).
 // When EM_JEST_ESM_FRIENDLY=true:
 //  - ts-jest compiles .ts as ESM (useESM), targeting es2022.
 //  - extensionsToTreatAsEsm lets Jest load .ts through its ESM VM loader,
 //    the same realm that handles ESM node_modules like @mikro-orm/*.
 // Opting-in services must import { jest } from '@jest/globals' in test files
 // that use jest.* APIs, since the `jest` global is CJS-only.
-const esmFriendly = process.env.EM_JEST_ESM_FRIENDLY === 'true'
+const rawEsmFriendly = process.env.EM_JEST_ESM_FRIENDLY
+const esmFriendly = rawEsmFriendly?.trim().toLowerCase() === 'true'
+if (rawEsmFriendly !== undefined && !esmFriendly) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[em-commons] EM_JEST_ESM_FRIENDLY=${JSON.stringify(rawEsmFriendly)} ignored;`
+    + ' expected \'true\'. Falling back to default CJS Jest config.'
+  )
+}
 const tsJestTsConfig: Record<string, string> = {
   target: esmFriendly ? 'es2022' : 'es6'
 }
