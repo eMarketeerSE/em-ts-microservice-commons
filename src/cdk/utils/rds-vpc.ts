@@ -36,14 +36,14 @@ export function createRdsVpcConfig(
     vpcId: config.vpcId
   })
 
-  // Lambdas placed in these subnets need a route to RDS, but never read
-  // `subnet.routeTable.routeTableId`. Acknowledge the CDK warning that
-  // `fromSubnetId` emits for imports without route-table info.
+  // The imported subnets are only handed to Lambda's VpcConfig. We never read
+  // `subnet.routeTable.routeTableId`, so acknowledge the CDK warning that
+  // `fromSubnetId` emits for imports without route-table metadata.
   const privateSubnets = config.privateSubnetIds.map((subnetId, index) => {
     const subnet = ec2.Subnet.fromSubnetId(scope, `RdsPrivateSubnet${index}-${stage}`, subnetId)
     Annotations.of(subnet).acknowledgeWarning(
       '@aws-cdk/aws-ec2:noSubnetRouteTableId',
-      'Lambda-to-RDS networking does not consult subnet route tables.'
+      'This construct only passes imported subnets to Lambda VpcConfig and does not require routeTableId metadata.'
     )
     return subnet
   })
