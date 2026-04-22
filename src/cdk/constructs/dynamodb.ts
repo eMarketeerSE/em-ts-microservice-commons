@@ -36,7 +36,9 @@ export class EmDynamoDBTable extends Construct {
       partitionKey: config.partitionKey,
       sortKey: config.sortKey,
       billingMode: config.billingMode || BillingMode.PAY_PER_REQUEST,
-      pointInTimeRecovery: config.pointInTimeRecovery ?? config.stage === 'prod',
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.pointInTimeRecovery ?? config.stage === 'prod'
+      },
       deletionProtection: config.deletionProtection ?? config.stage === 'prod',
       stream: config.stream ? StreamViewType.NEW_AND_OLD_IMAGES : undefined,
       timeToLiveAttribute: config.timeToLiveAttribute,

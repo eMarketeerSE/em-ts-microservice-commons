@@ -1,4 +1,5 @@
 import { Construct } from 'constructs'
+import { Annotations } from 'aws-cdk-lib'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import { Role, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { Stage, VpcConfig } from '../types'
@@ -35,9 +36,17 @@ export function createRdsVpcConfig(
     vpcId: config.vpcId
   })
 
-  const privateSubnets = config.privateSubnetIds.map((subnetId, index) =>
-    ec2.Subnet.fromSubnetId(scope, `RdsPrivateSubnet${index}-${stage}`, subnetId)
-  )
+  // Lambdas placed in these subnets need a route to RDS, but never read
+  // `subnet.routeTable.routeTableId`. Acknowledge the CDK warning that
+  // `fromSubnetId` emits for imports without route-table info.
+  const privateSubnets = config.privateSubnetIds.map((subnetId, index) => {
+    const subnet = ec2.Subnet.fromSubnetId(scope, `RdsPrivateSubnet${index}-${stage}`, subnetId)
+    Annotations.of(subnet).acknowledgeWarning(
+      '@aws-cdk/aws-ec2:noSubnetRouteTableId',
+      'Lambda-to-RDS networking does not consult subnet route tables.'
+    )
+    return subnet
+  })
 
   const lambdaSecurityGroup = new ec2.SecurityGroup(scope, `RdsLambdaSecurityGroup-${stage}`, {
     vpc,
