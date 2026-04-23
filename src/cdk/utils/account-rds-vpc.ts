@@ -8,10 +8,6 @@
  * private subnets exist solely to give Lambdas a route to RDS — Lambdas that
  * don't talk to RDS do not need them.
  *
- * Only `dev` and `prod` are supported — `test` and `staging` do not have
- * separate VPC configurations. Use `createRdsVpcConfig()` directly with
- * explicit IDs for those stages if needed.
- *
  * Designed to compose with `createRdsVpcConfig()` in `./rds-vpc`:
  *
  * ```typescript
