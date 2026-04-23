@@ -50,15 +50,21 @@ if (esmFriendly) {
   // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
   // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
   config.extensionsToTreatAsEsm = ['.ts', '.tsx']
-  // Previously this block wired in a `setupFiles` entry that called
-  // `preloadMikroOrmModules` from runtime-commons. That preload goes through
-  // the same Function-constructor dynamic-import path runtime-commons uses
-  // for MikroORM and hits Jest's `importModuleDynamically` teardown
-  // invariant on ~60–90% of multi-file -w 4 runs — whether called from
-  // beforeAll or from a setupFile. Consumers that need a stable MikroORM
-  // init under Jest ESM should import from `@eMarketeerSE/runtime-commons/mikroorm-esm`
-  // (static ESM imports, routed via Jest's `loadEsmModule` which captures
-  // the VM context once per file).
+  // NOTE: a setupFiles-based preload is tempting here but unsafe. Calling
+  // runtime-commons' MikroORM loaders from a setup file still routes every
+  // `import()` through Jest's `importModuleDynamically` handler, which
+  // re-asserts the per-file VM context on each call. The Function-constructor
+  // closure inside runtime-commons' CJS helper is bound to the first test
+  // file's VM; a second file on the same worker hits "Test environment has
+  // been torn down" on multi-file parallel runs (whether fired from
+  // beforeAll or from a setup file).
+  //
+  // Consumers who need a stable MikroORM init under Jest ESM should import
+  // the ESM-only subpath, which uses static imports routed through Jest's
+  // per-file module-load path (`loadEsmModule`):
+  //
+  //   // src/db/orm-init.ts
+  //   import { getMikroOrmMySqlConnection } from '@eMarketeerSE/runtime-commons/mikroorm-esm'
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
