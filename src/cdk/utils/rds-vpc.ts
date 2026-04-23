@@ -25,6 +25,13 @@ export interface RdsVpcConfiguration {
    * disruptive security-group replacement.
    */
   readonly securityGroupDescription?: string
+  /**
+   * When false, strips SecurityGroupEgress from the CloudFormation template.
+   * Use for the initial Serverless→CDK migration deploy when the live stack never had
+   * an explicit egress rule. Prevents rollback from revoking the default allow-all-outbound
+   * rule. Remove this option in a follow-up deploy to hand CloudFormation ownership.
+   */
+  readonly manageSgEgress?: boolean
 }
 
 export function createRdsVpcConfig(
@@ -65,6 +72,17 @@ export function createRdsVpcConfig(
     cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
   }
 
+  if (config.manageSgEgress === false) {
+    const cfnSg = lambdaSecurityGroup.node.defaultChild
+    if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
+      throw new Error(
+        'Cannot strip SecurityGroupEgress: security group does not have a CfnSecurityGroup default child.'
+      )
+    }
+    cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
+  }
+
+
   const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {
     groupId: config.dbSecurityGroupId,
     ipProtocol: 'tcp',
@@ -77,6 +95,13 @@ export function createRdsVpcConfig(
   if (config.overrideLogicalIds?.ingress) {
     ingress.overrideLogicalId(config.overrideLogicalIds.ingress)
   }
+
+  if (config.overrideLogicalIds?.securityGroup) {
+    ingress.addPropertyOverride('SourceSecurityGroupId', {
+      Ref: config.overrideLogicalIds.securityGroup
+    })
+  }
+
 
   if (config.sharedRole) {
     config.sharedRole.addManagedPolicy(

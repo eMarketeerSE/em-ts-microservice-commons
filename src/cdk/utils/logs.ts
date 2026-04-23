@@ -55,7 +55,9 @@ export const convertRetentionDays = (days?: number): RetentionDays | undefined =
   const result = retentionMap[days]
   if (!result) {
     throw new Error(
-      `Unsupported logRetentionDays value: ${days}. Supported values: ${Object.keys(retentionMap).join(', ')}`
+      `Unsupported logRetentionDays value: ${days}. Supported values: ${Object.keys(
+        retentionMap
+      ).join(', ')}`
     )
   }
   return result
@@ -73,26 +75,6 @@ export const createLogGroup = (scope: Construct, id: string, config: LogGroupCon
     logGroupName: config.logGroupName,
     retention: retentionDays,
     removalPolicy: config.stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
-  })
-}
-
-/**
- * Create a Lambda function log group
- */
-export const createLambdaLogGroup = (
-  scope: Construct,
-  id: string,
-  stage: Stage,
-  serviceName: string,
-  functionName: string,
-  retentionDays?: number
-): LogGroup => {
-  const logGroupName = `/aws/lambda/${generateLogGroupName(stage, serviceName, functionName)}`
-
-  return createLogGroup(scope, id, {
-    logGroupName,
-    stage,
-    retentionDays
   })
 }
 
@@ -121,11 +103,4 @@ export const createApiGatewayLogGroup = (
  */
 export const getRemovalPolicy = (stage: Stage): RemovalPolicy => {
   return stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
-}
-
-/**
- * Should enable log insights based on stage
- */
-export const shouldEnableLogInsights = (stage: Stage): boolean => {
-  return stage === 'prod' || stage === 'staging'
 }

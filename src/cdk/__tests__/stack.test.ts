@@ -265,6 +265,65 @@ describe('EmStack', () => {
         expect(functions).toHaveProperty('CaptureDashscreenshotDashfromDashurlLambdaFunction')
         expect(functions).toHaveProperty('GenerateDashpdfDashfromDashurlLambdaFunction')
       })
+
+    describe('physicalName', () => {
+      it('sets FunctionName directly, bypassing generateLambdaName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+          FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+
+      it('sets log group name from physicalName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Logs::LogGroup', {
+          LogGroupName: '/aws/lambda/em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+
+      it('logical ID is still derived from functionName, not physicalName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        const template = Template.fromStack(stack)
+        const functions = template.findResources('AWS::Lambda::Function')
+        // Logical ID from functionName ('get-score-breakdown'), not physicalName
+        expect(functions).toHaveProperty('GetDashscoreDashbreakdownLambdaFunction')
+      })
+
+      it('works without useSharedRole', () => {
+        const stack = makeStack()
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+          FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+    })
     })
   })
 
@@ -728,16 +787,40 @@ describe('EmStack', () => {
   })
 
   describe('ssmParam', () => {
-    it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
+    function getSsmParameterDefaults(stack: EmStack): string[] {
+      const params = Template.fromStack(stack).findParameters('*', {
+        Type: 'AWS::SSM::Parameter::Value<String>'
+      })
+      return Object.values(params).map((p: any) => p.Default as string)
+    }
+
+    it('resolves service-scoped param as /{stage}/{serviceName}/{paramName}', () => {
       const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host')
-      expect(value).toBeDefined()
+      stack.ssmParam('db-timeout')
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/test-service/db-timeout')
     })
 
-    it('uses raw parameter name when raw: true', () => {
+    it('resolves raw param using paramName as-is when raw: true', () => {
       const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host', { raw: true })
-      expect(value).toBeDefined()
+      stack.ssmParam('proxy_dbms_host', { raw: true })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('/dev/')
+      expect(defaults.join()).not.toContain('test-service')
+    })
+
+    it('ignores serviceName when raw: true', () => {
+      const stack = makeStack()
+      stack.ssmParam('proxy_dbms_host', { raw: true })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('other-service')
+    })
+
+    it('respects serviceName option for service-scoped params', () => {
+      const stack = makeStack()
+      stack.ssmParam('api-key', { serviceName: 'em-form-service' })
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/em-form-service/api-key')
     })
   })
 

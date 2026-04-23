@@ -8,11 +8,7 @@ import { generateLambdaName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
-import {
-  buildRecapDevEnvironment,
-  getLambdaEnvironmentVariables,
-  resolveRecapDevEndpoint
-} from '../utils/config'
+import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 
 export class EmLambdaFunction extends Construct {
@@ -21,7 +17,9 @@ export class EmLambdaFunction extends Construct {
   constructor(scope: Construct, id: string, config: LambdaConfig) {
     super(scope, id)
 
-    const functionName = generateLambdaName(config.stage, config.serviceName, config.functionName)
+    const functionName =
+      config.physicalName ??
+      generateLambdaName(config.stage, config.serviceName, config.functionName)
 
     const role: IRole =
       config.role ??
@@ -49,7 +47,9 @@ export class EmLambdaFunction extends Construct {
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {
-        ...getLambdaEnvironmentVariables(config.stage),
+        STAGE: config.stage,
+        NODE_ENV: config.stage === 'prod' ? 'production' : 'development',
+        REGION: process.env.AWS_REGION ?? 'eu-west-1',
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },

@@ -1,6 +1,6 @@
 import { Construct } from 'constructs'
 import { IQueue } from 'aws-cdk-lib/aws-sqs'
-import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
+import { Alarm, CfnAlarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
 
@@ -8,6 +8,7 @@ export interface DlqAlarmProps {
   dlq: IQueue
   alarmName: string
   alarmTopic: ITopic
+  alarmLogicalId?: string
 }
 
 export class DlqAlarm extends Construct {
@@ -26,5 +27,15 @@ export class DlqAlarm extends Construct {
     })
 
     this.alarm.addAlarmAction(new SnsAction(props.alarmTopic))
+
+    if (props.alarmLogicalId) {
+      const cfnAlarm = this.alarm.node.defaultChild
+      if (!(cfnAlarm instanceof CfnAlarm)) {
+        throw new Error(
+          `Cannot override alarm logical ID "${props.alarmLogicalId}": defaultChild is not a CfnAlarm.`
+        )
+      }
+      cfnAlarm.overrideLogicalId(props.alarmLogicalId)
+    }
   }
 }

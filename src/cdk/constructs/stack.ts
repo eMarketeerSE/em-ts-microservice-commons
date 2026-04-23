@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
-import { Aws, Tags } from 'aws-cdk-lib'
+import { Annotations, Aws, Tags } from 'aws-cdk-lib'
 import {
   Effect,
   PolicyStatement,
@@ -25,6 +25,7 @@ import {
   overrideRoleLogicalId,
   createServerlessCompatibleOutput
 } from '../utils/serverless-migration'
+import { createXRayTracingPolicy } from '../utils/iam'
 
 export interface EmStackProps extends cdk.StackProps {
   readonly stage: Stage
@@ -44,9 +45,15 @@ export interface EmStackProps extends cdk.StackProps {
    */
   readonly useSharedRole?: boolean
   /**
-   * Managed policies to attach to the shared role.
+   * Replaces the default managed policies on the shared role.
    * Only used when `useSharedRole` is true.
-   * Defaults to CloudWatchLambdaInsightsExecutionRolePolicy.
+   *
+   * Defaults to `[AWSLambdaBasicExecutionRole, CloudWatchLambdaInsightsExecutionRolePolicy]`.
+   * Providing this option replaces that entire list — include `AWSLambdaBasicExecutionRole`
+   * explicitly if it is still needed.
+   *
+   * For VPC services, prefer passing `sharedRole` to `createRdsVpcConfig` instead.
+   * That appends `AWSLambdaVPCAccessExecutionRole` without replacing the defaults.
    */
   readonly sharedRoleManagedPolicies?: IManagedPolicy[]
   /**
@@ -212,21 +219,16 @@ export class EmStack extends cdk.Stack {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private mergeConfig<T extends Record<string, any>>(config: T): T {
-    const defaults = this.defaultFunctionConfig as Record<string, unknown>
-    const merged = { ...defaults, ...config } as T
-
+  private mergeConfig<T extends { environment?: Record<string, string> }>(config: T): T {
     const defaultEnv = this.defaultFunctionConfig.environment
-    const configEnv = (config as { environment?: Record<string, string> }).environment
-    if (defaultEnv || configEnv) {
-      ;((merged as unknown) as { environment: Record<string, string> }).environment = {
-        ...(defaultEnv ?? {}),
-        ...(configEnv ?? {})
-      }
-    }
-
-    return merged
+    const configEnv = config.environment
+    return {
+      ...this.defaultFunctionConfig,
+      ...config,
+      ...(defaultEnv || configEnv
+        ? { environment: { ...(defaultEnv ?? {}), ...(configEnv ?? {}) } }
+        : {})
+    } as T
   }
 
   /**
@@ -416,17 +418,24 @@ export class EmStack extends cdk.Stack {
    * Add a Lambda invoke policy to the shared role.
    * @param functionPattern - Optional function name pattern. Defaults to `{stage}-{serviceName}-*`.
    *   Pass `'*'` for account-wide access.
+   *
+   * **Note:** The default pattern only matches functions named with the CDK convention
+   * (`{stage}-{serviceName}-{fn}`). Functions created with `physicalName` using the legacy
+   * Serverless convention (`{service}-{stage}-{fn}`) will not be matched. Pass `'*'` when
+   * the service has any `physicalName` functions that must be invocable.
    */
   addLambdaInvokePolicy(functionPattern?: string): void {
-    this.requireSharedRole('addLambdaInvokePolicy')
+    const role = this.requireSharedRole('addLambdaInvokePolicy')
     const pattern = functionPattern ?? `${this.stage}-${this.serviceName}-*`
-    this.sharedRole!.addToPolicy(
+    const resources =
+      pattern === '*'
+        ? ['*']
+        : [`arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`]
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['lambda:InvokeFunction'],
-        resources: [
-          `arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`
-        ]
+        resources
       })
     )
   }
@@ -436,9 +445,9 @@ export class EmStack extends cdk.Stack {
    * @param streamName - Short stream name (prefixed with `{stage}-`).
    */
   addKinesisPolicy(streamName: string): void {
-    this.requireSharedRole('addKinesisPolicy')
+    const role = this.requireSharedRole('addKinesisPolicy')
     const arn = `arn:${Aws.PARTITION}:kinesis:${Aws.REGION}:${Aws.ACCOUNT_ID}:stream/${this.stage}-${streamName}`
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['kinesis:PutRecord', 'kinesis:PutRecords'],
@@ -452,12 +461,12 @@ export class EmStack extends cdk.Stack {
    * @param topicOrName - An ITopic reference, or a short topic name (prefixed with `{stage}-`).
    */
   addSnsPublishPolicy(topicOrName: ITopic | string): void {
-    this.requireSharedRole('addSnsPublishPolicy')
+    const role = this.requireSharedRole('addSnsPublishPolicy')
     const arn =
       typeof topicOrName === 'string'
         ? `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${topicOrName}`
         : topicOrName.topicArn
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sns:Publish'],
@@ -471,9 +480,9 @@ export class EmStack extends cdk.Stack {
    * @param queueName - Short queue name (prefixed with `{stage}-`).
    */
   addSqsSendPolicy(queueName: string): void {
-    this.requireSharedRole('addSqsSendPolicy')
+    const role = this.requireSharedRole('addSqsSendPolicy')
     const arn = `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${queueName}`
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
@@ -482,10 +491,185 @@ export class EmStack extends cdk.Stack {
     )
   }
 
-  private requireSharedRole(methodName: string): void {
+  /** Add an XRay tracing policy to the shared role. */
+  addXRayPolicy(): void {
+    const role = this.requireSharedRole('addXRayPolicy')
+    role.addToPolicy(createXRayTracingPolicy())
+  }
+
+  /**
+   * Add a CloudWatch Logs policy to the shared role.
+   * Grants describe, read, and query access on all log groups.
+   * Basic write access (CreateLogGroup, CreateLogStream, PutLogEvents) is already
+   * covered by AWSLambdaBasicExecutionRole attached to the shared role.
+   */
+  addCloudWatchLogsPolicy(): void {
+    const role = this.requireSharedRole('addCloudWatchLogsPolicy')
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogGroups',
+          'logs:DescribeLogStreams',
+          'logs:FilterLogEvents',
+          'logs:GetLogEvents',
+          'logs:StartQuery',
+          'logs:StopQuery',
+          'logs:GetQueryResults'
+        ],
+        resources: ['*']
+      })
+    )
+  }
+
+  /**
+   * Add an SNS policy to the shared role.
+   * @param options.actions - SNS actions (e.g. ['sns:Publish', 'sns:Subscribe']).
+   * @param options.resources - Resource ARNs. When omitted, defaults to `['*']`
+   *   (account-wide access). Prefer `addSnsPublishPolicy(topicArn)` for scoped
+   *   publish-only access to a specific topic.
+   */
+  addSnsPolicy(options: { actions: string[]; resources?: string[] }): void {
+    const role = this.requireSharedRole('addSnsPolicy')
+    if (!options.resources) {
+      Annotations.of(this).addWarning(
+        'addSnsPolicy: no resources specified — policy grants account-wide SNS access on all topics. ' +
+          'Pass resources to scope the policy, or use addSnsPublishPolicy(topicArn) for publish access.'
+      )
+    }
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: options.actions,
+        resources: options.resources ?? ['*']
+      })
+    )
+  }
+
+  /**
+   * Add an SQS consumer policy to the shared role.
+   * Grants ChangeMessageVisibility, DeleteMessage, ReceiveMessage, SendMessage,
+   * and GetQueueAttributes on each queue.
+   * @param queueNames - Short queue names without stage prefix. Stage prefix added automatically.
+   */
+  addSqsConsumerPolicy(queueNames: string[]): void {
+    const role = this.requireSharedRole('addSqsConsumerPolicy')
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'sqs:ChangeMessageVisibility',
+          'sqs:DeleteMessage',
+          'sqs:ReceiveMessage',
+          'sqs:SendMessage',
+          'sqs:GetQueueAttributes'
+        ],
+        resources: queueNames.map(
+          name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`
+        )
+      })
+    )
+  }
+
+  /**
+   * Add an execute-api:Invoke policy to the shared role.
+   * Resources are scoped to `*` — API Gateway requires the full execution ARN
+   * (`arn:{partition}:execute-api:{region}:{account}:{api-id}/{stage}/{method}/{path}`)
+   * which is not available as a stable value in migration stacks.
+   */
+  addExecuteApiPolicy(): void {
+    const role = this.requireSharedRole('addExecuteApiPolicy')
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['execute-api:Invoke'],
+        resources: ['*']
+      })
+    )
+  }
+
+  /**
+   * Add an S3 policy to the shared role.
+   * @param bucketName - Full bucket name (no stage prefix added).
+   * @param actions - S3 actions to grant. Defaults to `['s3:GetObject', 's3:PutObject',
+   *   's3:DeleteObject', 's3:ListBucket']`. Pass an explicit list for narrower or broader access.
+   */
+  addS3Policy(bucketName: string, actions?: string[]): void {
+    const role = this.requireSharedRole('addS3Policy')
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: actions ?? ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
+        resources: [
+          `arn:${Aws.PARTITION}:s3:::${bucketName}`,
+          `arn:${Aws.PARTITION}:s3:::${bucketName}/*`
+        ]
+      })
+    )
+  }
+
+  /**
+   * Add a DynamoDB policy to the shared role.
+   * Grants read, write, transact, and describe actions on each table.
+   * Uses literal * for region and account in ARNs.
+   * @param tableNames - Short table names without stage prefix. Stage prefix added automatically.
+   * @param options.streamTableNames - Short table names to also grant stream read access (/stream/*).
+   * @param options.indexTableNames - Short table names to also grant Query/Scan on all indexes (/index/*).
+   *   Uses a separate policy statement scoped to only dynamodb:Query and dynamodb:Scan.
+   */
+  addDynamoDbPolicy(tableNames: string[], options?: { streamTableNames?: string[], indexTableNames?: string[] }): void {
+    const role = this.requireSharedRole('addDynamoDbPolicy')
+    const tableArns = tableNames.map(
+      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}`
+    )
+    const streamArns = (options?.streamTableNames ?? []).map(
+      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}/stream/*`
+    )
+    role.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:GetItem',
+          'dynamodb:PutItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem',
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:BatchGetItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:TransactGetItems',
+          'dynamodb:TransactWriteItems',
+          'dynamodb:DescribeTable',
+          'dynamodb:DescribeStream',
+          'dynamodb:GetRecords',
+          'dynamodb:GetShardIterator',
+          'dynamodb:ListStreams'
+        ],
+        resources: [...tableArns, ...streamArns]
+      })
+    )
+    const indexArns = (options?.indexTableNames ?? []).map(
+      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}/index/*`
+    )
+    if (indexArns.length > 0) {
+      role.addToPolicy(
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['dynamodb:Query', 'dynamodb:Scan'],
+          resources: indexArns,
+        })
+      )
+    }
+  }
+
+  private requireSharedRole(methodName: string): Role {
     if (!this.sharedRole) {
       throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)
     }
+    return this.sharedRole
   }
 
   /**
