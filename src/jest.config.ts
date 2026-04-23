@@ -50,10 +50,15 @@ if (esmFriendly) {
   // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
   // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
   config.extensionsToTreatAsEsm = ['.ts', '.tsx']
-  // Preload runtime-commons' MikroORM modules during the worker's stable
-  // module-load phase so lazy loaders short-circuit at test time — avoids
-  // Jest's ESM teardown invariant racing dynamic imports in MikroORM.
-  config.setupFiles = [require.resolve('./jest-esm-warmup.mjs')]
+  // Previously this block wired in a `setupFiles` entry that called
+  // `preloadMikroOrmModules` from runtime-commons. That preload goes through
+  // the same Function-constructor dynamic-import path runtime-commons uses
+  // for MikroORM and hits Jest's `importModuleDynamically` teardown
+  // invariant on ~60–90% of multi-file -w 4 runs — whether called from
+  // beforeAll or from a setupFile. Consumers that need a stable MikroORM
+  // init under Jest ESM should import from `@eMarketeerSE/runtime-commons/mikroorm-esm`
+  // (static ESM imports, routed via Jest's `loadEsmModule` which captures
+  // the VM context once per file).
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
