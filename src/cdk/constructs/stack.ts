@@ -425,13 +425,13 @@ export class EmStack extends cdk.Stack {
    * the service has any `physicalName` functions that must be invocable.
    */
   addLambdaInvokePolicy(functionPattern?: string): void {
-    this.requireSharedRole('addLambdaInvokePolicy')
+    const role = this.requireSharedRole('addLambdaInvokePolicy')
     const pattern = functionPattern ?? `${this.stage}-${this.serviceName}-*`
     const resources =
       pattern === '*'
         ? ['*']
         : [`arn:${Aws.PARTITION}:lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:function:${pattern}`]
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['lambda:InvokeFunction'],
@@ -445,9 +445,9 @@ export class EmStack extends cdk.Stack {
    * @param streamName - Short stream name (prefixed with `{stage}-`).
    */
   addKinesisPolicy(streamName: string): void {
-    this.requireSharedRole('addKinesisPolicy')
+    const role = this.requireSharedRole('addKinesisPolicy')
     const arn = `arn:${Aws.PARTITION}:kinesis:${Aws.REGION}:${Aws.ACCOUNT_ID}:stream/${this.stage}-${streamName}`
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['kinesis:PutRecord', 'kinesis:PutRecords'],
@@ -461,12 +461,12 @@ export class EmStack extends cdk.Stack {
    * @param topicOrName - An ITopic reference, or a short topic name (prefixed with `{stage}-`).
    */
   addSnsPublishPolicy(topicOrName: ITopic | string): void {
-    this.requireSharedRole('addSnsPublishPolicy')
+    const role = this.requireSharedRole('addSnsPublishPolicy')
     const arn =
       typeof topicOrName === 'string'
         ? `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${topicOrName}`
         : topicOrName.topicArn
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sns:Publish'],
@@ -480,9 +480,9 @@ export class EmStack extends cdk.Stack {
    * @param queueName - Short queue name (prefixed with `{stage}-`).
    */
   addSqsSendPolicy(queueName: string): void {
-    this.requireSharedRole('addSqsSendPolicy')
+    const role = this.requireSharedRole('addSqsSendPolicy')
     const arn = `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${queueName}`
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
@@ -493,8 +493,8 @@ export class EmStack extends cdk.Stack {
 
   /** Add an XRay tracing policy to the shared role. */
   addXRayPolicy(): void {
-    this.requireSharedRole('addXRayPolicy')
-    this.sharedRole!.addToPolicy(createXRayTracingPolicy())
+    const role = this.requireSharedRole('addXRayPolicy')
+    role.addToPolicy(createXRayTracingPolicy())
   }
 
   /**
@@ -556,8 +556,8 @@ export class EmStack extends cdk.Stack {
    * @param queueNames - Short queue names without stage prefix. Stage prefix added automatically.
    */
   addSqsConsumerPolicy(queueNames: string[]): void {
-    this.requireSharedRole('addSqsConsumerPolicy')
-    this.sharedRole!.addToPolicy(
+    const role = this.requireSharedRole('addSqsConsumerPolicy')
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [
@@ -581,8 +581,8 @@ export class EmStack extends cdk.Stack {
    * which is not available as a stable value in migration stacks.
    */
   addExecuteApiPolicy(): void {
-    this.requireSharedRole('addExecuteApiPolicy')
-    this.sharedRole!.addToPolicy(
+    const role = this.requireSharedRole('addExecuteApiPolicy')
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['execute-api:Invoke'],
@@ -598,8 +598,8 @@ export class EmStack extends cdk.Stack {
    *   's3:DeleteObject', 's3:ListBucket']`. Pass an explicit list for narrower or broader access.
    */
   addS3Policy(bucketName: string, actions?: string[]): void {
-    this.requireSharedRole('addS3Policy')
-    this.sharedRole!.addToPolicy(
+    const role = this.requireSharedRole('addS3Policy')
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: actions ?? ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
@@ -619,14 +619,14 @@ export class EmStack extends cdk.Stack {
    * @param options.streamTableNames - Short table names to also grant stream read access (/stream/*).
    */
   addDynamoDbPolicy(tableNames: string[], options?: { streamTableNames?: string[] }): void {
-    this.requireSharedRole('addDynamoDbPolicy')
+    const role = this.requireSharedRole('addDynamoDbPolicy')
     const tableArns = tableNames.map(
       n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}`
     )
     const streamArns = (options?.streamTableNames ?? []).map(
       n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}/stream/*`
     )
-    this.sharedRole!.addToPolicy(
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [

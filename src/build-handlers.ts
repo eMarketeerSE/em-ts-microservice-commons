@@ -44,31 +44,43 @@ if (!fs.existsSync(absoluteHandlersDir)) {
   process.exit(1)
 }
 
-const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as any) as string[])
-  .filter(f => {
-    if (!f.endsWith('.ts') || f.endsWith('.d.ts') || f.includes('.test.') || f.includes('.spec.')) {
-      return false
-    }
-    const content = fs.readFileSync(path.join(absoluteHandlersDir, f), 'utf8')
-    return (
-      /export\s+(const|function|async\s+function)\s+handler\b/.test(content) ||
-      /export\s*\{[^}]*\bhandler\b[^}]*\}/.test(content)
+async function findEntryPoints(): Promise<{ in: string; out: string }[]> {
+  const files = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as any) as string[])
+    .filter(f =>
+      f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.includes('.test.') && !f.includes('.spec.')
     )
-  })
-  .map(f => ({
-    in: path.join(absoluteHandlersDir, f),
-    out: path.join(path.dirname(f), path.basename(f, '.ts'), 'index')
-  }))
 
-if (entryPoints.length === 0) {
-  console.log(`No handlers found in ${handlersDir}`)
-  process.exit(0)
+  const results = await Promise.all(
+    files.map(async f => {
+      const fullPath = path.join(absoluteHandlersDir, f)
+      const content = await fs.promises.readFile(fullPath, 'utf8')
+      const hasHandlerExport =
+        /export\s+(const|function|async\s+function)\s+handler\b/.test(content) ||
+        /export\s*\{[^}]*\bhandler\b[^}]*\}/.test(content)
+      if (!hasHandlerExport) {
+        return undefined
+      }
+      return {
+        in: fullPath,
+        out: path.join(path.dirname(f), path.basename(f, '.ts'), 'index')
+      }
+    })
+  )
+
+  return results.filter((entry): entry is { in: string; out: string } => entry !== undefined)
 }
 
-console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)
+async function main(): Promise<void> {
+  const entryPoints = await findEntryPoints()
 
-esbuild
-  .build({
+  if (entryPoints.length === 0) {
+    console.log(`No handlers found in ${handlersDir}`)
+    return
+  }
+
+  console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)
+
+  await esbuild.build({
     entryPoints,
     outdir: absoluteOutDir,
     bundle: true,
@@ -96,19 +108,20 @@ esbuild
     ],
     plugins: [recapDevHandlerWrapper, ...defaultPlugins]
   })
-  .then(() => {
-    entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
-  })
-  .catch(err => {
-    if (err?.errors?.length) {
-      err.errors.forEach((e: any) => {
-        const loc = e.location
-          ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
-          : ''
-        console.error(`  esbuild error${loc}: ${e.text}`)
-      })
-    } else {
-      console.error(err)
-    }
-    process.exit(1)
-  })
+
+  entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
+}
+
+main().catch(err => {
+  if (err?.errors?.length) {
+    err.errors.forEach((e: any) => {
+      const loc = e.location
+        ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
+        : ''
+      console.error(`  esbuild error${loc}: ${e.text}`)
+    })
+  } else {
+    console.error(err)
+  }
+  process.exit(1)
+})
