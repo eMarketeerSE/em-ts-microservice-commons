@@ -50,14 +50,14 @@ if (esmFriendly) {
   // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
   // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
   config.extensionsToTreatAsEsm = ['.ts', '.tsx']
-  // NOTE: a setupFiles-based preload is tempting here but unsafe. Calling
-  // runtime-commons' MikroORM loaders from a setup file still routes every
-  // `import()` through Jest's `importModuleDynamically` handler, which
-  // re-asserts the per-file VM context on each call. The Function-constructor
-  // closure inside runtime-commons' CJS helper is bound to the first test
-  // file's VM; a second file on the same worker hits "Test environment has
-  // been torn down" on multi-file parallel runs (whether fired from
-  // beforeAll or from a setup file).
+  // Do not preload runtime-commons' MikroORM loaders via `setupFiles`.
+  // That preload still goes through a dynamic `import()`, which Jest routes
+  // through its `importModuleDynamically` handler — the handler re-asserts
+  // the per-file VM context on every call. The Function-constructor closure
+  // inside runtime-commons' CJS helper is bound to the first test file's
+  // VM; a second file on the same worker hits "Test environment has been
+  // torn down" on multi-file parallel runs (whether fired from beforeAll
+  // or from a setup file).
   //
   // Consumers who need a stable MikroORM init under Jest ESM should import
   // the ESM-only subpath, which uses static imports routed through Jest's
