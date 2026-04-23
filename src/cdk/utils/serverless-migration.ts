@@ -2,6 +2,7 @@ import { CfnOutput, Duration, RemovalPolicy } from 'aws-cdk-lib'
 import {
   Function as LambdaFunction,
   CfnFunction,
+  CfnPermission,
   ILayerVersion,
   CfnLayerVersion
 } from 'aws-cdk-lib/aws-lambda'
@@ -189,8 +190,6 @@ export const createServerlessCompatibleOutput = (
     exportName: `sls-${props.serviceName}-${props.stage}-${props.outputKey}`
   })
 
-// ─── Serverless Migration Queue / Subscription / Policy Helpers ───────────────
-
 export interface MakeServerlessQueueOpts {
   /** Override visibility timeout. Defaults to 900 seconds (Serverless convention). */
   readonly visibilityTimeout?: Duration
@@ -209,19 +208,15 @@ export interface MakeServerlessQueueOpts {
 }
 
 /**
- * Create a Queue + DLQ pair with explicit physical names and Serverless Framework-
- * compatible logical IDs.
+ * Creates an SQS queue with a dead-letter queue using the names and logical IDs
+ * from the existing Serverless stack.
  *
- * This is the primary helper for Serverless-to-CDK migrations. Serverless Framework
- * generates separate CloudFormation resources for every queue and DLQ using the
- * YAML resource key as the logical ID (e.g. `MqlEventsQueue`, `MqlEventsQueueDLQ`).
- * Matching those IDs exactly is required for a zero-downtime in-place migration —
- * any mismatch causes CloudFormation to delete and recreate the queue, losing
- * in-flight messages.
+ * Use this during Serverless to CDK migrations when the queues already exist.
+ * The queue and DLQ logical IDs must match the CloudFormation resources created
+ * by Serverless, otherwise CloudFormation can replace the queues during deploy.
  *
- * `stage` drives the removal policy: RETAIN in prod, DESTROY everywhere else —
- * matching the `getRemovalPolicy()` convention from `logs.ts`.
- * The DLQ retains messages for 14 days (Serverless default).
+ * Production queues are retained. Other stages use the shared removal policy
+ * from `getRemovalPolicy()`. The DLQ message retention is set to 14 days.
  *
  * @example
  * ```typescript
@@ -285,16 +280,15 @@ export function makeServerlessQueue(
 }
 
 /**
- * Create an SNS→SQS subscription (AWS::SNS::Subscription) with a Serverless
- * Framework-compatible logical ID.
+ * Creates an SNS to SQS subscription with the same logical ID as the existing
+ * Serverless resource.
  *
- * Use this instead of `topic.addSubscription(new SqsSubscription(queue))` for
- * Serverless-to-CDK migrations. The L2 `addSubscription()` generates CDK hash-suffixed
- * logical IDs that don't match the existing Serverless stack's subscription resources —
- * causing subscription deletion and recreation during deploy, which disrupts in-flight
- * message delivery.
+ * Use this when migrating an existing subscription from Serverless to CDK.
+ * `topic.addSubscription(new SqsSubscription(queue))` lets CDK generate the
+ * logical ID, which usually does not match the resource already in CloudFormation.
+ * That can cause the subscription to be replaced during deployment.
  *
- * The construct ID and the CloudFormation logical ID are both set to `logicalId`.
+ * Both the construct ID and CloudFormation logical ID are set from `logicalId`.
  *
  * @example
  * ```typescript
@@ -317,14 +311,82 @@ export function makeSnsToSqsSubscription(
 }
 
 /**
- * Create an SQS queue policy (AWS::SQS::QueuePolicy) with a Serverless
- * Framework-compatible logical ID.
+ * Creates an SNS to Lambda subscription and matching invoke permission using
+ * logical IDs from the existing Serverless stack.
  *
- * Use this instead of `queue.addToResourcePolicy()` for Serverless-to-CDK migrations.
- * The L2 method generates CDK hash-suffixed logical IDs that don't match the Serverless
- * stack's existing AWS::SQS::QueuePolicy resources.
+ * Use this when migrating an existing SNS Lambda trigger to CDK. The normal CDK
+ * subscription helper generates its own logical IDs, so it can replace the
+ * Serverless-created subscription and permission during deploy. For SNS Lambda
+ * subscriptions that means events published during the replacement window are lost.
  *
- * The construct ID and the CloudFormation logical ID are both set to `logicalId`.
+ * Pass literal ARN strings for both the topic and Lambda function. Avoid using
+ * `topic.topicArn` or `function.functionArn` here, since changes in the generated
+ * CloudFormation expression can still force replacement even when the final ARN is
+ * the same.
+ *
+ * The Lambda function must have a fixed `physicalName`, otherwise the function ARN
+ * cannot be written safely by hand.
+ *
+ * Check the live CloudFormation stack for the subscription and permission logical
+ * IDs before using this helper:
+ *
+ * ```bash
+ * aws cloudformation list-stack-resources --stack-name <stack-name> \
+ *   --query "StackResourceSummaries[?ResourceType=='AWS::SNS::Subscription' ||
+ *            ResourceType=='AWS::Lambda::Permission'].[LogicalResourceId,ResourceType]" \
+ *   --output table
+ * ```
+ *
+ * @example
+ * ```typescript
+ * const stagePrefix = stage.charAt(0).toUpperCase() + stage.slice(1)
+ * makeSnsToLambdaSubscription(
+ *   scope,
+ *   `HandleDashemailDashstatusDashchangedSnsSubscription${stagePrefix}emarketeereventemailreputationchanged`,
+ *   `HandleDashemailDashstatusDashchangedLambdaPermission${stagePrefix}emarketeereventemailreputationchangedSNS`,
+ *   {
+ *     topicArn:    `arn:aws:sns:eu-west-1:${accountId}:${stage}-emarketeer-event-email-reputation-changed`,
+ *     functionArn: `arn:aws:lambda:eu-west-1:${accountId}:function:em-contacts-service-${stage}-handle-email-status-changed`,
+ *   }
+ * )
+ * ```
+ */
+export function makeSnsToLambdaSubscription(
+  scope: Construct,
+  subscriptionLogicalId: string,
+  permissionLogicalId: string,
+  props: {
+    readonly topicArn: string
+    readonly functionArn: string
+  }
+): { subscription: CfnSubscription; permission: CfnPermission } {
+  const subscription = new CfnSubscription(scope, subscriptionLogicalId, {
+    topicArn: props.topicArn,
+    protocol: 'lambda',
+    endpoint: props.functionArn,
+  })
+  subscription.overrideLogicalId(subscriptionLogicalId)
+
+  const permission = new CfnPermission(scope, permissionLogicalId, {
+    action: 'lambda:InvokeFunction',
+    functionName: props.functionArn,
+    principal: 'sns.amazonaws.com',
+    sourceArn: props.topicArn,
+  })
+  permission.overrideLogicalId(permissionLogicalId)
+
+  return { subscription, permission }
+}
+
+/**
+ * Creates an SQS queue policy using the logical ID from the existing Serverless
+ * stack.
+ *
+ * Use this for migrated queues instead of `queue.addToResourcePolicy()`. The CDK
+ * helper creates its own logical ID, which usually does not match the
+ * `AWS::SQS::QueuePolicy` resource already managed by CloudFormation.
+ *
+ * Both the construct ID and CloudFormation logical ID are set from `logicalId`.
  *
  * @example
  * ```typescript
@@ -334,7 +396,7 @@ export function makeSnsToSqsSubscription(
  *     Version: '2012-10-17',
  *     Statement: [{
  *       Effect: 'Allow', Principal: '*', Action: 'sqs:SendMessage', Resource: '*',
- *       // Always include Condition to restrict to the subscribing SNS topic ARN
+ *       // Keep the policy limited to the SNS topic that sends to this queue.
  *       Condition: { ArnEquals: { 'aws:SourceArn': `arn:aws:sns:...` } },
  *     }],
  *   },
@@ -352,19 +414,18 @@ export function makeServerlessQueuePolicy(
 }
 
 /**
- * Create a DynamoDB Table with an explicit physical name and a Serverless Framework-
- * compatible logical ID.
+ * Creates a DynamoDB table with the physical name and logical ID used by the
+ * existing Serverless stack.
  *
- * This is the primary helper for Serverless-to-CDK DynamoDB migrations. Serverless Framework
- * generates CloudFormation resources using the YAML resource key as the logical ID
- * (e.g. `ContactScoreItemTable`). Matching those IDs exactly is required for a
- * zero-downtime in-place migration — any mismatch causes CloudFormation to delete and
- * recreate the table, losing all data.
+ * Use this when moving an existing Serverless-managed table to CDK. The logical
+ * ID should be copied from the CloudFormation resource, usually the resource key
+ * from `serverless.yml`. If it does not match, CloudFormation may replace the
+ * table during deploy.
  *
- * Defaults applied:
- * - BillingMode: PAY_PER_REQUEST
- * - pointInTimeRecovery: enabled in prod, disabled elsewhere
- * - removalPolicy: RETAIN in prod, DESTROY elsewhere
+ * Defaults used by this helper:
+ * - billing mode is PAY_PER_REQUEST
+ * - point-in-time recovery is enabled only in prod
+ * - removal policy is RETAIN in prod and DESTROY in other stages
  *
  * @example
  * ```typescript

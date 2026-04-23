@@ -9,7 +9,6 @@ export const RECAP_DEV_TIMEOUT_WINDOW_SECONDS = 300
 
 /**
  * Returns the env var block to inject for recap.dev, or an empty object.
- * Handles CDK dummy values returned by valueFromLookup when the SSM key is absent.
  */
 export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<string, string> => {
   if (!endpoint || endpoint.startsWith('dummy-value-')) {

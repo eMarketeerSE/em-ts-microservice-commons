@@ -50,7 +50,10 @@ const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as 
       return false
     }
     const content = fs.readFileSync(path.join(absoluteHandlersDir, f), 'utf8')
-    return /export\s+(const|function|async\s+function)\s+handler\b/.test(content)
+    return (
+      /export\s+(const|function|async\s+function)\s+handler\b/.test(content) ||
+      /export\s*\{[^}]*\bhandler\b[^}]*\}/.test(content)
+    )
   })
   .map(f => ({
     in: path.join(absoluteHandlersDir, f),

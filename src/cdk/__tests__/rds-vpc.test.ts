@@ -23,7 +23,7 @@ describe('createRdsVpcConfig', () => {
     expect(Object.keys(sgs).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('creates an ingress rule on the DB security group (R2)', () => {
+  it('creates an ingress rule on the DB security group', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', BASE_CONFIG)
     const template = Template.fromStack(stack)
@@ -33,7 +33,7 @@ describe('createRdsVpcConfig', () => {
     })
   })
 
-  it('defaults dbPort to 3306 (R5)', () => {
+  it('defaults dbPort to 3306', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', BASE_CONFIG)
     const template = Template.fromStack(stack)
@@ -43,7 +43,7 @@ describe('createRdsVpcConfig', () => {
     })
   })
 
-  it('overrides security group logical ID (R3)', () => {
+  it('overrides security group logical ID', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', {
       ...BASE_CONFIG,
@@ -55,7 +55,7 @@ describe('createRdsVpcConfig', () => {
     )
   })
 
-  it('overrides ingress rule logical ID (R4)', () => {
+  it('overrides ingress rule logical ID', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', {
       ...BASE_CONFIG,
@@ -67,7 +67,7 @@ describe('createRdsVpcConfig', () => {
     )
   })
 
-  it('attaches AWSLambdaVPCAccessExecutionRole to sharedRole (R6)', () => {
+  it('attaches AWSLambdaVPCAccessExecutionRole to sharedRole', () => {
     const stack = makeStack()
     const role = new Role(stack, 'SharedRole', {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com')
@@ -90,7 +90,7 @@ describe('createRdsVpcConfig', () => {
     })
   })
 
-  it('returns vpc, vpcSubnets, and securityGroups containing the created SG (R7)', () => {
+  it('returns vpc, vpcSubnets, and securityGroups containing the created SG', () => {
     const stack = makeStack()
     const result = createRdsVpcConfig(stack, 'dev', BASE_CONFIG)
     expect(result).toHaveProperty('vpc')

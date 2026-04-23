@@ -265,6 +265,65 @@ describe('EmStack', () => {
         expect(functions).toHaveProperty('CaptureDashscreenshotDashfromDashurlLambdaFunction')
         expect(functions).toHaveProperty('GenerateDashpdfDashfromDashurlLambdaFunction')
       })
+
+    describe('physicalName', () => {
+      it('sets FunctionName directly, bypassing generateLambdaName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+          FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+
+      it('sets log group name from physicalName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Logs::LogGroup', {
+          LogGroupName: '/aws/lambda/em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+
+      it('logical ID is still derived from functionName, not physicalName', () => {
+        const stack = makeStack({ useSharedRole: true })
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        const template = Template.fromStack(stack)
+        const functions = template.findResources('AWS::Lambda::Function')
+        // Logical ID from functionName ('get-score-breakdown'), not physicalName
+        expect(functions).toHaveProperty('GetDashscoreDashbreakdownLambdaFunction')
+      })
+
+      it('works without useSharedRole', () => {
+        const stack = makeStack()
+        stack.createFunction('GetScoreBreakdown', {
+          functionName: 'get-score-breakdown',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          physicalName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+
+        Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+          FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+        })
+      })
+    })
     })
   })
 
@@ -728,9 +787,6 @@ describe('EmStack', () => {
   })
 
   describe('ssmParam', () => {
-    // valueForStringParameter creates a CloudFormation Parameter with
-    // Type: AWS::SSM::Parameter::Value<String> and Default set to the SSM path.
-    // The path is only visible in the synthesized template, not in the CDK token itself.
     function getSsmParameterDefaults(stack: EmStack): string[] {
       const params = Template.fromStack(stack).findParameters('*', {
         Type: 'AWS::SSM::Parameter::Value<String>'

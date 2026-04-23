@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
-import { Aws, Tags } from 'aws-cdk-lib'
+import { Annotations, Aws, Tags } from 'aws-cdk-lib'
 import {
   Effect,
   PolicyStatement,
@@ -219,21 +219,16 @@ export class EmStack extends cdk.Stack {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private mergeConfig<T extends Record<string, any>>(config: T): T {
-    const defaults = this.defaultFunctionConfig as Record<string, unknown>
-    const merged = { ...defaults, ...config } as T
-
+  private mergeConfig<T extends { environment?: Record<string, string> }>(config: T): T {
     const defaultEnv = this.defaultFunctionConfig.environment
-    const configEnv = (config as { environment?: Record<string, string> }).environment
-    if (defaultEnv || configEnv) {
-      ;((merged as unknown) as { environment: Record<string, string> }).environment = {
-        ...(defaultEnv ?? {}),
-        ...(configEnv ?? {})
-      }
-    }
-
-    return merged
+    const configEnv = config.environment
+    return {
+      ...this.defaultFunctionConfig,
+      ...config,
+      ...(defaultEnv || configEnv
+        ? { environment: { ...(defaultEnv ?? {}), ...(configEnv ?? {}) } }
+        : {})
+    } as T
   }
 
   /**
@@ -423,6 +418,11 @@ export class EmStack extends cdk.Stack {
    * Add a Lambda invoke policy to the shared role.
    * @param functionPattern - Optional function name pattern. Defaults to `{stage}-{serviceName}-*`.
    *   Pass `'*'` for account-wide access.
+   *
+   * **Note:** The default pattern only matches functions named with the CDK convention
+   * (`{stage}-{serviceName}-{fn}`). Functions created with `physicalName` using the legacy
+   * Serverless convention (`{service}-{stage}-{fn}`) will not be matched. Pass `'*'` when
+   * the service has any `physicalName` functions that must be invocable.
    */
   addLambdaInvokePolicy(functionPattern?: string): void {
     this.requireSharedRole('addLambdaInvokePolicy')
@@ -497,13 +497,29 @@ export class EmStack extends cdk.Stack {
     this.sharedRole!.addToPolicy(createXRayTracingPolicy())
   }
 
-  /** Add a CloudWatch Logs policy to the shared role. Grants logs:* on *. */
+  /**
+   * Add a CloudWatch Logs policy to the shared role.
+   * Grants describe, read, and query access on all log groups.
+   * Basic write access (CreateLogGroup, CreateLogStream, PutLogEvents) is already
+   * covered by AWSLambdaBasicExecutionRole attached to the shared role.
+   */
   addCloudWatchLogsPolicy(): void {
-    this.requireSharedRole('addCloudWatchLogsPolicy')
-    this.sharedRole!.addToPolicy(
+    const role = this.requireSharedRole('addCloudWatchLogsPolicy')
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: ['logs:*'],
+        actions: [
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogGroups',
+          'logs:DescribeLogStreams',
+          'logs:FilterLogEvents',
+          'logs:GetLogEvents',
+          'logs:StartQuery',
+          'logs:StopQuery',
+          'logs:GetQueryResults'
+        ],
         resources: ['*']
       })
     )
@@ -511,12 +527,20 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an SNS policy to the shared role.
-   * @param options.actions - SNS actions (e.g. ['SNS:Publish', 'SNS:Subscribe']).
-   * @param options.resources - Resource ARNs. Defaults to ['*'].
+   * @param options.actions - SNS actions (e.g. ['sns:Publish', 'sns:Subscribe']).
+   * @param options.resources - Resource ARNs. When omitted, defaults to `['*']`
+   *   (account-wide access). Prefer `addSnsPublishPolicy(topicArn)` for scoped
+   *   publish-only access to a specific topic.
    */
   addSnsPolicy(options: { actions: string[]; resources?: string[] }): void {
-    this.requireSharedRole('addSnsPolicy')
-    this.sharedRole!.addToPolicy(
+    const role = this.requireSharedRole('addSnsPolicy')
+    if (!options.resources) {
+      Annotations.of(this).addWarning(
+        'addSnsPolicy: no resources specified — policy grants account-wide SNS access on all topics. ' +
+          'Pass resources to scope the policy, or use addSnsPublishPolicy(topicArn) for publish access.'
+      )
+    }
+    role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: options.actions,
@@ -550,7 +574,12 @@ export class EmStack extends cdk.Stack {
     )
   }
 
-  /** Add an execute-api:Invoke policy to the shared role on *. */
+  /**
+   * Add an execute-api:Invoke policy to the shared role.
+   * Resources are scoped to `*` — API Gateway requires the full execution ARN
+   * (`arn:{partition}:execute-api:{region}:{account}:{api-id}/{stage}/{method}/{path}`)
+   * which is not available as a stable value in migration stacks.
+   */
   addExecuteApiPolicy(): void {
     this.requireSharedRole('addExecuteApiPolicy')
     this.sharedRole!.addToPolicy(
@@ -583,10 +612,11 @@ export class EmStack extends cdk.Stack {
   }
 
   /**
-   * Add a DynamoDB policy to the shared role. Grants dynamodb:* on each table.
+   * Add a DynamoDB policy to the shared role.
+   * Grants read, write, transact, and describe actions on each table.
    * Uses literal * for region and account in ARNs.
    * @param tableNames - Short table names without stage prefix. Stage prefix added automatically.
-   * @param options.streamTableNames - Short table names to also grant stream access (/stream/*).
+   * @param options.streamTableNames - Short table names to also grant stream read access (/stream/*).
    */
   addDynamoDbPolicy(tableNames: string[], options?: { streamTableNames?: string[] }): void {
     this.requireSharedRole('addDynamoDbPolicy')
@@ -599,16 +629,33 @@ export class EmStack extends cdk.Stack {
     this.sharedRole!.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: ['dynamodb:*'],
+        actions: [
+          'dynamodb:GetItem',
+          'dynamodb:PutItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem',
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:BatchGetItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:TransactGetItems',
+          'dynamodb:TransactWriteItems',
+          'dynamodb:DescribeTable',
+          'dynamodb:DescribeStream',
+          'dynamodb:GetRecords',
+          'dynamodb:GetShardIterator',
+          'dynamodb:ListStreams'
+        ],
         resources: [...tableArns, ...streamArns]
       })
     )
   }
 
-  private requireSharedRole(methodName: string): void {
+  private requireSharedRole(methodName: string): Role {
     if (!this.sharedRole) {
       throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)
     }
+    return this.sharedRole
   }
 
   /**

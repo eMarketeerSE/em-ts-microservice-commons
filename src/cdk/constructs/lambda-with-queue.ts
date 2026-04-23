@@ -68,6 +68,9 @@ export interface LambdaWithQueueProps {
   readonly vpcConfig?: VpcConfig
   readonly architecture?: Architecture
   readonly runtime?: Runtime
+  /** Bypass `generateLambdaName` and use this as the physical function name. 
+   * Required for Serverless migrations with legacy naming conventions. */
+  readonly physicalName?: string
   /**
    * Serverless function name for logical ID overrides (migration mode).
    * Overrides Lambda + log group logical IDs to match Serverless Framework naming.
@@ -98,7 +101,7 @@ export class LambdaWithQueue extends Construct {
     const resolved = resolveHandlerPath(props)
     const shortName = resolved.functionName
     const resourceName = props.resourceName ?? shortName
-    const functionName = generateLambdaName(props.stage, props.serviceName, shortName)
+    const functionName = props.physicalName ?? generateLambdaName(props.stage, props.serviceName, shortName)
     const handler = resolved.handler ?? props.handler ?? 'index.handler'
     const codePath = resolved.codePath ?? props.codePath ?? `./dist/handlers/${resourceName}`
 
@@ -266,18 +269,6 @@ export class LambdaWithQueue extends Construct {
     return role
   }
 
-  /**
-   * Subscribe the queue to an SNS topic.
-   *
-   * **Migration note:** Pass `serverlessSubscriptionLogicalId` for Serverless→CDK migrations.
-   * Without it, L2 `addSubscription()` generates a hash-suffixed logical ID that does not match
-   * the existing Serverless stack resource, causing subscription deletion and recreation —
-   * silently dropping in-flight messages during deploy.
-   *
-   * @param serverlessSubscriptionLogicalId - When set, uses `makeSnsToSqsSubscription` (L1)
-   *   instead of `addSubscription()` and pins the CloudFormation logical ID to this value.
-   *   Must match the logical ID of the existing `AWS::SNS::Subscription` in the live stack.
-   */
   public subscribeToTopic(
     topic: ITopic,
     options?: SqsSubscriptionProps,
