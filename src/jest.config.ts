@@ -1,5 +1,30 @@
 const esModules = ['@eMarketeerSE/runtime-commons'].join('|')
 
+// Opt-in mode for services that depend on ESM-only packages (e.g. MikroORM).
+// When EM_JEST_ESM_FRIENDLY=true:
+//  - ts-jest compiles .ts as ESM (useESM), targeting es2022.
+//  - extensionsToTreatAsEsm lets Jest load .ts through its ESM VM loader,
+//    the same realm that handles ESM node_modules like @mikro-orm/*.
+// Opting-in services must import { jest } from '@jest/globals' in test files
+// that use jest.* APIs, since the `jest` global is CJS-only.
+const rawEsmFriendly = process.env.EM_JEST_ESM_FRIENDLY
+const esmFriendly = rawEsmFriendly?.trim().toLowerCase() === 'true'
+if (rawEsmFriendly !== undefined && !esmFriendly) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[em-commons] EM_JEST_ESM_FRIENDLY=${JSON.stringify(rawEsmFriendly)} ignored;`
+    + ' expected \'true\'. Falling back to default CJS Jest config.'
+  )
+}
+const tsJestTsConfig: Record<string, string> = {
+  target: esmFriendly ? 'es2022' : 'es6'
+}
+if (esmFriendly) {
+  // useESM needs an ES module output from TS; otherwise ts-jest still emits
+  // `exports.foo = ...` which explodes when Jest loads the file as ESM.
+  tsJestTsConfig.module = 'esnext'
+}
+
 const config: any = {
   verbose: true,
   testEnvironment: 'node',
@@ -7,10 +32,9 @@ const config: any = {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
-        tsconfig: {
-          target: 'es6'
-        },
-        isolatedModules: true
+        tsconfig: tsJestTsConfig,
+        isolatedModules: true,
+        useESM: esmFriendly
       }
     ]
   },
@@ -20,6 +44,27 @@ const config: any = {
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transformIgnorePatterns: [`/node_modules/(?!${esModules})`]
+}
+
+if (esmFriendly) {
+  // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
+  // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
+  config.extensionsToTreatAsEsm = ['.ts', '.tsx']
+  // Do not preload runtime-commons' MikroORM loaders via `setupFiles`.
+  // That preload still goes through a dynamic `import()`, which Jest routes
+  // through its `importModuleDynamically` handler — the handler re-asserts
+  // the per-file VM context on every call. The Function-constructor closure
+  // inside runtime-commons' CJS helper is bound to the first test file's
+  // VM; a second file on the same worker hits "Test environment has been
+  // torn down" on multi-file parallel runs (whether fired from beforeAll
+  // or from a setup file).
+  //
+  // Consumers who need a stable MikroORM init under Jest ESM should import
+  // the ESM-only subpath, which uses static imports routed through Jest's
+  // per-file module-load path (`loadEsmModule`):
+  //
+  //   // src/db/orm-init.ts
+  //   import { getMikroOrmMySqlConnection } from '@eMarketeerSE/runtime-commons/mikroorm-esm'
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
