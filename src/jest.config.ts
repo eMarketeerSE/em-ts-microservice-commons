@@ -50,6 +50,10 @@ if (esmFriendly) {
   // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
   // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
   config.extensionsToTreatAsEsm = ['.ts', '.tsx']
+  // Preload runtime-commons' MikroORM modules during the worker's stable
+  // module-load phase so lazy loaders short-circuit at test time — avoids
+  // Jest's ESM teardown invariant racing dynamic imports in MikroORM.
+  config.setupFiles = [require.resolve('./jest-esm-warmup.mjs')]
 }
 
 const shouldAddSetup = !process.argv.includes('unit')
