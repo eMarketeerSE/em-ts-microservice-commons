@@ -9,6 +9,7 @@ const args = process.argv.slice(2)
 const handlersDirIndex = args.indexOf('--handlers-dir')
 const outDirIndex = args.indexOf('--out-dir')
 const targetIndex = args.indexOf('--target')
+const allowEmpty = args.includes('--allow-empty')
 
 function resolveArg(index: number, flag: string, fallback: string): string {
   if (index === -1) {
@@ -49,8 +50,12 @@ async function main(): Promise<void> {
   const entryPoints = await findEntryPoints(absoluteHandlersDir)
 
   if (entryPoints.length === 0) {
-    console.warn(`No handlers found in ${handlersDir}, skipping build`)
-    return
+    if (allowEmpty) {
+      console.warn(`No handlers found in ${handlersDir}, skipping build (--allow-empty)`)
+      return
+    }
+    console.error(`No handlers found in ${handlersDir}. Pass --allow-empty to suppress this error.`)
+    process.exit(1)
   }
 
   console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)

@@ -46,8 +46,23 @@ describe('findEntryPoints', () => {
       expect(await findEntryPoints(tmpDir)).toHaveLength(1)
     })
 
+    it('includes export var handler', async () => {
+      write('h.ts', 'export var handler = async () => {}')
+      expect(await findEntryPoints(tmpDir)).toHaveLength(1)
+    })
+
     it('includes module.exports.handler (CJS interop)', async () => {
       write('h.ts', 'module.exports.handler = async () => {}')
+      expect(await findEntryPoints(tmpDir)).toHaveLength(1)
+    })
+
+    it('includes exports.handler (bare CJS, no module prefix)', async () => {
+      write('h.ts', 'exports.handler = async () => {}')
+      expect(await findEntryPoints(tmpDir)).toHaveLength(1)
+    })
+
+    it('includes export { handler } in multi-line brace form', async () => {
+      write('h.ts', 'const h = () => {}\nexport {\n  h as handler\n}')
       expect(await findEntryPoints(tmpDir)).toHaveLength(1)
     })
 

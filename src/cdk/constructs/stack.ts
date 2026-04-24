@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib'
 import { Annotations, Aws, Tags } from 'aws-cdk-lib'
 import {
   Effect,
+  IRole,
   PolicyStatement,
   Role,
   ServicePrincipal,
@@ -237,6 +238,8 @@ export class EmStack extends cdk.Stack {
    * - Overrides log group logical ID to `{prefix}LogGroup`
    * - Sets log group removal policy to RETAIN
    * - Uses the shared role unless `config.role` is provided
+   * - Throws if `importExistingLogGroup` is set — migration mode requires managed log groups
+   *   to override their logical IDs
    */
   createFunction(id: string, config: CreateFunctionConfig): EmLambdaFunction {
     const merged = this.mergeConfig(config)
@@ -268,16 +271,9 @@ export class EmStack extends cdk.Stack {
             'Migration mode requires explicit log groups to override their logical IDs.'
         )
       }
-      if (merged.role && merged.role !== this.sharedRole) {
-        Annotations.of(fn).addWarning(
-          `createFunction("${functionName}"): a custom role was provided in migration mode (useSharedRole: true). ` +
-            'The Lambda logical ID will be overridden to match Serverless naming, but the custom role\'s logical ID ' +
-            'will NOT be pinned to IamRoleLambdaExecution — CloudFormation may replace the role on deploy. ' +
-            'Pass the shared role via the stack\'s sharedRole property instead, or omit config.role.'
-        )
-      }
       overrideFunctionLogicalIds(fn.function, functionName)
     }
+    this.errorIfRoleOverrideInMigrationMode(fn, 'createFunction', functionName, merged.role)
 
     return fn
   }
@@ -305,8 +301,7 @@ export class EmStack extends cdk.Stack {
   createQueueConsumer(id: string, config: CreateQueueConsumerConfig): LambdaWithQueue {
     const merged = this.mergeConfig(config)
     const { functionName } = resolveHandlerPath(merged)
-
-    return new LambdaWithQueue(this, id, {
+    const consumer = new LambdaWithQueue(this, id, {
       ...merged,
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
@@ -315,6 +310,8 @@ export class EmStack extends cdk.Stack {
         serverlessFunctionName: merged.serverlessFunctionName ?? functionName
       })
     })
+    this.errorIfRoleOverrideInMigrationMode(consumer, 'createQueueConsumer', functionName ?? id, merged.role)
+    return consumer
   }
 
   /**
@@ -343,8 +340,7 @@ export class EmStack extends cdk.Stack {
     const { topic, subscriptionOptions, serverlessSubscriptionLogicalId, ...queueConfig } = config
     const merged = this.mergeConfig(queueConfig)
     const { functionName } = resolveHandlerPath(merged)
-
-    return new TopicQueueConsumer(this, id, {
+    const consumer = new TopicQueueConsumer(this, id, {
       ...merged,
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
@@ -356,6 +352,8 @@ export class EmStack extends cdk.Stack {
         serverlessFunctionName: merged.serverlessFunctionName ?? functionName
       })
     })
+    this.errorIfRoleOverrideInMigrationMode(consumer, 'createTopicQueueConsumer', functionName ?? id, merged.role)
+    return consumer
   }
 
   /**
@@ -376,12 +374,13 @@ export class EmStack extends cdk.Stack {
   ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
     const merged = this.mergeConfig(functionConfig)
+    const { functionName } = resolveHandlerPath(merged)
     const fn = this.createFunction(id, merged)
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
-      ruleName: ruleName ?? resolveHandlerPath(merged).functionName,
+      ruleName: ruleName ?? functionName,
       description: ruleDescription,
       schedule
     })
@@ -510,9 +509,7 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add a CloudWatch Logs policy to the shared role.
-   * Grants describe, read, and query access on all log groups.
-   * Basic write access (CreateLogGroup, CreateLogStream, PutLogEvents) is already
-   * covered by AWSLambdaBasicExecutionRole attached to the shared role.
+   * Grants create, write, describe, read, and query access on all log groups.
    */
   addCloudWatchLogsPolicy(): void {
     const role = this.requireSharedRole('addCloudWatchLogsPolicy')
@@ -632,6 +629,9 @@ export class EmStack extends cdk.Stack {
    *   Uses a separate policy statement scoped to only dynamodb:Query and dynamodb:Scan.
    */
   addDynamoDbPolicy(tableNames: string[], options?: { streamTableNames?: string[], indexTableNames?: string[] }): void {
+    if (tableNames.length === 0) {
+      throw new Error('addDynamoDbPolicy: tableNames must not be empty.')
+    }
     const role = this.requireSharedRole('addDynamoDbPolicy')
     const tableArns = tableNames.map(
       n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}`
@@ -681,6 +681,30 @@ export class EmStack extends cdk.Stack {
       throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)
     }
     return this.sharedRole
+  }
+
+  /**
+   * Blocks synth with an error when a custom role is passed in migration mode.
+   * The Lambda logical ID is overridden to match Serverless naming, but the
+   * custom role's logical ID will NOT be pinned — CloudFormation may replace it.
+   * Uses addError (not addWarning) so the misconfiguration is caught before a
+   * changeset is created.
+   * Called from createFunction, createQueueConsumer, and createTopicQueueConsumer.
+   */
+  private errorIfRoleOverrideInMigrationMode(
+    scope: Construct,
+    callerMethod: string,
+    functionName: string,
+    role?: IRole
+  ): void {
+    if (this.sharedRole && role && role !== this.sharedRole) {
+      Annotations.of(scope).addError(
+        `${callerMethod}("${functionName}"): a custom role was provided in migration mode (useSharedRole: true). ` +
+          'The Lambda logical ID will be overridden to match Serverless naming, but the custom role\'s logical ID ' +
+          'will NOT be pinned to IamRoleLambdaExecution — CloudFormation may replace the role on deploy. ' +
+          'Pass the shared role via the stack\'s sharedRole property instead, or omit config.role.'
+      )
+    }
   }
 
   /**

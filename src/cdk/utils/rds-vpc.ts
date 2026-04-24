@@ -61,27 +61,21 @@ export function createRdsVpcConfig(
     allowAllOutbound: true
   })
 
-  if (config.overrideLogicalIds?.securityGroup) {
+  if (config.overrideLogicalIds?.securityGroup || config.manageSgEgress === false) {
     const cfnSg = lambdaSecurityGroup.node.defaultChild
     if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
       throw new Error(
-        `Cannot override security group logical ID to "${config.overrideLogicalIds.securityGroup}": ` +
-          'security group does not have a CfnSecurityGroup default child.'
+        'Security group does not have a CfnSecurityGroup default child — ' +
+          'cannot apply overrideLogicalIds.securityGroup or manageSgEgress.'
       )
     }
-    cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
-  }
-
-  if (config.manageSgEgress === false) {
-    const cfnSg = lambdaSecurityGroup.node.defaultChild
-    if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
-      throw new Error(
-        'Cannot strip SecurityGroupEgress: security group does not have a CfnSecurityGroup default child.'
-      )
+    if (config.overrideLogicalIds?.securityGroup) {
+      cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
     }
-    cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
+    if (config.manageSgEgress === false) {
+      cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
+    }
   }
-
 
   const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {
     groupId: config.dbSecurityGroupId,
@@ -101,7 +95,6 @@ export function createRdsVpcConfig(
       Ref: config.overrideLogicalIds.securityGroup
     })
   }
-
 
   if (config.sharedRole) {
     config.sharedRole.addManagedPolicy(

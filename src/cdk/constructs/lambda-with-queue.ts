@@ -296,6 +296,12 @@ export class LambdaWithQueue extends Construct {
     options?: SqsSubscriptionProps,
     serverlessSubscriptionLogicalId?: string
   ): void {
+    if (serverlessSubscriptionLogicalId !== undefined && serverlessSubscriptionLogicalId.trim() === '') {
+      throw new Error(
+        'subscribeToTopic: serverlessSubscriptionLogicalId must not be an empty string — ' +
+          'omit the argument to use the standard CDK subscription path.'
+      )
+    }
     if (serverlessSubscriptionLogicalId) {
       Annotations.of(this).addWarning(
         `subscribeToTopic with serverlessSubscriptionLogicalId="${serverlessSubscriptionLogicalId}" ` +

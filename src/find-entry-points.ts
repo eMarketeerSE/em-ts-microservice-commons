@@ -13,7 +13,7 @@ export interface EntryPoint {
  *   export const/let/var handler = ...
  *   export function handler / export async function handler
  *   export { handler } / export { foo as handler }
- *   module.exports.handler = ... (CJS interop)
+ *   module.exports.handler = ... / exports.handler = ... (CJS interop)
  *
  * Intentionally excludes `export default function handler` — the esbuild wrapper
  * accesses `unwrappedHandler.handler` (named export). Default exports compile to
@@ -25,7 +25,7 @@ export interface EntryPoint {
 const HANDLER_EXPORT_PATTERNS = [
   /export\s+(const|let|var|function|async\s+function)\s+handler\b/,
   /export\s*\{[^}]*\bhandler\b(?!\s*as\b)[^}]*\}/,
-  /module\.exports\.handler\s*=/,
+  /(?:module\.)?exports\.handler\s*=/,
 ]
 
 function containsHandlerExport(content: string): boolean {
@@ -36,8 +36,9 @@ function containsHandlerExport(content: string): boolean {
  * Scans `handlersDir` recursively for TypeScript source files that export a
  * Lambda handler. Returns esbuild-compatible `{ in, out }` entry point pairs.
  *
- * Each matching file `<dir>/<name>.ts` maps to output
- * `<dir>/<name>/index` so the Lambda code path becomes `dist/handlers/<dir>/<name>/index.js`.
+ * `in` is the absolute file path. `out` is relative to `handlersDir`:
+ * a file at `<handlersDir>/subdir/my-handler.ts` produces `out: 'subdir/my-handler/index'`.
+ * esbuild combines this with its `outdir` to produce the final path.
  *
  * Throws if a file cannot be read, with the full path included in the error message.
  */
