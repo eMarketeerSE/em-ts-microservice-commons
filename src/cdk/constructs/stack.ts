@@ -15,7 +15,7 @@ import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
-import { resolveHandlerPath } from '../utils/handler-path'
+import { HandlerPathConfig, resolveHandlerPath } from '../utils/handler-path'
 import { EmLambdaFunction } from './lambda'
 import { EmEventBridgeRule } from './eventbridge'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
@@ -99,14 +99,11 @@ export interface EmStackProps extends cdk.StackProps {
  */
 export type CreateFunctionConfig = Omit<
   LambdaConfig,
-  'stage' | 'serviceName' | 'handler' | 'codePath' | 'functionName'
+  'stage' | 'serviceName' | 'handler' | 'codePath' | 'functionName' | 'handlerPath'
 > & {
-  stage?: LambdaConfig['stage']
-  serviceName?: LambdaConfig['serviceName']
-  handler?: LambdaConfig['handler']
-  codePath?: LambdaConfig['codePath']
-  functionName?: LambdaConfig['functionName']
-}
+  readonly stage?: LambdaConfig['stage']
+  readonly serviceName?: LambdaConfig['serviceName']
+} & HandlerPathConfig
 
 /**
  * Base stack class for eMarketeer microservices.
@@ -198,7 +195,7 @@ export class EmStack extends cdk.Stack {
   /**
    * Update default function config after construction.
    * Use this when defaults depend on resources created after `super()`.
-   * Environment is deep-merged with any existing defaults.
+   * The environment map is shallow-merged with existing defaults; all other keys are replaced.
    *
    * @example
    * ```typescript
@@ -269,6 +266,14 @@ export class EmStack extends cdk.Stack {
         throw new Error(
           `Cannot use importExistingLogGroup with useSharedRole (migration mode) for "${functionName}". ` +
             'Migration mode requires explicit log groups to override their logical IDs.'
+        )
+      }
+      if (merged.role && merged.role !== this.sharedRole) {
+        Annotations.of(fn).addWarning(
+          `createFunction("${functionName}"): a custom role was provided in migration mode (useSharedRole: true). ` +
+            'The Lambda logical ID will be overridden to match Serverless naming, but the custom role\'s logical ID ' +
+            'will NOT be pinned to IamRoleLambdaExecution — CloudFormation may replace the role on deploy. ' +
+            'Pass the shared role via the stack\'s sharedRole property instead, or omit config.role.'
         )
       }
       overrideFunctionLogicalIds(fn.function, functionName)

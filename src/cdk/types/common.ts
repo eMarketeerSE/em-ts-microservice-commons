@@ -61,8 +61,8 @@ export interface LambdaConfig extends BaseConstructConfig {
    * If `functionName` is omitted it defaults to the last segment of
    * the path (e.g. `'capture-screenshot-from-url'`).
    *
-   * NOTE: This field is only used by `EmStack.createFunction()` — it is
-   * stripped before the config reaches `EmLambdaFunction`.
+   * NOTE: Both `EmStack.createFunction()` and `EmLambdaFunction` support this
+   * field. `EmLambdaFunction` resolves it internally via `resolveHandlerPath()`.
    */
   readonly handlerPath?: string
   readonly runtime?: Runtime

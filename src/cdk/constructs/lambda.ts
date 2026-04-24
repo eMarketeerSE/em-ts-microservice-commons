@@ -34,7 +34,7 @@ export class EmLambdaFunction extends Construct {
     const role: IRole =
       config.role ??
       createLambdaExecutionRole(this, 'Role', {
-        roleName: config.functionName,
+        roleName: resolved.functionName ?? config.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
         managedPolicies: extraPolicies.length ? extraPolicies : undefined
@@ -70,7 +70,7 @@ export class EmLambdaFunction extends Construct {
       retryAttempts: config.retryAttempts,
       logGroup,
       layers: config.layers,
-      description: `${config.serviceName} - ${config.functionName}`,
+      description: `${config.serviceName} - ${resolved.functionName ?? config.functionName}`,
       ...(config.vpcConfig && {
         vpc: config.vpcConfig.vpc,
         vpcSubnets: config.vpcConfig.vpcSubnets,

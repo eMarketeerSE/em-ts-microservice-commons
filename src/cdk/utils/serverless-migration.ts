@@ -351,11 +351,11 @@ export function makeSnsToSqsSubscription(
  * const stagePrefix = stage.charAt(0).toUpperCase() + stage.slice(1)
  * makeSnsToLambdaSubscription(
  *   scope,
- *   `HandleDashemailDashstatusDashchangedSnsSubscription${stagePrefix}emarketeereventemailreputationchanged`,
- *   `HandleDashemailDashstatusDashchangedLambdaPermission${stagePrefix}emarketeereventemailreputationchangedSNS`,
+ *   `HandleDashorderDashcreatedSnsSubscription${stagePrefix}myserviceeventordercreated`,
+ *   `HandleDashorderDashcreatedLambdaPermission${stagePrefix}myserviceeventordercreatedSNS`,
  *   {
- *     topicArn:    `arn:aws:sns:eu-west-1:${accountId}:${stage}-emarketeer-event-email-reputation-changed`,
- *     functionArn: `arn:aws:lambda:eu-west-1:${accountId}:function:em-contacts-service-${stage}-handle-email-status-changed`,
+ *     topicArn:    `arn:aws:sns:eu-west-1:${accountId}:${stage}-my-service-event-order-created`,
+ *     functionArn: `arn:aws:lambda:eu-west-1:${accountId}:function:my-service-${stage}-handle-order-created`,
  *   }
  * )
  * ```

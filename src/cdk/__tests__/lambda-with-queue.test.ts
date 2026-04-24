@@ -1,5 +1,5 @@
 import { App, Duration, Stack } from 'aws-cdk-lib'
-import { Match, Template } from 'aws-cdk-lib/assertions'
+import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { Queue } from 'aws-cdk-lib/aws-sqs'
@@ -463,6 +463,76 @@ describe('LambdaWithQueue', () => {
       const template = Template.fromStack(stack)
       const alarms = template.findResources('AWS::CloudWatch::Alarm')
       expect(alarms).toHaveProperty('ProcessJobsDLQAlarm')
+    })
+
+    it('uses physicalName as the exact Lambda function name', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        physicalName: 'my-service-dev-my-handler'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'my-service-dev-my-handler'
+      })
+    })
+
+    it('uses physicalName for the log group path', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        physicalName: 'my-service-dev-my-handler'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: '/aws/lambda/my-service-dev-my-handler'
+      })
+    })
+
+    it('physicalName + serverlessFunctionName: exact function name with Serverless logical IDs', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        physicalName: 'my-service-dev-my-handler',
+        serverlessFunctionName: 'my-handler'
+      })
+      // Physical name is preserved
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'my-service-dev-my-handler'
+      })
+      // Logical ID follows Serverless naming derived from serverlessFunctionName, not physicalName
+      expect(Template.fromStack(stack).findResources('AWS::Lambda::Function')).toHaveProperty(
+        'MyDashhandlerLambdaFunction'
+      )
+    })
+  })
+
+  describe('subscribeToTopic', () => {
+    it('creates subscription via CDK L2 when serverlessSubscriptionLogicalId is omitted', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      lq.subscribeToTopic(topic)
+      Template.fromStack(stack).resourceCountIs('AWS::SNS::Subscription', 1)
+    })
+
+    it('creates subscription with overridden logical ID when serverlessSubscriptionLogicalId is set', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      lq.subscribeToTopic(topic, {}, 'TenantPurgeSubscription')
+      expect(Template.fromStack(stack).findResources('AWS::SNS::Subscription')).toHaveProperty(
+        'TenantPurgeSubscription'
+      )
+    })
+
+    it('emits warning about missing queue policy when serverlessSubscriptionLogicalId is set', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      lq.subscribeToTopic(topic, {}, 'TenantPurgeSubscription')
+      Annotations.fromStack(stack).hasWarning(
+        '/TestStack/Subject',
+        Match.stringLikeRegexp('SNS delivery will fail silently')
+      )
     })
   })
 })

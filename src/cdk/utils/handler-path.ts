@@ -3,15 +3,39 @@ import * as path from 'path'
 const DEFAULT_HANDLERS_DIR = 'src/handlers'
 const DEFAULT_OUT_DIR = 'dist/handlers'
 
-export interface HandlerPathConfig {
-  readonly handlerPath?: string
-  readonly functionName?: string
+/**
+ * Public type for constructing handler path config. Enforces at compile time
+ * that either `handlerPath` or `functionName` is provided — the runtime throw
+ * in `resolveHandlerPath` is a safety net for internal callers that widen the type.
+ */
+export type HandlerPathConfig =
+  | {
+      readonly handlerPath: string
+      readonly functionName?: string
+      readonly handler?: string
+      readonly codePath?: string
+    }
+  | {
+      readonly handlerPath?: undefined
+      readonly functionName: string
+      readonly handler?: string
+      readonly codePath?: string
+    }
+
+export interface ResolvedHandlerPath {
+  readonly functionName: string
   readonly handler?: string
   readonly codePath?: string
 }
 
-export interface ResolvedHandlerPath {
-  readonly functionName: string
+/**
+ * Internal flat type accepted by `resolveHandlerPath`. Wider than `HandlerPathConfig`
+ * so that internal call sites passing objects with both fields optional still compile.
+ * The invariant is enforced at public API boundaries via `HandlerPathConfig`.
+ */
+interface HandlerPathInput {
+  readonly handlerPath?: string
+  readonly functionName?: string
   readonly handler?: string
   readonly codePath?: string
 }
@@ -27,7 +51,7 @@ export interface ResolvedHandlerPath {
  * When `handlerPath` is not provided, `functionName` is required.
  * `handler` and `codePath` may remain undefined if the caller has its own defaults.
  */
-export function resolveHandlerPath(config: HandlerPathConfig): ResolvedHandlerPath {
+export function resolveHandlerPath(config: HandlerPathInput): ResolvedHandlerPath {
   const { handlerPath } = config
 
   if (handlerPath) {

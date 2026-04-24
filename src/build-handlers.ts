@@ -1,6 +1,7 @@
 import * as path from 'path'
 import * as esbuild from 'esbuild'
 import * as fs from 'fs'
+import { findEntryPoints } from './find-entry-points'
 
 const { recapDevHandlerWrapper, defaultPlugins } = require('./esbuild-plugins')
 
@@ -44,37 +45,11 @@ if (!fs.existsSync(absoluteHandlersDir)) {
   process.exit(1)
 }
 
-async function findEntryPoints(): Promise<{ in: string; out: string }[]> {
-  const files = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as any) as string[])
-    .filter(f =>
-      f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.includes('.test.') && !f.includes('.spec.')
-    )
-
-  const results = await Promise.all(
-    files.map(async f => {
-      const fullPath = path.join(absoluteHandlersDir, f)
-      const content = await fs.promises.readFile(fullPath, 'utf8')
-      const hasHandlerExport =
-        /export\s+(const|function|async\s+function)\s+handler\b/.test(content) ||
-        /export\s*\{[^}]*\bhandler\b[^}]*\}/.test(content)
-      if (!hasHandlerExport) {
-        return undefined
-      }
-      return {
-        in: fullPath,
-        out: path.join(path.dirname(f), path.basename(f, '.ts'), 'index')
-      }
-    })
-  )
-
-  return results.filter((entry): entry is { in: string; out: string } => entry !== undefined)
-}
-
 async function main(): Promise<void> {
-  const entryPoints = await findEntryPoints()
+  const entryPoints = await findEntryPoints(absoluteHandlersDir)
 
   if (entryPoints.length === 0) {
-    console.log(`No handlers found in ${handlersDir}`)
+    console.warn(`No handlers found in ${handlersDir}, skipping build`)
     return
   }
 

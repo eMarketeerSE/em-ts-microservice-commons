@@ -16,13 +16,15 @@
  * ```
  */
 
+import { Stage } from '../types'
+
 export interface AccountRdsVpcConfig {
   readonly vpcId: string
   readonly privateSubnetIds: readonly string[]
   readonly dbSecurityGroupId: string
 }
 
-export function getAccountRdsVpcConfig(stage: 'dev' | 'prod'): AccountRdsVpcConfig {
+export function getAccountRdsVpcConfig(stage: Stage): AccountRdsVpcConfig {
   switch (stage) {
     case 'dev':
       return {

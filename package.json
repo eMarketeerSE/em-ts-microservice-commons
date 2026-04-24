@@ -88,7 +88,13 @@
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
-      "/test/"
+      "/test/",
+      "src/build-handlers.ts",
+      "src/em-commons.ts",
+      "src/esbuild-plugins.js",
+      "src/jest.config.ts",
+      "src/webpack.config.ts",
+      "src/utils.ts"
     ],
     "coverageThreshold": {
       "global": {

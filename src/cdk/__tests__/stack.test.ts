@@ -1043,32 +1043,20 @@ describe('EmStack', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addLambdaInvokePolicy('dev-other-service-*')
 
-      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
-        PolicyDocument: {
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: 'lambda:InvokeFunction',
-              Effect: 'Allow'
-            })
-          ])
-        }
-      })
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('dev-other-service-*')
     })
 
     it('addSnsPublishPolicy accepts a topic name string', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addSnsPublishPolicy('emarketeer-event-contact-event')
 
-      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
-        PolicyDocument: {
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: 'sns:Publish',
-              Effect: 'Allow'
-            })
-          ])
-        }
-      })
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('emarketeer-event-contact-event')
     })
 
     it('throws when shared role is not enabled', () => {

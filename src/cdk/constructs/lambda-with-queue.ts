@@ -85,7 +85,7 @@ export interface LambdaWithQueueProps {
    */
   readonly physicalName?: string
   /**
-   * Serverless function name for logical ID overrides (migration mode).
+   * Migration-only: Serverless function name for logical ID overrides.
    * Overrides Lambda + log group logical IDs to match Serverless Framework naming.
    */
   readonly serverlessFunctionName?: string
