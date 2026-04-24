@@ -392,6 +392,7 @@ export function makeSnsToLambdaSubscription(
     sourceArn: props.topicArn,
   })
   permission.overrideLogicalId(permissionLogicalId)
+  subscription.addDependency(permission)
 
   return { subscription, permission }
 }

@@ -331,6 +331,11 @@ describe('makeSnsToLambdaSubscription', () => {
     const perms = template.findResources('AWS::Lambda::Permission')
     expect(perms).toHaveProperty('HandleEmailStatusLambdaPermission')
     expect(perms.HandleEmailStatusLambdaPermission.Properties.Action).toBe('lambda:InvokeFunction')
+    const dependsOn = subs.HandleEmailStatusSnsSubscription.DependsOn
+    expect(
+      dependsOn === 'HandleEmailStatusLambdaPermission' ||
+        (Array.isArray(dependsOn) && dependsOn.includes('HandleEmailStatusLambdaPermission'))
+    ).toBe(true)
   })
 
   it('throws when topicArn is a CDK token', () => {
