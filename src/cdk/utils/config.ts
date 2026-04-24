@@ -1,4 +1,4 @@
-import { Stack } from 'aws-cdk-lib'
+import { Stack, Token } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 
@@ -37,8 +37,11 @@ export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<s
  * Cached per stack so the SSM lookup happens once per stack
  * regardless of how many constructs call this.
  */
-export const resolveRecapDevEndpoint = (scope: Construct): string => {
+export const resolveRecapDevEndpoint = (scope: Construct): string | undefined => {
   const stack = Stack.of(scope)
+  if (Token.isUnresolved(stack.account) || Token.isUnresolved(stack.region)) {
+    return undefined
+  }
   if (!recapDevEndpointCache.has(stack)) {
     recapDevEndpointCache.set(stack, StringParameter.valueFromLookup(stack, RECAP_DEV_SSM_KEY))
   }

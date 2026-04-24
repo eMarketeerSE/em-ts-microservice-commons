@@ -1,4 +1,4 @@
-import { Duration } from 'aws-cdk-lib'
+import { Annotations, Duration, Stack } from 'aws-cdk-lib'
 import { CfnQueue, Queue, IQueue } from 'aws-cdk-lib/aws-sqs'
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 import {
@@ -153,7 +153,7 @@ export class LambdaWithQueue extends Construct {
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
-    const role: IRole = props.role ?? this.createRole(props)
+    const role: IRole = props.role ?? this.createRole(props, enableTracing)
 
     const logGroup = new LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/${functionName}`,
@@ -170,6 +170,9 @@ export class LambdaWithQueue extends Construct {
       memorySize,
       timeout,
       environment: {
+        STAGE: props.stage,
+        NODE_ENV: props.stage === 'prod' ? 'production' : 'development',
+        REGION: Stack.of(this).region,
         ...(props.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
@@ -258,7 +261,7 @@ export class LambdaWithQueue extends Construct {
     }
   }
 
-  private createRole(props: LambdaWithQueueProps): IRole {
+  private createRole(props: LambdaWithQueueProps, enableTracing: boolean): IRole {
     if (!props.roleName) {
       throw new Error('LambdaWithQueue requires either `role` or `roleName` to be provided.')
     }
@@ -279,6 +282,12 @@ export class LambdaWithQueue extends Construct {
       )
     }
 
+    if (enableTracing) {
+      role.addManagedPolicy(
+        ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+      )
+    }
+
     return role
   }
 
@@ -288,6 +297,12 @@ export class LambdaWithQueue extends Construct {
     serverlessSubscriptionLogicalId?: string
   ): void {
     if (serverlessSubscriptionLogicalId) {
+      Annotations.of(this).addWarning(
+        `subscribeToTopic with serverlessSubscriptionLogicalId="${serverlessSubscriptionLogicalId}" ` +
+          'creates only the SNS subscription — no SQS queue policy is created. ' +
+          'On migrated stacks the queue policy already exists in CloudFormation; preserve it with makeServerlessQueuePolicy(). ' +
+          'On new queues you must also call makeServerlessQueuePolicy() or SNS delivery will fail silently.'
+      )
       makeSnsToSqsSubscription(this, serverlessSubscriptionLogicalId, {
         topicArn: topic.topicArn,
         endpoint: this.queue.queueArn,

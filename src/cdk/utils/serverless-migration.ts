@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy } from 'aws-cdk-lib'
+import { CfnOutput, Duration, RemovalPolicy, Token } from 'aws-cdk-lib'
 import {
   Function as LambdaFunction,
   CfnFunction,
@@ -290,6 +290,13 @@ export function makeServerlessQueue(
  *
  * Both the construct ID and CloudFormation logical ID are set from `logicalId`.
  *
+ * **Queue policy not included.** Unlike CDK's `SqsSubscription`, this helper only
+ * creates the `AWS::SNS::Subscription`. It does NOT create an `AWS::SQS::QueuePolicy`
+ * allowing SNS to send to the queue. On migrated stacks the policy was already created
+ * by Serverless Framework — use `makeServerlessQueuePolicy` to preserve it with the
+ * correct logical ID. On new queues call `makeServerlessQueuePolicy` (or use the CDK
+ * `SqsSubscription` helper instead) to ensure SNS can deliver messages.
+ *
  * @example
  * ```typescript
  * makeSnsToSqsSubscription(scope, 'TenantPurgeSubscription', {
@@ -298,6 +305,8 @@ export function makeServerlessQueue(
  *   protocol: 'sqs',
  *   rawMessageDelivery: true,
  * })
+ * // Also preserve (or create) the matching queue policy:
+ * makeServerlessQueuePolicy(scope, 'TenantPurgeSQSPolicy', { ... })
  * ```
  */
 export function makeSnsToSqsSubscription(
@@ -360,6 +369,15 @@ export function makeSnsToLambdaSubscription(
     readonly functionArn: string
   }
 ): { subscription: CfnSubscription; permission: CfnPermission } {
+  if (Token.isUnresolved(props.topicArn) || Token.isUnresolved(props.functionArn)) {
+    throw new Error(
+      'makeSnsToLambdaSubscription requires literal ARN strings, not CDK tokens. ' +
+        'Using topic.topicArn or function.functionArn produces a CloudFormation expression whose ' +
+        'rendered form can change independently of the resolved ARN, forcing subscription replacement. ' +
+        'Pass the physical ARN as a string literal (e.g. `arn:aws:sns:eu-west-1:${accountId}:${stage}-my-topic`).'
+    )
+  }
+
   const subscription = new CfnSubscription(scope, subscriptionLogicalId, {
     topicArn: props.topicArn,
     protocol: 'lambda',

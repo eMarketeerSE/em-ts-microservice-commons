@@ -6,7 +6,7 @@ import { Stage, VpcConfig } from '../types'
 
 export interface RdsVpcConfiguration {
   readonly vpcId: string
-  readonly privateSubnetIds: string[]
+  readonly privateSubnetIds: readonly string[]
   readonly dbSecurityGroupId: string
   /** Override CloudFormation logical IDs for migration. */
   readonly overrideLogicalIds?: {

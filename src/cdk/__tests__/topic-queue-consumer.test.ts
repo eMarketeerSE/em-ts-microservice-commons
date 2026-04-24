@@ -1,5 +1,5 @@
 import { App, Duration, Stack } from 'aws-cdk-lib'
-import { Template } from 'aws-cdk-lib/assertions'
+import { Match, Template } from 'aws-cdk-lib/assertions'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { TopicQueueConsumer } from '../constructs/topic-queue-consumer'
 
@@ -50,8 +50,14 @@ describe('TopicQueueConsumer', () => {
       roleName: 'test-role'
     })
 
-    Template.fromStack(stack).hasResourceProperties('AWS::SNS::Subscription', {
-      Protocol: 'sqs'
+    const template = Template.fromStack(stack)
+    const queues = template.findResources('AWS::SQS::Queue')
+    const mainQueueLogicalId = Object.keys(queues).find(id => !id.toLowerCase().includes('dlq'))!
+
+    template.hasResourceProperties('AWS::SNS::Subscription', {
+      Protocol: 'sqs',
+      TopicArn: Match.objectLike({ Ref: Match.stringLikeRegexp('^EventTopic') }),
+      Endpoint: { 'Fn::GetAtt': [mainQueueLogicalId, 'Arn'] }
     })
   })
 
@@ -93,12 +99,40 @@ describe('TopicQueueConsumer', () => {
       serverlessSubscriptionLogicalId: 'ProcessEventSnsSubscription'
     })
 
-    const subscriptions = Template.fromStack(stack).findResources('AWS::SNS::Subscription')
+    const template = Template.fromStack(stack)
+    const subscriptions = template.findResources('AWS::SNS::Subscription')
     expect(subscriptions).toHaveProperty('ProcessEventSnsSubscription')
+
+    const sub = subscriptions.ProcessEventSnsSubscription.Properties
+    expect(sub.Protocol).toBe('sqs')
+    expect(sub.TopicArn.Ref).toMatch(/^EventTopic/)
+    expect(sub.Endpoint['Fn::GetAtt'][1]).toBe('Arn')
+  })
+
+  it('forwards rawMessageDelivery on the migration subscription path', () => {
+    const stack = makeStack()
+    const eventTopic = new Topic(stack, 'EventTopic')
+    const alarmTopic = new Topic(stack, 'AlarmTopic')
+
+    new TopicQueueConsumer(stack, 'Subject', {
+      topic: eventTopic,
+      stage: 'dev',
+      serviceName: 'test-service',
+      functionName: 'process-event',
+      queueName: 'dev-test-service-event-queue',
+      alarmTopic,
+      codePath: CODE_PATH,
+      roleName: 'test-role',
+      serverlessSubscriptionLogicalId: 'ProcessEventSnsSubscription',
+      subscriptionOptions: { rawMessageDelivery: true }
+    })
+
+    const subscriptions = Template.fromStack(stack).findResources('AWS::SNS::Subscription')
+    expect(subscriptions.ProcessEventSnsSubscription.Properties.RawMessageDelivery).toBe(true)
   })
 
 
-  it('supports handlerPath', () => {
+  it('derives functionName from handlerPath', () => {
     const stack = makeStack()
     const eventTopic = new Topic(stack, 'EventTopic')
     const alarmTopic = new Topic(stack, 'AlarmTopic')

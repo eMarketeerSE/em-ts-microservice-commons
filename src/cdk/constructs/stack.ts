@@ -151,6 +151,7 @@ export class EmStack extends cdk.Stack {
    */
   public readonly sharedRole?: Role
   private defaultFunctionConfig: Partial<CreateFunctionConfig>
+  private _alarmTopic?: ITopic
 
   constructor(scope: Construct, id: string, props: EmStackProps) {
     super(scope, id, {
@@ -334,7 +335,7 @@ export class EmStack extends cdk.Stack {
     id: string,
     config: CreateTopicQueueConsumerConfig
   ): TopicQueueConsumer {
-    const { topic, subscriptionOptions, ...queueConfig } = config
+    const { topic, subscriptionOptions, serverlessSubscriptionLogicalId, ...queueConfig } = config
     const merged = this.mergeConfig(queueConfig)
     const { functionName } = resolveHandlerPath(merged)
 
@@ -345,6 +346,7 @@ export class EmStack extends cdk.Stack {
       role: merged.role ?? this.sharedRole,
       topic,
       subscriptionOptions,
+      serverlessSubscriptionLogicalId,
       ...(this.sharedRole && {
         serverlessFunctionName: merged.serverlessFunctionName ?? functionName
       })
@@ -368,12 +370,13 @@ export class EmStack extends cdk.Stack {
     config: CreateScheduledFunctionConfig
   ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
-    const fn = this.createFunction(id, functionConfig)
+    const merged = this.mergeConfig(functionConfig)
+    const fn = this.createFunction(id, merged)
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
-      stage: config.stage ?? this.stage,
-      serviceName: config.serviceName ?? this.serviceName,
-      ruleName: ruleName ?? resolveHandlerPath(functionConfig).functionName,
+      stage: merged.stage ?? this.stage,
+      serviceName: merged.serviceName ?? this.serviceName,
+      ruleName: ruleName ?? resolveHandlerPath(merged).functionName,
       description: ruleDescription,
       schedule
     })
@@ -410,8 +413,11 @@ export class EmStack extends cdk.Stack {
    * ARN: `arn:{partition}:sns:{region}:{account}:{stage}-alarm-email`
    */
   alarmTopic(): ITopic {
-    const arn = `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-alarm-email`
-    return Topic.fromTopicArn(this, 'AlarmTopic', arn)
+    if (!this._alarmTopic) {
+      const arn = `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-alarm-email`
+      this._alarmTopic = Topic.fromTopicArn(this, 'AlarmTopic', arn)
+    }
+    return this._alarmTopic
   }
 
   /**
@@ -721,10 +727,15 @@ export type CreateScheduledFunctionConfig = CreateFunctionConfig & {
  * subscription options on top of `CreateQueueConsumerConfig`.
  */
 export type CreateTopicQueueConsumerConfig = CreateQueueConsumerConfig & {
-  /** The SNS topic to subscribe to. */
-  readonly topic: ITopic
+  /** The SNS topic to subscribe to. Can be an ITopic or a topic ARN string. */
+  readonly topic: ITopic | string
   /** Options for the SQS subscription (e.g. rawMessageDelivery, filterPolicy). */
   readonly subscriptionOptions?: Omit<SqsSubscriptionProps, 'rawMessageDelivery'> & {
     rawMessageDelivery?: boolean
   }
+  /**
+   * Migration only: pins the SNS subscription logical ID to prevent recreation
+   * and in-flight message loss during Serverless→CDK deploy.
+   */
+  readonly serverlessSubscriptionLogicalId?: string
 }

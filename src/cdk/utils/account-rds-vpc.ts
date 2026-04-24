@@ -11,7 +11,7 @@
  * Designed to compose with `createRdsVpcConfig()` in `./rds-vpc`:
  *
  * ```typescript
- * const account = getAccountRdsVpcConfig(this.stage)
+ * const account = getAccountRdsVpcConfig(rdsStage)
  * const vpcConfig = createRdsVpcConfig(this, this.stage, { ...account })
  * ```
  */
@@ -36,5 +36,7 @@ export function getAccountRdsVpcConfig(stage: 'dev' | 'prod'): AccountRdsVpcConf
         privateSubnetIds: ['subnet-dab14f80', 'subnet-e06ad686', 'subnet-14ea665c'],
         dbSecurityGroupId: 'sg-427bda39'
       }
+    default:
+      throw new Error(`getAccountRdsVpcConfig: unsupported stage "${stage}". Only 'dev' and 'prod' are supported.`)
   }
 }

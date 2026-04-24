@@ -324,6 +324,18 @@ describe('EmStack', () => {
         })
       })
     })
+
+      it('throws when importExistingLogGroup is combined with useSharedRole', () => {
+        const stack = makeStack({ useSharedRole: true })
+        expect(() => {
+          stack.createFunction('Handler', {
+            functionName: 'my-handler',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            importExistingLogGroup: true
+          })
+        }).toThrow('Cannot use importExistingLogGroup with useSharedRole')
+      })
     })
   })
 
@@ -783,6 +795,51 @@ describe('EmStack', () => {
       // Lambda logical ID overridden
       const functions = template.findResources('AWS::Lambda::Function')
       expect(functions).toHaveProperty('DailyDashreportLambdaFunction')
+    })
+
+    it('attaches the Lambda as an EventBridge target', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'cron(0 8 * * ? *)'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Targets: Match.arrayWith([
+          Match.objectLike({
+            Arn: { 'Fn::GetAtt': ['DailyDashreportLambdaFunction', 'Arn'] }
+          })
+        ])
+      })
+    })
+
+    it('forwards ruleName to the EventBridge rule', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'rate(1 day)',
+        ruleName: 'my-custom-rule'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Name: Match.stringLikeRegexp('my-custom-rule')
+      })
+    })
+
+    it('forwards ruleDescription to the EventBridge rule', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'rate(1 day)',
+        ruleDescription: 'Runs the daily report job'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Description: 'Runs the daily report job'
+      })
     })
   })
 

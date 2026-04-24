@@ -20,18 +20,17 @@ export const createLambdaExecutionRole = (
   const role = new Role(scope, id, {
     roleName,
     assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    description: `Lambda execution role for ${config.serviceName}`
+    description: `Lambda execution role for ${config.serviceName}`,
+    ...(config.inlinePolicies && { inlinePolicies: config.inlinePolicies })
   })
 
   role.addManagedPolicy(
     ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
   )
 
-  if (config.managedPolicies?.includes('AWSLambdaVPCAccessExecutionRole')) {
-    role.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
-    )
-  }
+  config.managedPolicies?.forEach(policy => {
+    role.addManagedPolicy(policy)
+  })
 
   return role
 }

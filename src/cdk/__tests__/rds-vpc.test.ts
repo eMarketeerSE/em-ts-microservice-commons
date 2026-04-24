@@ -15,12 +15,34 @@ const BASE_CONFIG = {
 }
 
 describe('createRdsVpcConfig', () => {
-  it('creates a Lambda security group (R1)', () => {
+  it('creates a Lambda security group with the default description', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', BASE_CONFIG)
     const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::EC2::SecurityGroup', {
+      GroupDescription: 'Lambda security group for RDS access'
+    })
+  })
+
+  it('preserves a custom securityGroupDescription in the template', () => {
+    const stack = makeStack()
+    createRdsVpcConfig(stack, 'dev', {
+      ...BASE_CONFIG,
+      securityGroupDescription: 'serverless-contacts-dev-sg'
+    })
+    const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::EC2::SecurityGroup', {
+      GroupDescription: 'serverless-contacts-dev-sg'
+    })
+  })
+
+  it('strips SecurityGroupEgress when manageSgEgress is false', () => {
+    const stack = makeStack()
+    createRdsVpcConfig(stack, 'dev', { ...BASE_CONFIG, manageSgEgress: false })
+    const template = Template.fromStack(stack)
     const sgs = template.findResources('AWS::EC2::SecurityGroup')
-    expect(Object.keys(sgs).length).toBeGreaterThanOrEqual(1)
+    const sg = Object.values(sgs)[0] as any
+    expect(sg.Properties).not.toHaveProperty('SecurityGroupEgress')
   })
 
   it('creates an ingress rule on the DB security group', () => {
@@ -53,6 +75,18 @@ describe('createRdsVpcConfig', () => {
     expect(template.findResources('AWS::EC2::SecurityGroup')).toHaveProperty(
       'LambdaSecurityGroupDev'
     )
+  })
+
+  it('rewires ingress SourceSecurityGroupId to the overridden SG logical ID', () => {
+    const stack = makeStack()
+    createRdsVpcConfig(stack, 'dev', {
+      ...BASE_CONFIG,
+      overrideLogicalIds: { securityGroup: 'LambdaSecurityGroupDev' }
+    })
+    const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::EC2::SecurityGroupIngress', {
+      SourceSecurityGroupId: { Ref: 'LambdaSecurityGroupDev' }
+    })
   })
 
   it('overrides ingress rule logical ID', () => {

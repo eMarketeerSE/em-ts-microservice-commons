@@ -30,37 +30,16 @@ export const getLogRetentionDays = (stage: Stage): RetentionDays => {
  * Convert retention days number to RetentionDays enum
  */
 export const convertRetentionDays = (days?: number): RetentionDays | undefined => {
-  if (!days) return undefined
+  if (days === undefined || days === null) return undefined
 
-  const retentionMap: Record<number, RetentionDays> = {
-    1: RetentionDays.ONE_DAY,
-    3: RetentionDays.THREE_DAYS,
-    5: RetentionDays.FIVE_DAYS,
-    7: RetentionDays.ONE_WEEK,
-    14: RetentionDays.TWO_WEEKS,
-    30: RetentionDays.ONE_MONTH,
-    60: RetentionDays.TWO_MONTHS,
-    90: RetentionDays.THREE_MONTHS,
-    120: RetentionDays.FOUR_MONTHS,
-    150: RetentionDays.FIVE_MONTHS,
-    180: RetentionDays.SIX_MONTHS,
-    365: RetentionDays.ONE_YEAR,
-    400: RetentionDays.THIRTEEN_MONTHS,
-    545: RetentionDays.EIGHTEEN_MONTHS,
-    731: RetentionDays.TWO_YEARS,
-    1827: RetentionDays.FIVE_YEARS,
-    3653: RetentionDays.TEN_YEARS
+  if (typeof (RetentionDays as Record<number, string | undefined>)[days] !== 'string') {
+    const supported = Object.values(RetentionDays)
+      .filter((v): v is number => typeof v === 'number')
+      .sort((a, b) => a - b)
+      .join(', ')
+    throw new Error(`Unsupported logRetentionDays value: ${days}. Supported values: ${supported}`)
   }
-
-  const result = retentionMap[days]
-  if (!result) {
-    throw new Error(
-      `Unsupported logRetentionDays value: ${days}. Supported values: ${Object.keys(
-        retentionMap
-      ).join(', ')}`
-    )
-  }
-  return result
+  return days as RetentionDays
 }
 
 /**

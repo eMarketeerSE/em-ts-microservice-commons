@@ -1,6 +1,6 @@
-import { Duration } from 'aws-cdk-lib'
+import { Duration, Stack } from 'aws-cdk-lib'
 import { Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
-import { IRole } from 'aws-cdk-lib/aws-iam'
+import { IRole, IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
@@ -10,6 +10,7 @@ import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../
 import { createLambdaExecutionRole } from '../utils/iam'
 import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
+import { resolveHandlerPath } from '../utils/handler-path'
 
 export class EmLambdaFunction extends Construct {
   public readonly function: LambdaFunction
@@ -17,9 +18,18 @@ export class EmLambdaFunction extends Construct {
   constructor(scope: Construct, id: string, config: LambdaConfig) {
     super(scope, id)
 
+    const resolved = resolveHandlerPath(config)
     const functionName =
       config.physicalName ??
-      generateLambdaName(config.stage, config.serviceName, config.functionName)
+      generateLambdaName(config.stage, config.serviceName, resolved.functionName)
+
+    const extraPolicies: IManagedPolicy[] = []
+    if (config.vpcConfig) {
+      extraPolicies.push(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
+    }
+    if (config.enableTracing) {
+      extraPolicies.push(ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'))
+    }
 
     const role: IRole =
       config.role ??
@@ -27,7 +37,7 @@ export class EmLambdaFunction extends Construct {
         roleName: config.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
-        managedPolicies: config.vpcConfig ? ['AWSLambdaVPCAccessExecutionRole'] : undefined
+        managedPolicies: extraPolicies.length ? extraPolicies : undefined
       })
 
     const logGroup: ILogGroup = config.importExistingLogGroup
@@ -42,14 +52,14 @@ export class EmLambdaFunction extends Construct {
     this.function = new LambdaFunction(this, 'Function', {
       functionName,
       runtime: config.runtime ?? DEFAULT_LAMBDA_RUNTIME,
-      handler: config.handler,
-      code: Code.fromAsset(config.codePath),
+      handler: resolved.handler ?? config.handler,
+      code: Code.fromAsset(resolved.codePath ?? config.codePath),
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {
         STAGE: config.stage,
         NODE_ENV: config.stage === 'prod' ? 'production' : 'development',
-        REGION: process.env.AWS_REGION ?? 'eu-west-1',
+        REGION: Stack.of(this).region,
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },

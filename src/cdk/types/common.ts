@@ -4,7 +4,7 @@
 
 import { Duration } from 'aws-cdk-lib'
 import { Runtime, Architecture, ILayerVersion } from 'aws-cdk-lib/aws-lambda'
-import { IRole, PolicyDocument } from 'aws-cdk-lib/aws-iam'
+import { IRole, IManagedPolicy, PolicyDocument } from 'aws-cdk-lib/aws-iam'
 import { AttributeType, BillingMode, ProjectionType } from 'aws-cdk-lib/aws-dynamodb'
 import { IVpc, ISecurityGroup, SubnetSelection } from 'aws-cdk-lib/aws-ec2'
 import { EventPattern } from 'aws-cdk-lib/aws-events'
@@ -31,7 +31,6 @@ export interface BaseConstructConfig {
   readonly stage: Stage
   readonly serviceName: string
   readonly tags?: Record<string, string>
-  readonly enableTracing?: boolean
 }
 
 /**
@@ -76,6 +75,7 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly layers?: ILayerVersion[]
   readonly architecture?: Architecture
   readonly vpcConfig?: VpcConfig
+  readonly enableTracing?: boolean
   /** Provide an existing role instead of creating a per-function one. */
   readonly role?: IRole
   /** When true, imports the log group by name instead of creating a managed resource. 
@@ -231,7 +231,7 @@ export interface IamRoleConfig {
   readonly roleName: string
   readonly stage: Stage
   readonly serviceName: string
-  readonly managedPolicies?: string[]
+  readonly managedPolicies?: IManagedPolicy[]
   readonly inlinePolicies?: Record<string, PolicyDocument>
 }
 
