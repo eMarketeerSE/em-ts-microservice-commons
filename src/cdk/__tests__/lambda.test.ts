@@ -1,6 +1,8 @@
 import { App, Duration, Stack } from 'aws-cdk-lib'
 import { Match, Template } from 'aws-cdk-lib/assertions'
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+import { Vpc, SecurityGroup } from 'aws-cdk-lib/aws-ec2'
 import { EmLambdaFunction } from '../constructs/lambda'
 import { LambdaConfig } from '../types'
 
@@ -126,6 +128,78 @@ describe('EmLambdaFunction', () => {
       new EmLambdaFunction(stack, 'Subject', { ...defaultConfig(), enableTracing: true })
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
         TracingConfig: { Mode: 'Active' }
+      })
+    })
+
+    it('attaches AWSXRayDaemonWriteAccess to the auto-created role when enableTracing is true', () => {
+      const stack = makeStack()
+      new EmLambdaFunction(stack, 'Subject', { ...defaultConfig(), enableTracing: true })
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Role', {
+        ManagedPolicyArns: Match.arrayWith([
+          {
+            'Fn::Join': [
+              '',
+              [
+                'arn:',
+                { Ref: 'AWS::Partition' },
+                ':iam::aws:policy/AWSXRayDaemonWriteAccess'
+              ]
+            ]
+          }
+        ])
+      })
+    })
+
+    it('attaches AWSLambdaVPCAccessExecutionRole to the auto-created role when vpcConfig is provided', () => {
+      const stack = makeStack()
+      const vpc = new Vpc(stack, 'Vpc')
+      const sg = new SecurityGroup(stack, 'LambdaSg', { vpc })
+      new EmLambdaFunction(stack, 'Subject', {
+        ...defaultConfig(),
+        vpcConfig: { vpc, vpcSubnets: { subnets: vpc.privateSubnets }, securityGroups: [sg] }
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Role', {
+        ManagedPolicyArns: Match.arrayWith([
+          {
+            'Fn::Join': [
+              '',
+              [
+                'arn:',
+                { Ref: 'AWS::Partition' },
+                ':iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+              ]
+            ]
+          }
+        ])
+      })
+    })
+
+    it('attaches AWSXRayDaemonWriteAccess to a caller-provided role when enableTracing is true', () => {
+      const stack = makeStack()
+      const role = new Role(stack, 'CustomRole', {
+        assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+      })
+      new EmLambdaFunction(stack, 'Subject', {
+        ...defaultConfig(),
+        role,
+        enableTracing: true
+      })
+      // Caller-provided role should still receive the X-Ray policy so the
+      // Lambda's runtime tracing actually works — without this the function
+      // would deploy with TracingConfig: Active but no permission to write.
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Role', {
+        ManagedPolicyArns: Match.arrayWith([
+          {
+            'Fn::Join': [
+              '',
+              [
+                'arn:',
+                { Ref: 'AWS::Partition' },
+                ':iam::aws:policy/AWSXRayDaemonWriteAccess'
+              ]
+            ]
+          }
+        ])
       })
     })
 

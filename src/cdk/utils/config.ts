@@ -20,6 +20,11 @@ export const buildBaseEnvironment = (stage: Stage, scope: Construct): Record<str
 
 /**
  * Returns the env var block to inject for recap.dev, or an empty object.
+ *
+ * The `dummy-value-` early-return guards against CDK's SSM lookup placeholder:
+ * `valueFromLookup` returns `dummy-value-…` strings during the first synth
+ * before the cache file is populated, and we must not bake those into the
+ * Lambda's environment.
  */
 export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<string, string> => {
   if (!endpoint || endpoint.startsWith('dummy-value-')) {

@@ -1,7 +1,3 @@
-/**
- * IAM role and policy helpers
- */
-
 import { Effect, PolicyStatement, Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 import { IamRoleConfig } from '../types'

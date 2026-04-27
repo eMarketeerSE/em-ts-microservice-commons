@@ -9,6 +9,10 @@ const args = process.argv.slice(2)
 const handlersDirIndex = args.indexOf('--handlers-dir')
 const outDirIndex = args.indexOf('--out-dir')
 const targetIndex = args.indexOf('--target')
+// --allow-empty: exit 0 instead of 1 when no handlers are found. Used by
+// services that may legitimately have zero Lambda handlers (libraries,
+// infra-only packages) so a shared `em-commons build-handlers` step can be
+// run unconditionally in their CI without breaking the pipeline.
 const allowEmpty = args.includes('--allow-empty')
 
 function resolveArg(index: number, flag: string, fallback: string): string {
@@ -51,7 +55,12 @@ async function main(): Promise<void> {
 
   if (entryPoints.length === 0) {
     if (allowEmpty) {
-      console.warn(`No handlers found in ${handlersDir}, skipping build (--allow-empty)`)
+      // Log the resolved absolute path so a misrouted --handlers-dir (typo'd
+      // to a real-but-empty sibling directory) is visible in CI output.
+      console.warn(
+        `No handlers found in ${handlersDir} (resolved: ${absoluteHandlersDir}), `
+        + 'skipping build (--allow-empty)'
+      )
       return
     }
     console.error(`No handlers found in ${handlersDir}. Pass --allow-empty to suppress this error.`)
@@ -94,14 +103,16 @@ async function main(): Promise<void> {
 
 main().catch(err => {
   if (err?.errors?.length) {
-    err.errors.forEach((e: any) => {
+    err.errors.forEach((e: { text?: string; location?: { file: string; line: number; column: number } }) => {
       const loc = e.location
         ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
         : ''
       console.error(`  esbuild error${loc}: ${e.text}`)
     })
   } else {
-    console.error(err)
+    // Print the full stack (and `cause` chain) so non-esbuild errors are
+    // diagnosable in CI output rather than being collapsed to the message.
+    console.error(err instanceof Error ? (err.stack ?? err) : err)
   }
   process.exit(1)
 })

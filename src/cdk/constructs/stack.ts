@@ -11,6 +11,10 @@ import {
 } from 'aws-cdk-lib/aws-iam'
 import { ITopic, Topic } from 'aws-cdk-lib/aws-sns'
 import { SqsSubscriptionProps } from 'aws-cdk-lib/aws-sns-subscriptions'
+import { IQueue } from 'aws-cdk-lib/aws-sqs'
+import { ITable } from 'aws-cdk-lib/aws-dynamodb'
+import { IBucket } from 'aws-cdk-lib/aws-s3'
+import { IStream } from 'aws-cdk-lib/aws-kinesis'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
 import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
@@ -249,7 +253,8 @@ export class EmStack extends cdk.Stack {
    * When `useSharedRole: true` (Serverless migration mode), also:
    * - Overrides Lambda logical ID to `{prefix}LambdaFunction`
    * - Overrides log group logical ID to `{prefix}LogGroup`
-   * - Sets log group removal policy to RETAIN
+   * - Sets log group removal policy via `getRemovalPolicy(stage)` (RETAIN in
+   *   prod, DESTROY otherwise — see utils/logs.ts)
    * - Uses the shared role unless `config.role` is provided
    * - Throws if `importExistingLogGroup` is set — migration mode requires managed log groups
    *   to override their logical IDs
@@ -428,6 +433,10 @@ export class EmStack extends cdk.Stack {
   /**
    * Import the alarm email topic by convention.
    * ARN: `arn:{partition}:sns:{region}:{account}:{stage}-alarm-email`
+   *
+   * Memoised: `Topic.fromTopicArn` registers a new construct on each call and
+   * CDK errors on duplicate construct IDs in the same scope, so multiple
+   * call sites would otherwise fail synth.
    */
   alarmTopic(): ITopic {
     if (!this._alarmTopic) {
@@ -448,6 +457,9 @@ export class EmStack extends cdk.Stack {
    * the service has any `physicalName` functions that must be invocable.
    */
   addLambdaInvokePolicy(functionPattern?: string): void {
+    if (functionPattern !== undefined && functionPattern.trim() === '') {
+      throw new Error('addLambdaInvokePolicy: functionPattern must not be empty.')
+    }
     const role = this.requireSharedRole('addLambdaInvokePolicy')
     const pattern = functionPattern ?? `${this.stage}-${this.serviceName}-*`
     const resources =
@@ -465,11 +477,17 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add a Kinesis PutRecord/PutRecords policy to the shared role.
-   * @param streamName - Short stream name (prefixed with `{stage}-`).
+   * @param streamOrName - An IStream reference, or a short stream name (prefixed with `{stage}-`).
    */
-  addKinesisPolicy(streamName: string): void {
+  addKinesisPolicy(streamOrName: IStream | string): void {
     const role = this.requireSharedRole('addKinesisPolicy')
-    const arn = `arn:${Aws.PARTITION}:kinesis:${Aws.REGION}:${Aws.ACCOUNT_ID}:stream/${this.stage}-${streamName}`
+    const arn = this.resolveResourceArn(
+      streamOrName,
+      'addKinesisPolicy',
+      'streamName',
+      name => `arn:${Aws.PARTITION}:kinesis:${Aws.REGION}:${Aws.ACCOUNT_ID}:stream/${this.stage}-${name}`,
+      stream => stream.streamArn
+    )
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
@@ -485,10 +503,13 @@ export class EmStack extends cdk.Stack {
    */
   addSnsPublishPolicy(topicOrName: ITopic | string): void {
     const role = this.requireSharedRole('addSnsPublishPolicy')
-    const arn =
-      typeof topicOrName === 'string'
-        ? `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${topicOrName}`
-        : topicOrName.topicArn
+    const arn = this.resolveResourceArn(
+      topicOrName,
+      'addSnsPublishPolicy',
+      'topicName',
+      name => `arn:${Aws.PARTITION}:sns:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`,
+      topic => topic.topicArn
+    )
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
@@ -500,19 +521,29 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an SQS SendMessage policy to the shared role.
-   * @param queueNameOrNames - Short queue name(s) (prefixed with `{stage}-`).
+   * @param queueOrNames - One or more IQueue references and/or short queue names
+   *   (string names are prefixed with `{stage}-`).
    */
-  addSqsSendPolicy(queueNameOrNames: string | string[]): void {
-    const names = Array.isArray(queueNameOrNames) ? queueNameOrNames : [queueNameOrNames]
-    if (names.length === 0) {
-      throw new Error('addSqsSendPolicy: queueNameOrNames must not be empty.')
+  addSqsSendPolicy(queueOrNames: IQueue | string | (IQueue | string)[]): void {
+    const items = Array.isArray(queueOrNames) ? queueOrNames : [queueOrNames]
+    if (items.length === 0) {
+      throw new Error('addSqsSendPolicy: queueOrNames must not be empty.')
     }
     const role = this.requireSharedRole('addSqsSendPolicy')
+    const resources = items.map(item =>
+      this.resolveResourceArn(
+        item,
+        'addSqsSendPolicy',
+        'queueName',
+        name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`,
+        queue => queue.queueArn
+      )
+    )
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
-        resources: names.map(name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`)
+        resources
       })
     )
   }
@@ -557,6 +588,14 @@ export class EmStack extends cdk.Stack {
    *   publish-only access to a specific topic.
    */
   addSnsPolicy(options: { actions: string[]; resources?: string[] }): void {
+    if (options.actions.length === 0) {
+      throw new Error('addSnsPolicy: actions must not be empty.')
+    }
+    if (options.resources && options.resources.length === 0) {
+      throw new Error(
+        'addSnsPolicy: resources must not be empty. Omit the field to grant account-wide access explicitly.'
+      )
+    }
     const role = this.requireSharedRole('addSnsPolicy')
     if (!options.resources) {
       Annotations.of(this).addWarning(
@@ -577,13 +616,23 @@ export class EmStack extends cdk.Stack {
    * Add an SQS consumer policy to the shared role.
    * Grants ChangeMessageVisibility, DeleteMessage, ReceiveMessage, and GetQueueAttributes on each queue.
    * Use `addSqsSendPolicy` separately for queues the service also produces to.
-   * @param queueNames - Short queue names without stage prefix. Stage prefix added automatically.
+   * @param queues - One or more IQueue references and/or short queue names
+   *   (string names are prefixed with `{stage}-`).
    */
-  addSqsConsumerPolicy(queueNames: string[]): void {
-    if (queueNames.length === 0) {
-      throw new Error('addSqsConsumerPolicy: queueNames must not be empty.')
+  addSqsConsumerPolicy(queues: (IQueue | string)[]): void {
+    if (queues.length === 0) {
+      throw new Error('addSqsConsumerPolicy: queues must not be empty.')
     }
     const role = this.requireSharedRole('addSqsConsumerPolicy')
+    const resources = queues.map(item =>
+      this.resolveResourceArn(
+        item,
+        'addSqsConsumerPolicy',
+        'queueName',
+        name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`,
+        queue => queue.queueArn
+      )
+    )
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
@@ -593,9 +642,7 @@ export class EmStack extends cdk.Stack {
           'sqs:ReceiveMessage',
           'sqs:GetQueueAttributes'
         ],
-        resources: queueNames.map(
-          name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`
-        )
+        resources
       })
     )
   }
@@ -619,20 +666,27 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an S3 policy to the shared role.
-   * @param bucketName - Full bucket name (no stage prefix added).
+   * @param bucketOrName - An IBucket reference, or a full bucket name (no stage prefix added).
    * @param actions - S3 actions to grant. Defaults to `['s3:GetObject', 's3:PutObject',
-   *   's3:DeleteObject', 's3:ListBucket']`. Pass an explicit list for narrower or broader access.
+   *   's3:DeleteObject', 's3:ListBucket']`. Pass an explicit non-empty list for narrower or broader access.
    */
-  addS3Policy(bucketName: string, actions?: string[]): void {
+  addS3Policy(bucketOrName: IBucket | string, actions?: string[]): void {
+    if (actions && actions.length === 0) {
+      throw new Error('addS3Policy: actions must not be empty.')
+    }
     const role = this.requireSharedRole('addS3Policy')
+    const bucketArn = this.resolveResourceArn(
+      bucketOrName,
+      'addS3Policy',
+      'bucketName',
+      name => `arn:${Aws.PARTITION}:s3:::${name}`,
+      bucket => bucket.bucketArn
+    )
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: actions ?? ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
-        resources: [
-          `arn:${Aws.PARTITION}:s3:::${bucketName}`,
-          `arn:${Aws.PARTITION}:s3:::${bucketName}/*`
-        ]
+        resources: [bucketArn, `${bucketArn}/*`]
       })
     )
   }
@@ -640,22 +694,44 @@ export class EmStack extends cdk.Stack {
   /**
    * Add a DynamoDB policy to the shared role.
    * Grants read, write, transact, and describe actions on each table.
-   * Uses literal * for region and account in ARNs.
-   * @param tableNames - Short table names without stage prefix. Stage prefix added automatically.
-   * @param options.streamTableNames - Short table names to also grant stream read access (/stream/*).
-   * @param options.indexTableNames - Short table names to also grant Query/Scan on all indexes (/index/*).
+   *
+   * String-name ARNs use literal `*` for region and account. This matches the
+   * Serverless Framework's source policy on migrated stacks; replacing the `*`
+   * with `${Aws.REGION}/${Aws.ACCOUNT_ID}` would generate a noisy CloudFormation
+   * diff on first deploy without changing effective access.
+   *
+   * @param tables - One or more ITable references and/or short table names
+   *   (string names are prefixed with `{stage}-`).
+   * @param options.streamTables - Tables to also grant stream read access.
+   *   Accepts ITable refs (uses tableStreamArn) or string short names.
+   * @param options.indexTables - Tables to also grant Query/Scan on all indexes.
    *   Uses a separate policy statement scoped to only dynamodb:Query and dynamodb:Scan.
    */
-  addDynamoDbPolicy(tableNames: string[], options?: { streamTableNames?: string[], indexTableNames?: string[] }): void {
-    if (tableNames.length === 0) {
-      throw new Error('addDynamoDbPolicy: tableNames must not be empty.')
+  addDynamoDbPolicy(
+    tables: (ITable | string)[],
+    options?: { streamTables?: (ITable | string)[]; indexTables?: (ITable | string)[] }
+  ): void {
+    if (tables.length === 0) {
+      throw new Error('addDynamoDbPolicy: tables must not be empty.')
     }
     const role = this.requireSharedRole('addDynamoDbPolicy')
-    const tableArns = tableNames.map(
-      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}`
+    const tableArns = tables.map(item =>
+      this.resolveResourceArn(
+        item,
+        'addDynamoDbPolicy',
+        'tableName',
+        name => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${name}`,
+        table => table.tableArn
+      )
     )
-    const streamArns = (options?.streamTableNames ?? []).map(
-      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}/stream/*`
+    const streamArns = (options?.streamTables ?? []).map(item =>
+      this.resolveResourceArn(
+        item,
+        'addDynamoDbPolicy(streamTables)',
+        'tableName',
+        name => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${name}/stream/*`,
+        table => table.tableStreamArn ?? `${table.tableArn}/stream/*`
+      )
     )
     role.addToPolicy(
       new PolicyStatement({
@@ -680,8 +756,14 @@ export class EmStack extends cdk.Stack {
         resources: [...tableArns, ...streamArns]
       })
     )
-    const indexArns = (options?.indexTableNames ?? []).map(
-      n => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${n}/index/*`
+    const indexArns = (options?.indexTables ?? []).map(item =>
+      this.resolveResourceArn(
+        item,
+        'addDynamoDbPolicy(indexTables)',
+        'tableName',
+        name => `arn:${Aws.PARTITION}:dynamodb:*:*:table/${this.stage}-${name}/index/*`,
+        table => `${table.tableArn}/index/*`
+      )
     )
     if (indexArns.length > 0) {
       role.addToPolicy(
@@ -699,6 +781,28 @@ export class EmStack extends cdk.Stack {
       throw new Error(`${methodName}() requires useSharedRole: true on the stack.`)
     }
     return this.sharedRole
+  }
+
+  /**
+   * Resolve a CDK resource reference or short name into an ARN string.
+   * Centralises empty-input validation so callers (add*Policy methods)
+   * fail loud at synth instead of producing a malformed ARN that
+   * CloudFormation later rejects with a generic error.
+   */
+  private resolveResourceArn<T extends object>(
+    refOrName: T | string,
+    methodName: string,
+    nameLabel: string,
+    fromName: (name: string) => string,
+    fromRef: (ref: T) => string
+  ): string {
+    if (typeof refOrName === 'string') {
+      if (refOrName.trim() === '') {
+        throw new Error(`${methodName}: ${nameLabel} must not be empty.`)
+      }
+      return fromName(refOrName)
+    }
+    return fromRef(refOrName)
   }
 
   /**

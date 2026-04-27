@@ -40,6 +40,14 @@ export class EmLambdaFunction extends Construct {
         managedPolicies: extraPolicies.length ? extraPolicies : undefined
       })
 
+    // When the caller supplies a role (typically EmStack's sharedRole during
+    // Serverless migration) createLambdaExecutionRole is bypassed and the
+    // VPC/X-Ray policies above are not attached. Attach them here so
+    // vpcConfig/enableTracing produce a working role regardless of source.
+    if (config.role) {
+      extraPolicies.forEach(policy => role.addManagedPolicy(policy))
+    }
+
     const logGroup: ILogGroup = config.importExistingLogGroup
       ? LogGroup.fromLogGroupName(this, `${id}LogGroup`, `/aws/lambda/${functionName}`)
       : new LogGroup(this, `${id}LogGroup`, {

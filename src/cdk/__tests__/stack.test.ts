@@ -1209,18 +1209,18 @@ describe('EmStack', () => {
       expect(policyJson).toContain('dev-contacts')
     })
 
-    it('addDynamoDbPolicy includes stream ARNs when streamTableNames provided', () => {
+    it('addDynamoDbPolicy includes stream ARNs when streamTables provided', () => {
       const stack = makeStack({ useSharedRole: true })
-      stack.addDynamoDbPolicy(['contacts'], { streamTableNames: ['contacts'] })
+      stack.addDynamoDbPolicy(['contacts'], { streamTables: ['contacts'] })
 
       const template = Template.fromStack(stack)
       const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
       expect(policyJson).toContain('stream/*')
     })
 
-    it('addDynamoDbPolicy creates separate index policy statement when indexTableNames provided', () => {
+    it('addDynamoDbPolicy creates separate index policy statement when indexTables provided', () => {
       const stack = makeStack({ useSharedRole: true })
-      stack.addDynamoDbPolicy(['contacts'], { indexTableNames: ['contacts'] })
+      stack.addDynamoDbPolicy(['contacts'], { indexTables: ['contacts'] })
 
       const template = Template.fromStack(stack)
       const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
@@ -1290,9 +1290,9 @@ describe('EmStack', () => {
       expect(policyJson).not.toContain('sqs:SendMessage')
     })
 
-    it('addSqsConsumerPolicy throws when queueNames is empty', () => {
+    it('addSqsConsumerPolicy throws when queues is empty', () => {
       const stack = makeStack({ useSharedRole: true })
-      expect(() => stack.addSqsConsumerPolicy([])).toThrow('queueNames must not be empty')
+      expect(() => stack.addSqsConsumerPolicy([])).toThrow('queues must not be empty')
     })
 
     it('addS3Policy grants object and bucket actions on bucket and prefix ARNs', () => {
@@ -1335,9 +1335,29 @@ describe('EmStack', () => {
       expect(policyJson).toContain('logs:StartQuery')
     })
 
-    it('addDynamoDbPolicy throws when tableNames is empty', () => {
+    it('addDynamoDbPolicy throws when tables is empty', () => {
       const stack = makeStack({ useSharedRole: true })
-      expect(() => stack.addDynamoDbPolicy([])).toThrow('tableNames must not be empty')
+      expect(() => stack.addDynamoDbPolicy([])).toThrow('tables must not be empty')
+    })
+
+    it('addSnsPolicy throws when actions is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSnsPolicy({ actions: [] })).toThrow('actions must not be empty')
+    })
+
+    it('addS3Policy throws when actions array is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addS3Policy('my-bucket', [])).toThrow('actions must not be empty')
+    })
+
+    it('addSnsPublishPolicy throws when topic name string is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSnsPublishPolicy('')).toThrow('topicName must not be empty')
+    })
+
+    it('addKinesisPolicy throws when stream name string is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addKinesisPolicy('')).toThrow('streamName must not be empty')
     })
 
     it('throws when shared role is not enabled', () => {

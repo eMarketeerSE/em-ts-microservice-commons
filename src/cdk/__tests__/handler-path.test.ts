@@ -65,6 +65,18 @@ describe('resolveHandlerPath', () => {
       })
       expect(result.codePath).toBe('./custom/path')
     })
+
+    it('throws when handlerPath has directory components but does not start with src/handlers/', () => {
+      expect(() =>
+        resolveHandlerPath({ handlerPath: 'src/lambdas/foo' })
+      ).toThrow(/must either be a bare basename or start with "src\/handlers\/"/)
+    })
+
+    it('throws when handlerPath is absolute', () => {
+      expect(() =>
+        resolveHandlerPath({ handlerPath: '/abs/path/foo' })
+      ).toThrow(/must either be a bare basename or start with "src\/handlers\/"/)
+    })
   })
 
   describe('without handlerPath', () => {

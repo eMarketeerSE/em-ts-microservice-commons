@@ -22,15 +22,35 @@ export const getLogRetentionDays = (stage: Stage): RetentionDays => {
     case 'dev':
       return RetentionDays.THREE_DAYS
     default:
-      return RetentionDays.ONE_WEEK
+      // Stage is a compile-time union. A runtime value outside it means a
+      // caller widened the type — fail loud rather than silently returning a
+      // dev-shaped default for what may be a production deployment.
+      throw new Error(`getLogRetentionDays: unknown stage "${stage as string}"`)
   }
 }
 
 /**
- * Convert retention days number to RetentionDays enum
+ * Convert retention days number to RetentionDays enum.
+ *
+ * Validates `days` against `RetentionDays`'s TS enum reverse-mapping (every
+ * numeric enum member exposes its name as a string-keyed property — e.g.
+ * `RetentionDays[1] === 'ONE_DAY'`). This catches typos without
+ * hand-maintaining a switch in parallel with the SDK enum.
+ *
+ * `0` is rejected even though `RetentionDays.INFINITE === 0`: passing 0 from
+ * a config object almost always means "unset" rather than "retain forever".
+ * Callers that genuinely want INFINITE must pass `RetentionDays.INFINITE`
+ * explicitly via a non-numeric path (or update this guard with a clear test).
  */
 export const convertRetentionDays = (days?: number): RetentionDays | undefined => {
   if (days === undefined || days === null) return undefined
+
+  if (days === 0) {
+    throw new Error(
+      'logRetentionDays: 0 is not accepted (would map to RetentionDays.INFINITE). '
+      + 'Pass RetentionDays.INFINITE explicitly if infinite retention is intended.'
+    )
+  }
 
   if (typeof (RetentionDays as Record<number, string | undefined>)[days] !== 'string') {
     const supported = Object.values(RetentionDays)
@@ -81,5 +101,16 @@ export const createApiGatewayLogGroup = (
  * Get removal policy based on stage
  */
 export const getRemovalPolicy = (stage: Stage): RemovalPolicy => {
-  return stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
+  switch (stage) {
+    case 'prod':
+      return RemovalPolicy.RETAIN
+    case 'staging':
+    case 'test':
+    case 'dev':
+      return RemovalPolicy.DESTROY
+    default:
+      // Same rationale as getLogRetentionDays: a typo like 'production' must
+      // not silently produce DESTROY for what should be a retained resource.
+      throw new Error(`getRemovalPolicy: unknown stage "${stage as string}"`)
+  }
 }

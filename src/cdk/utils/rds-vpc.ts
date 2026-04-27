@@ -91,6 +91,10 @@ export function createRdsVpcConfig(
   }
 
   if (config.overrideLogicalIds?.securityGroup) {
+    // When the SG logical ID is pinned, CDK's auto-generated `Ref` on the
+    // ingress points at the original (CDK-generated) logical ID. CloudFormation
+    // can't resolve that reference at deploy and the changeset fails. Rewrite
+    // the Ref to the overridden ID.
     ingress.addPropertyOverride('SourceSecurityGroupId', {
       Ref: config.overrideLogicalIds.securityGroup
     })

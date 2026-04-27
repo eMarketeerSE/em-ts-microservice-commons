@@ -56,7 +56,21 @@ export function resolveHandlerPath(config: HandlerPathInput): ResolvedHandlerPat
 
   if (handlerPath) {
     const normalised = handlerPath.replace(/\.ts$/, '')
-    const relative = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
+    const startsWithHandlersDir = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
+    const containsSeparator = normalised.includes('/') || normalised.includes(path.sep)
+
+    if (!startsWithHandlersDir && (path.isAbsolute(normalised) || containsSeparator)) {
+      // A bare basename like 'get-data' is fine (treated as relative to
+      // src/handlers). Anything with directory components must be rooted at
+      // DEFAULT_HANDLERS_DIR — otherwise we'd silently produce e.g.
+      // 'dist/handlers/src/lambdas/foo' and fail at synth with an opaque
+      // Code.fromAsset error far from the call site.
+      throw new Error(
+        `resolveHandlerPath: handlerPath "${handlerPath}" must either be a bare basename or start with "${DEFAULT_HANDLERS_DIR}/".`
+      )
+    }
+
+    const relative = startsWithHandlersDir
       ? normalised.slice(DEFAULT_HANDLERS_DIR.length + 1)
       : normalised
 

@@ -8,6 +8,11 @@ export interface DlqAlarmProps {
   dlq: IQueue
   alarmName: string
   alarmTopic: ITopic
+  /**
+   * Migration only: pins the CloudFormation logical ID of the alarm so it
+   * matches an existing Serverless-generated CFN alarm during in-place
+   * Serverless→CDK migration. Omit for new stacks.
+   */
   alarmLogicalId?: string
 }
 
