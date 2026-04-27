@@ -292,10 +292,22 @@ export class LambdaWithQueue extends Construct {
             'omit the argument to use the standard CDK subscription path.'
         )
       }
-      if (options?.filterPolicy || options?.filterPolicyWithMessageBody || options?.deadLetterQueue) {
+      if (options?.filterPolicy) {
         throw new Error(
-          'subscribeToTopic: filterPolicy, filterPolicyWithMessageBody, and deadLetterQueue are not ' +
-            'supported with serverlessSubscriptionLogicalId. Use the standard CDK subscription path instead.'
+          'subscribeToTopic: filterPolicy is not supported with serverlessSubscriptionLogicalId. ' +
+            'Use the standard CDK subscription path instead.'
+        )
+      }
+      if (options?.filterPolicyWithMessageBody) {
+        throw new Error(
+          'subscribeToTopic: filterPolicyWithMessageBody is not supported with serverlessSubscriptionLogicalId. ' +
+            'Use the standard CDK subscription path instead.'
+        )
+      }
+      if (options?.deadLetterQueue) {
+        throw new Error(
+          'subscribeToTopic: deadLetterQueue is not supported with serverlessSubscriptionLogicalId. ' +
+            'Use the standard CDK subscription path instead.'
         )
       }
       Annotations.of(this).addWarning(

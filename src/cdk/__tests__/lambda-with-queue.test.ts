@@ -616,7 +616,7 @@ describe('LambdaWithQueue', () => {
       const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
       expect(() =>
         lq.subscribeToTopic(topic, { filterPolicyWithMessageBody: { type: {} as any } }, 'MySub')
-      ).toThrow('filterPolicy')
+      ).toThrow('filterPolicyWithMessageBody')
     })
 
     it('throws when deadLetterQueue is combined with serverlessSubscriptionLogicalId', () => {
@@ -626,7 +626,7 @@ describe('LambdaWithQueue', () => {
       const dlq = new Queue(stack, 'DLQ')
       expect(() =>
         lq.subscribeToTopic(topic, { deadLetterQueue: dlq }, 'MySub')
-      ).toThrow('filterPolicy')
+      ).toThrow('deadLetterQueue')
     })
   })
 })

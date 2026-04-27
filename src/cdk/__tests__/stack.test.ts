@@ -1023,6 +1023,13 @@ describe('EmStack', () => {
         ]
       })
     })
+
+    it('returns the same instance on repeated calls without throwing a duplicate construct error', () => {
+      const stack = makeStack()
+      const first = stack.alarmTopic()
+      const second = stack.alarmTopic()
+      expect(first).toBe(second)
+    })
   })
 
   describe('em-microservice tag', () => {
@@ -1134,7 +1141,7 @@ describe('EmStack', () => {
       })
     })
 
-    it('addSqsSendPolicy adds sqs:SendMessage', () => {
+    it('addSqsSendPolicy adds sqs:SendMessage for a single queue', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addSqsSendPolicy('em-contacts-service-contact-source')
 
@@ -1148,6 +1155,16 @@ describe('EmStack', () => {
           ])
         }
       })
+    })
+
+    it('addSqsSendPolicy accepts an array and creates one statement covering all queues', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSqsSendPolicy(['queue-a', 'queue-b'])
+
+      const template = Template.fromStack(stack)
+      const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
+      expect(policyJson).toContain('dev-queue-a')
+      expect(policyJson).toContain('dev-queue-b')
     })
 
     it('addLambdaInvokePolicy scopes to service by default', () => {
@@ -1223,7 +1240,7 @@ describe('EmStack', () => {
       expect(policyJson).not.toContain(':function:')
     })
 
-    it('addXRayPolicy grants xray:PutTraceSegments', () => {
+    it('addXRayPolicy grants xray:PutTraceSegments and xray:PutTelemetryRecords', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addXRayPolicy()
 
@@ -1231,6 +1248,7 @@ describe('EmStack', () => {
       const policies = template.findResources('AWS::IAM::Policy')
       const policyJson = JSON.stringify(Object.values(policies)[0])
       expect(policyJson).toContain('xray:PutTraceSegments')
+      expect(policyJson).toContain('xray:PutTelemetryRecords')
     })
 
     it('addSnsPolicy grants specified actions on provided resources', () => {
@@ -1267,6 +1285,12 @@ describe('EmStack', () => {
       expect(policyJson).toContain('sqs:ReceiveMessage')
       expect(policyJson).toContain('sqs:DeleteMessage')
       expect(policyJson).toContain('dev-my-queue')
+      expect(policyJson).not.toContain('sqs:SendMessage')
+    })
+
+    it('addSqsConsumerPolicy throws when queueNames is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSqsConsumerPolicy([])).toThrow('queueNames must not be empty')
     })
 
     it('addS3Policy grants object and bucket actions on bucket and prefix ARNs', () => {

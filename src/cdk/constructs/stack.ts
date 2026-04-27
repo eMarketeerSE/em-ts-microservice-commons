@@ -387,7 +387,7 @@ export class EmStack extends cdk.Stack {
   ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
     const merged = this.mergeConfig(functionConfig)
-    const fn = this.createFunction(id, functionConfig)
+    const fn = this.createFunction(id, merged)
     const { functionName } = resolveHandlerPath(merged)
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
@@ -500,16 +500,16 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an SQS SendMessage policy to the shared role.
-   * @param queueName - Short queue name (prefixed with `{stage}-`).
+   * @param queueNameOrNames - Short queue name(s) (prefixed with `{stage}-`).
    */
-  addSqsSendPolicy(queueName: string): void {
+  addSqsSendPolicy(queueNameOrNames: string | string[]): void {
     const role = this.requireSharedRole('addSqsSendPolicy')
-    const arn = `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${queueName}`
+    const names = Array.isArray(queueNameOrNames) ? queueNameOrNames : [queueNameOrNames]
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'],
-        resources: [arn]
+        resources: names.map(name => `arn:${Aws.PARTITION}:sqs:${Aws.REGION}:${Aws.ACCOUNT_ID}:${this.stage}-${name}`)
       })
     )
   }
@@ -572,11 +572,14 @@ export class EmStack extends cdk.Stack {
 
   /**
    * Add an SQS consumer policy to the shared role.
-   * Grants ChangeMessageVisibility, DeleteMessage, ReceiveMessage, SendMessage,
-   * and GetQueueAttributes on each queue.
+   * Grants ChangeMessageVisibility, DeleteMessage, ReceiveMessage, and GetQueueAttributes on each queue.
+   * Use `addSqsSendPolicy` separately for queues the service also produces to.
    * @param queueNames - Short queue names without stage prefix. Stage prefix added automatically.
    */
   addSqsConsumerPolicy(queueNames: string[]): void {
+    if (queueNames.length === 0) {
+      throw new Error('addSqsConsumerPolicy: queueNames must not be empty.')
+    }
     const role = this.requireSharedRole('addSqsConsumerPolicy')
     role.addToPolicy(
       new PolicyStatement({
@@ -585,7 +588,6 @@ export class EmStack extends cdk.Stack {
           'sqs:ChangeMessageVisibility',
           'sqs:DeleteMessage',
           'sqs:ReceiveMessage',
-          'sqs:SendMessage',
           'sqs:GetQueueAttributes'
         ],
         resources: queueNames.map(

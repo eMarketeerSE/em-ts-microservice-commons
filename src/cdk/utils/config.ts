@@ -32,9 +32,9 @@ export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<s
       throw new Error(`recap.dev endpoint must use http or https, got: ${parsed.protocol}`)
     }
   } catch (err) {
-    throw err instanceof Error
-      ? err
-      : new Error(`recap.dev endpoint is not a valid URL: ${endpoint}`)
+    throw new Error(
+      `recap.dev endpoint is not a valid URL "${endpoint}": ${(err as Error).message}`
+    )
   }
 
   return {
