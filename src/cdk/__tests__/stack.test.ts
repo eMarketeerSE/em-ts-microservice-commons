@@ -1161,10 +1161,12 @@ describe('EmStack', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addSqsSendPolicy(['queue-a', 'queue-b'])
 
-      const template = Template.fromStack(stack)
-      const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
-      expect(policyJson).toContain('dev-queue-a')
-      expect(policyJson).toContain('dev-queue-b')
+      const policies = Template.fromStack(stack).findResources('AWS::IAM::Policy')
+      const statements = (Object.values(policies)[0] as any).Properties.PolicyDocument.Statement
+      expect(statements).toHaveLength(1)
+      const resourceJson = JSON.stringify(statements[0].Resource)
+      expect(resourceJson).toContain('dev-queue-a')
+      expect(resourceJson).toContain('dev-queue-b')
     })
 
     it('addLambdaInvokePolicy scopes to service by default', () => {

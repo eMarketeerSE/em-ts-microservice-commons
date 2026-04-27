@@ -26,15 +26,14 @@ export const buildRecapDevEnvironment = (endpoint: string | undefined): Record<s
     return {}
   }
 
+  let parsed: URL
   try {
-    const parsed = new URL(endpoint)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error(`recap.dev endpoint must use http or https, got: ${parsed.protocol}`)
-    }
-  } catch (err) {
-    throw new Error(
-      `recap.dev endpoint is not a valid URL "${endpoint}": ${(err as Error).message}`
-    )
+    parsed = new URL(endpoint)
+  } catch {
+    throw new Error(`recap.dev endpoint is not a valid URL: "${endpoint}"`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`recap.dev endpoint must use http or https, got: ${parsed.protocol}`)
   }
 
   return {

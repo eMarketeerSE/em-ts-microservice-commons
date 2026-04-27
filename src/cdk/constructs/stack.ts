@@ -503,8 +503,11 @@ export class EmStack extends cdk.Stack {
    * @param queueNameOrNames - Short queue name(s) (prefixed with `{stage}-`).
    */
   addSqsSendPolicy(queueNameOrNames: string | string[]): void {
-    const role = this.requireSharedRole('addSqsSendPolicy')
     const names = Array.isArray(queueNameOrNames) ? queueNameOrNames : [queueNameOrNames]
+    if (names.length === 0) {
+      throw new Error('addSqsSendPolicy: queueNameOrNames must not be empty.')
+    }
+    const role = this.requireSharedRole('addSqsSendPolicy')
     role.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
