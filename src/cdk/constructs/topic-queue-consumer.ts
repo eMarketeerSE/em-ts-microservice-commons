@@ -10,6 +10,11 @@ export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
   readonly subscriptionOptions?: Omit<SqsSubscriptionProps, 'rawMessageDelivery'> & {
     rawMessageDelivery?: boolean
   }
+  /**
+   * Migration only: pins SNS subscription logical ID to prevent recreation
+   * and in-flight message loss during Serverless→CDK deploy.
+   */
+  readonly serverlessSubscriptionLogicalId?: string
 }
 
 /**
@@ -37,7 +42,12 @@ export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
  */
 export class TopicQueueConsumer extends LambdaWithQueue {
   constructor(scope: Construct, id: string, props: TopicQueueConsumerProps) {
-    const { topic: topicOrArn, subscriptionOptions, ...queueProps } = props
+    const {
+      topic: topicOrArn,
+      subscriptionOptions,
+      serverlessSubscriptionLogicalId,
+      ...queueProps
+    } = props
     super(scope, id, queueProps)
 
     const topic =
@@ -45,6 +55,6 @@ export class TopicQueueConsumer extends LambdaWithQueue {
         ? Topic.fromTopicArn(this, 'SubscribedTopic', topicOrArn)
         : topicOrArn
 
-    this.subscribeToTopic(topic, subscriptionOptions)
+    this.subscribeToTopic(topic, subscriptionOptions, serverlessSubscriptionLogicalId)
   }
 }

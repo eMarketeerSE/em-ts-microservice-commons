@@ -6,7 +6,7 @@ import { Stage, VpcConfig } from '../types'
 
 export interface RdsVpcConfiguration {
   readonly vpcId: string
-  readonly privateSubnetIds: string[]
+  readonly privateSubnetIds: readonly string[]
   readonly dbSecurityGroupId: string
   /** Override CloudFormation logical IDs for migration. */
   readonly overrideLogicalIds?: {
@@ -25,6 +25,13 @@ export interface RdsVpcConfiguration {
    * disruptive security-group replacement.
    */
   readonly securityGroupDescription?: string
+  /**
+   * When false, strips SecurityGroupEgress from the CloudFormation template.
+   * Use for the initial Serverless→CDK migration deploy when the live stack never had
+   * an explicit egress rule. Prevents rollback from revoking the default allow-all-outbound
+   * rule. Remove this option in a follow-up deploy to hand CloudFormation ownership.
+   */
+  readonly manageSgEgress?: boolean
 }
 
 export function createRdsVpcConfig(
@@ -54,15 +61,20 @@ export function createRdsVpcConfig(
     allowAllOutbound: true
   })
 
-  if (config.overrideLogicalIds?.securityGroup) {
+  if (config.overrideLogicalIds?.securityGroup || config.manageSgEgress === false) {
     const cfnSg = lambdaSecurityGroup.node.defaultChild
     if (!(cfnSg instanceof ec2.CfnSecurityGroup)) {
       throw new Error(
-        `Cannot override security group logical ID to "${config.overrideLogicalIds.securityGroup}": ` +
-          'security group does not have a CfnSecurityGroup default child.'
+        'Security group does not have a CfnSecurityGroup default child — ' +
+          'cannot apply overrideLogicalIds.securityGroup or manageSgEgress.'
       )
     }
-    cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
+    if (config.overrideLogicalIds?.securityGroup) {
+      cfnSg.overrideLogicalId(config.overrideLogicalIds.securityGroup)
+    }
+    if (config.manageSgEgress === false) {
+      cfnSg.addPropertyDeletionOverride('SecurityGroupEgress')
+    }
   }
 
   const ingress = new ec2.CfnSecurityGroupIngress(scope, `RdsIngress-${stage}`, {
@@ -76,6 +88,16 @@ export function createRdsVpcConfig(
 
   if (config.overrideLogicalIds?.ingress) {
     ingress.overrideLogicalId(config.overrideLogicalIds.ingress)
+  }
+
+  if (config.overrideLogicalIds?.securityGroup) {
+    // When the SG logical ID is pinned, CDK's auto-generated `Ref` on the
+    // ingress points at the original (CDK-generated) logical ID. CloudFormation
+    // can't resolve that reference at deploy and the changeset fails. Rewrite
+    // the Ref to the overridden ID.
+    ingress.addPropertyOverride('SourceSecurityGroupId', {
+      Ref: config.overrideLogicalIds.securityGroup
+    })
   }
 
   if (config.sharedRole) {

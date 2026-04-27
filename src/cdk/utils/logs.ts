@@ -22,43 +22,44 @@ export const getLogRetentionDays = (stage: Stage): RetentionDays => {
     case 'dev':
       return RetentionDays.THREE_DAYS
     default:
-      return RetentionDays.ONE_WEEK
+      // Stage is a compile-time union. A runtime value outside it means a
+      // caller widened the type — fail loud rather than silently returning a
+      // dev-shaped default for what may be a production deployment.
+      throw new Error(`getLogRetentionDays: unknown stage "${stage as string}"`)
   }
 }
 
 /**
- * Convert retention days number to RetentionDays enum
+ * Convert retention days number to RetentionDays enum.
+ *
+ * Validates `days` against `RetentionDays`'s TS enum reverse-mapping (every
+ * numeric enum member exposes its name as a string-keyed property — e.g.
+ * `RetentionDays[1] === 'ONE_DAY'`). This catches typos without
+ * hand-maintaining a switch in parallel with the SDK enum.
+ *
+ * `0` is rejected even though `RetentionDays.INFINITE === 0`: passing 0 from
+ * a config object almost always means "unset" rather than "retain forever".
+ * Callers that genuinely want INFINITE must pass `RetentionDays.INFINITE`
+ * explicitly via a non-numeric path (or update this guard with a clear test).
  */
 export const convertRetentionDays = (days?: number): RetentionDays | undefined => {
-  if (!days) return undefined
+  if (days === undefined || days === null) return undefined
 
-  const retentionMap: Record<number, RetentionDays> = {
-    1: RetentionDays.ONE_DAY,
-    3: RetentionDays.THREE_DAYS,
-    5: RetentionDays.FIVE_DAYS,
-    7: RetentionDays.ONE_WEEK,
-    14: RetentionDays.TWO_WEEKS,
-    30: RetentionDays.ONE_MONTH,
-    60: RetentionDays.TWO_MONTHS,
-    90: RetentionDays.THREE_MONTHS,
-    120: RetentionDays.FOUR_MONTHS,
-    150: RetentionDays.FIVE_MONTHS,
-    180: RetentionDays.SIX_MONTHS,
-    365: RetentionDays.ONE_YEAR,
-    400: RetentionDays.THIRTEEN_MONTHS,
-    545: RetentionDays.EIGHTEEN_MONTHS,
-    731: RetentionDays.TWO_YEARS,
-    1827: RetentionDays.FIVE_YEARS,
-    3653: RetentionDays.TEN_YEARS
-  }
-
-  const result = retentionMap[days]
-  if (!result) {
+  if (days === 0) {
     throw new Error(
-      `Unsupported logRetentionDays value: ${days}. Supported values: ${Object.keys(retentionMap).join(', ')}`
+      'logRetentionDays: 0 is not accepted (would map to RetentionDays.INFINITE). '
+      + 'Pass RetentionDays.INFINITE explicitly if infinite retention is intended.'
     )
   }
-  return result
+
+  if (typeof (RetentionDays as Record<number, string | undefined>)[days] !== 'string') {
+    const supported = Object.values(RetentionDays)
+      .filter((v): v is number => typeof v === 'number')
+      .sort((a, b) => a - b)
+      .join(', ')
+    throw new Error(`Unsupported logRetentionDays value: ${days}. Supported values: ${supported}`)
+  }
+  return days as RetentionDays
 }
 
 /**
@@ -73,26 +74,6 @@ export const createLogGroup = (scope: Construct, id: string, config: LogGroupCon
     logGroupName: config.logGroupName,
     retention: retentionDays,
     removalPolicy: config.stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
-  })
-}
-
-/**
- * Create a Lambda function log group
- */
-export const createLambdaLogGroup = (
-  scope: Construct,
-  id: string,
-  stage: Stage,
-  serviceName: string,
-  functionName: string,
-  retentionDays?: number
-): LogGroup => {
-  const logGroupName = `/aws/lambda/${generateLogGroupName(stage, serviceName, functionName)}`
-
-  return createLogGroup(scope, id, {
-    logGroupName,
-    stage,
-    retentionDays
   })
 }
 
@@ -120,12 +101,16 @@ export const createApiGatewayLogGroup = (
  * Get removal policy based on stage
  */
 export const getRemovalPolicy = (stage: Stage): RemovalPolicy => {
-  return stage === 'prod' ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
-}
-
-/**
- * Should enable log insights based on stage
- */
-export const shouldEnableLogInsights = (stage: Stage): boolean => {
-  return stage === 'prod' || stage === 'staging'
+  switch (stage) {
+    case 'prod':
+      return RemovalPolicy.RETAIN
+    case 'staging':
+    case 'test':
+    case 'dev':
+      return RemovalPolicy.DESTROY
+    default:
+      // Same rationale as getLogRetentionDays: a typo like 'production' must
+      // not silently produce DESTROY for what should be a retained resource.
+      throw new Error(`getRemovalPolicy: unknown stage "${stage as string}"`)
+  }
 }

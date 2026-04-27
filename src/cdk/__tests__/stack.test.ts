@@ -1,5 +1,6 @@
 import { App, Duration } from 'aws-cdk-lib'
-import { Match, Template } from 'aws-cdk-lib/assertions'
+import { Annotations, Match, Template } from 'aws-cdk-lib/assertions'
+import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmStack, EmStackProps } from '../constructs/stack'
 
@@ -15,7 +16,8 @@ function defaultProps(): EmStackProps {
 
 function makeStack(props?: Partial<EmStackProps>) {
   const app = new App()
-  return new EmStack(app, 'TestStack', { ...defaultProps(), ...props })
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return new EmStack(app, 'TestStack', { ...defaultProps(), ...props } as EmStackProps)
 }
 
 describe('EmStack', () => {
@@ -265,6 +267,104 @@ describe('EmStack', () => {
         expect(functions).toHaveProperty('CaptureDashscreenshotDashfromDashurlLambdaFunction')
         expect(functions).toHaveProperty('GenerateDashpdfDashfromDashurlLambdaFunction')
       })
+
+      describe('physicalName', () => {
+        it('sets FunctionName directly, bypassing generateLambdaName', () => {
+          const stack = makeStack({ useSharedRole: true })
+          stack.createFunction('GetScoreBreakdown', {
+            functionName: 'get-score-breakdown',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            physicalName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+
+          Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+            FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+        })
+
+        it('sets log group name from physicalName', () => {
+          const stack = makeStack({ useSharedRole: true })
+          stack.createFunction('GetScoreBreakdown', {
+            functionName: 'get-score-breakdown',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            physicalName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+
+          Template.fromStack(stack).hasResourceProperties('AWS::Logs::LogGroup', {
+            LogGroupName: '/aws/lambda/em-contacts-service-dev-get-score-breakdown'
+          })
+        })
+
+        it('logical ID is still derived from functionName, not physicalName', () => {
+          const stack = makeStack({ useSharedRole: true })
+          stack.createFunction('GetScoreBreakdown', {
+            functionName: 'get-score-breakdown',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            physicalName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+
+          const template = Template.fromStack(stack)
+          const functions = template.findResources('AWS::Lambda::Function')
+          // Logical ID from functionName ('get-score-breakdown'), not physicalName
+          expect(functions).toHaveProperty('GetDashscoreDashbreakdownLambdaFunction')
+        })
+
+        it('works without useSharedRole', () => {
+          const stack = makeStack()
+          stack.createFunction('GetScoreBreakdown', {
+            functionName: 'get-score-breakdown',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            physicalName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+
+          Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+            FunctionName: 'em-contacts-service-dev-get-score-breakdown'
+          })
+        })
+      })
+
+      it('throws when importExistingLogGroup is combined with useSharedRole', () => {
+        const stack = makeStack({ useSharedRole: true })
+        expect(() => {
+          stack.createFunction('Handler', {
+            functionName: 'my-handler',
+            handler: 'index.handler',
+            codePath: CODE_PATH,
+            importExistingLogGroup: true
+          })
+        }).toThrow('Cannot use importExistingLogGroup with useSharedRole')
+      })
+
+      it('emits synth-time error when a custom role is passed in migration mode', () => {
+        const app = new App()
+        const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+        const customRole = new Role(stack, 'CustomRole', {
+          assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+        })
+        stack.createFunction('Handler', {
+          functionName: 'my-handler',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          role: customRole
+        })
+        Annotations.fromStack(stack).hasError('*', Match.stringLikeRegexp('createFunction.*custom role.*migration mode'))
+      })
+
+      it('does NOT emit an error when the shared role itself is passed', () => {
+        const app = new App()
+        const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+        stack.createFunction('Handler', {
+          functionName: 'my-handler',
+          handler: 'index.handler',
+          codePath: CODE_PATH,
+          role: stack.sharedRole
+        })
+        Annotations.fromStack(stack).hasNoError('*', Match.stringLikeRegexp('custom role.*migration mode'))
+      })
     })
   })
 
@@ -513,6 +613,39 @@ describe('EmStack', () => {
       expect(functions).toHaveProperty('ProcessDashjobsLambdaFunction')
     })
 
+    it('emits synth-time error when a custom role is passed in migration mode', () => {
+      const app = new App()
+      const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const customRole = new Role(stack, 'CustomRole', {
+        assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+      })
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        alarmTopic,
+        role: customRole
+      })
+      Annotations.fromStack(stack).hasError('*', Match.stringLikeRegexp('createQueueConsumer.*custom role.*migration mode'))
+    })
+
+    it('does NOT emit an error when the shared role itself is passed', () => {
+      const app = new App()
+      const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        alarmTopic,
+        role: stack.sharedRole
+      })
+      Annotations.fromStack(stack).hasNoError('*', Match.stringLikeRegexp('custom role.*migration mode'))
+    })
+
     it('resolves handlerPath', () => {
       const stack = makeStack()
       const alarmTopic = new Topic(stack, 'AlarmTopic')
@@ -658,6 +791,43 @@ describe('EmStack', () => {
       expect(functions).toHaveProperty('ProcessDashinvoicesLambdaFunction')
     })
 
+    it('emits synth-time error when a custom role is passed in migration mode', () => {
+      const app = new App()
+      const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      const customRole = new Role(stack, 'CustomRole', {
+        assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+      })
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        functionName: 'process-invoices',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        alarmTopic,
+        role: customRole
+      })
+      Annotations.fromStack(stack).hasError('*', Match.stringLikeRegexp('createTopicQueueConsumer.*custom role.*migration mode'))
+    })
+
+    it('does NOT emit an error when the shared role itself is passed', () => {
+      const app = new App()
+      const stack = new EmStack(app, 'TestStack', { ...defaultProps(), useSharedRole: true })
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        functionName: 'process-invoices',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        alarmTopic,
+        role: stack.sharedRole
+      })
+      Annotations.fromStack(stack).hasNoError('*', Match.stringLikeRegexp('custom role.*migration mode'))
+    })
+
     it('forwards subscriptionOptions to the SNS subscription', () => {
       const stack = makeStack()
       const alarmTopic = new Topic(stack, 'AlarmTopic')
@@ -680,6 +850,28 @@ describe('EmStack', () => {
       Template.fromStack(stack).hasResourceProperties('AWS::SNS::Subscription', {
         RawMessageDelivery: true
       })
+    })
+
+    it('pins SNS subscription logical ID end-to-end via serverlessSubscriptionLogicalId', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        handlerPath: 'src/handlers/process-invoices',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role',
+        serverlessSubscriptionLogicalId: 'ProcessInvoicesSnsSubscription'
+      })
+
+      expect(Template.fromStack(stack).findResources('AWS::SNS::Subscription')).toHaveProperty(
+        'ProcessInvoicesSnsSubscription'
+      )
     })
   })
 
@@ -725,19 +917,88 @@ describe('EmStack', () => {
       const functions = template.findResources('AWS::Lambda::Function')
       expect(functions).toHaveProperty('DailyDashreportLambdaFunction')
     })
+
+    it('attaches the Lambda as an EventBridge target', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'cron(0 8 * * ? *)'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Targets: Match.arrayWith([
+          Match.objectLike({
+            Arn: { 'Fn::GetAtt': ['DailyDashreportLambdaFunction', 'Arn'] }
+          })
+        ])
+      })
+    })
+
+    it('forwards ruleName to the EventBridge rule', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'rate(1 day)',
+        ruleName: 'my-custom-rule'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Name: Match.stringLikeRegexp('my-custom-rule')
+      })
+    })
+
+    it('forwards ruleDescription to the EventBridge rule', () => {
+      const stack = makeStack()
+      stack.createScheduledFunction('DailyReport', {
+        handlerPath: 'src/handlers/daily-report',
+        codePath: CODE_PATH,
+        schedule: 'rate(1 day)',
+        ruleDescription: 'Runs the daily report job'
+      })
+
+      Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
+        Description: 'Runs the daily report job'
+      })
+    })
   })
 
   describe('ssmParam', () => {
-    it('resolves parameter with /{stage}/{serviceName}/{paramName} path', () => {
+    function getSsmParameterDefaults(stack: EmStack): string[] {
+      const params = Template.fromStack(stack).findParameters('*', {
+        Type: 'AWS::SSM::Parameter::Value<String>'
+      })
+      return Object.values(params).map((p: any) => p.Default as string)
+    }
+
+    it('resolves service-scoped param as /{stage}/{serviceName}/{paramName}', () => {
       const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host')
-      expect(value).toBeDefined()
+      stack.ssmParam('db-timeout')
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/test-service/db-timeout')
     })
 
-    it('uses raw parameter name when raw: true', () => {
+    it('resolves raw param using paramName as-is when raw: true', () => {
       const stack = makeStack()
-      const value = stack.ssmParam('proxy_dbms_host', { raw: true })
-      expect(value).toBeDefined()
+      stack.ssmParam('proxy_dbms_host', { raw: true })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('/dev/')
+      expect(defaults.join()).not.toContain('test-service')
+    })
+
+    it('ignores serviceName when raw: true', () => {
+      const stack = makeStack()
+      stack.ssmParam('proxy_dbms_host', { raw: true })
+      const defaults = getSsmParameterDefaults(stack)
+      expect(defaults).toContain('proxy_dbms_host')
+      expect(defaults.join()).not.toContain('other-service')
+    })
+
+    it('respects serviceName option for service-scoped params', () => {
+      const stack = makeStack()
+      stack.ssmParam('api-key', { serviceName: 'em-form-service' })
+      expect(getSsmParameterDefaults(stack)).toContain('/dev/em-form-service/api-key')
     })
   })
 
@@ -761,6 +1022,13 @@ describe('EmStack', () => {
           ]
         ]
       })
+    })
+
+    it('returns the same instance on repeated calls without throwing a duplicate construct error', () => {
+      const stack = makeStack()
+      const first = stack.alarmTopic()
+      const second = stack.alarmTopic()
+      expect(first).toBe(second)
     })
   })
 
@@ -873,7 +1141,7 @@ describe('EmStack', () => {
       })
     })
 
-    it('addSqsSendPolicy adds sqs:SendMessage', () => {
+    it('addSqsSendPolicy adds sqs:SendMessage for a single queue', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addSqsSendPolicy('em-contacts-service-contact-source')
 
@@ -887,6 +1155,18 @@ describe('EmStack', () => {
           ])
         }
       })
+    })
+
+    it('addSqsSendPolicy accepts an array and creates one statement covering all queues', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSqsSendPolicy(['queue-a', 'queue-b'])
+
+      const policies = Template.fromStack(stack).findResources('AWS::IAM::Policy')
+      const statements = (Object.values(policies)[0] as any).Properties.PolicyDocument.Statement
+      expect(statements).toHaveLength(1)
+      const resourceJson = JSON.stringify(statements[0].Resource)
+      expect(resourceJson).toContain('dev-queue-a')
+      expect(resourceJson).toContain('dev-queue-b')
     })
 
     it('addLambdaInvokePolicy scopes to service by default', () => {
@@ -903,37 +1183,201 @@ describe('EmStack', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addLambdaInvokePolicy('dev-other-service-*')
 
-      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
-        PolicyDocument: {
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: 'lambda:InvokeFunction',
-              Effect: 'Allow'
-            })
-          ])
-        }
-      })
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('dev-other-service-*')
     })
 
     it('addSnsPublishPolicy accepts a topic name string', () => {
       const stack = makeStack({ useSharedRole: true })
       stack.addSnsPublishPolicy('emarketeer-event-contact-event')
 
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('emarketeer-event-contact-event')
+    })
+
+    it('addDynamoDbPolicy adds core table actions', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addDynamoDbPolicy(['contacts'])
+
+      const template = Template.fromStack(stack)
+      const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
+      expect(policyJson).toContain('dynamodb:GetItem')
+      expect(policyJson).toContain('dev-contacts')
+    })
+
+    it('addDynamoDbPolicy includes stream ARNs when streamTables provided', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addDynamoDbPolicy(['contacts'], { streamTables: ['contacts'] })
+
+      const template = Template.fromStack(stack)
+      const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
+      expect(policyJson).toContain('stream/*')
+    })
+
+    it('addDynamoDbPolicy creates separate index policy statement when indexTables provided', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addDynamoDbPolicy(['contacts'], { indexTables: ['contacts'] })
+
+      const template = Template.fromStack(stack)
+      const policyJson = JSON.stringify(template.findResources('AWS::IAM::Policy'))
+      expect(policyJson).toContain('index/*')
+      // Two statements: one for table actions, one for index Query/Scan
+      const statements = JSON.parse(policyJson)
+      const policyStatements = Object.values(statements)[0] as any
+      expect(policyStatements.Properties.PolicyDocument.Statement.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('addLambdaInvokePolicy with * grants account-wide resources', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addLambdaInvokePolicy('*')
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('"Resource":"*"')
+      expect(policyJson).not.toContain(':function:')
+    })
+
+    it('addXRayPolicy grants xray:PutTraceSegments and xray:PutTelemetryRecords', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addXRayPolicy()
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('xray:PutTraceSegments')
+      expect(policyJson).toContain('xray:PutTelemetryRecords')
+    })
+
+    it('addSnsPolicy grants specified actions on provided resources', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSnsPolicy({ actions: ['sns:Publish', 'sns:Subscribe'], resources: ['arn:aws:sns:eu-west-1:123:my-topic'] })
+
       Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
         PolicyDocument: {
           Statement: Match.arrayWith([
             Match.objectLike({
-              Action: 'sns:Publish',
-              Effect: 'Allow'
+              Action: ['sns:Publish', 'sns:Subscribe'],
+              Effect: 'Allow',
+              Resource: 'arn:aws:sns:eu-west-1:123:my-topic'
             })
           ])
         }
       })
     })
 
+    it('addSnsPolicy emits warning when no resources specified', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSnsPolicy({ actions: ['sns:Publish'] })
+
+      Annotations.fromStack(stack).hasWarning('*', Match.stringLikeRegexp('account-wide SNS access'))
+    })
+
+    it('addSqsConsumerPolicy grants consumer actions scoped to stage-prefixed queues', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addSqsConsumerPolicy(['my-queue'])
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('sqs:ReceiveMessage')
+      expect(policyJson).toContain('sqs:DeleteMessage')
+      expect(policyJson).toContain('dev-my-queue')
+      expect(policyJson).not.toContain('sqs:SendMessage')
+    })
+
+    it('addSqsConsumerPolicy throws when queues is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSqsConsumerPolicy([])).toThrow('queues must not be empty')
+    })
+
+    it('addS3Policy grants object and bucket actions on bucket and prefix ARNs', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addS3Policy('my-bucket')
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('s3:GetObject')
+      expect(policyJson).toContain(':::my-bucket"')
+      expect(policyJson).toContain(':::my-bucket/*"')
+    })
+
+    it('addExecuteApiPolicy grants execute-api:Invoke on *', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addExecuteApiPolicy()
+
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'execute-api:Invoke',
+              Effect: 'Allow',
+              Resource: '*'
+            })
+          ])
+        }
+      })
+    })
+
+    it('addCloudWatchLogsPolicy grants logs actions', () => {
+      const stack = makeStack({ useSharedRole: true })
+      stack.addCloudWatchLogsPolicy()
+
+      const template = Template.fromStack(stack)
+      const policies = template.findResources('AWS::IAM::Policy')
+      const policyJson = JSON.stringify(Object.values(policies)[0])
+      expect(policyJson).toContain('logs:FilterLogEvents')
+      expect(policyJson).toContain('logs:StartQuery')
+    })
+
+    it('addDynamoDbPolicy throws when tables is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addDynamoDbPolicy([])).toThrow('tables must not be empty')
+    })
+
+    it('addSnsPolicy throws when actions is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSnsPolicy({ actions: [] })).toThrow('actions must not be empty')
+    })
+
+    it('addS3Policy throws when actions array is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addS3Policy('my-bucket', [])).toThrow('actions must not be empty')
+    })
+
+    it('addSnsPublishPolicy throws when topic name string is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addSnsPublishPolicy('')).toThrow('topicName must not be empty')
+    })
+
+    it('addKinesisPolicy throws when stream name string is empty', () => {
+      const stack = makeStack({ useSharedRole: true })
+      expect(() => stack.addKinesisPolicy('')).toThrow('streamName must not be empty')
+    })
+
     it('throws when shared role is not enabled', () => {
       const stack = makeStack()
       expect(() => stack.addLambdaInvokePolicy()).toThrow('requires useSharedRole: true')
+    })
+  })
+
+  describe('sharedRoleManagedPolicies', () => {
+    it('replaces the default managed policy list', () => {
+      const stack = makeStack({
+        useSharedRole: true,
+        sharedRoleManagedPolicies: [
+          ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+        ]
+      })
+
+      const roleJson = JSON.stringify(Template.fromStack(stack).findResources('AWS::IAM::Role'))
+      expect(roleJson).toContain('AWSXRayDaemonWriteAccess')
+      expect(roleJson).not.toContain('CloudWatchLambdaInsightsExecutionRolePolicy')
     })
   })
 

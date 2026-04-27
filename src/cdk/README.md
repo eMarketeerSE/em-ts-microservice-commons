@@ -524,20 +524,26 @@ generateQueueName('dev', 'contacts', 'process')        // dev-contacts-queue-pro
 
 ### IAM Helpers
 
+Attach policies to the stack's shared role via the `add*Policy` methods on
+`EmStack` (these supersede the standalone `create*Policy` helpers that
+previously lived in `utils/iam.ts`):
+
 ```typescript
-fn.function.addToRolePolicy(createDynamoDBAccessPolicy(table.getTableArn()))
-fn.function.addToRolePolicy(createS3ReadPolicy('my-bucket'))
+this.addDynamoDbPolicy([table])         // accepts ITable refs or short names
+this.addS3Policy('my-bucket')           // accepts IBucket refs or names
+this.addSnsPublishPolicy(topic)         // accepts ITopic refs or short names
+this.addSqsSendPolicy(['outbound-queue'])
 ```
+
+The methods require `useSharedRole: true` on the stack; for per-function role
+permissions, attach policies to the function's role directly.
 
 ### Configuration
 
-```typescript
-const limits = getResourceLimits('prod')
-// { lambdaMemory: 1024, lambdaTimeout: 30, ... }
-
-isProduction('prod')   // true
-isDevelopment('dev')    // true
-```
+Stage-driven defaults are applied automatically by the constructs (memory,
+timeout, log retention, removal policy, etc.). Lambdas receive `STAGE`,
+`NODE_ENV`, and `REGION` env vars from `buildBaseEnvironment()` —
+no caller code is required.
 
 ### Presets
 

@@ -3,7 +3,7 @@ import { EmLambdaFunction } from './lambda'
 import { EmHttpApi } from './api-gateway'
 import { LambdaConfig } from '../types'
 
-export interface LambdaWithHttpApiConfig extends LambdaConfig {
+export type LambdaWithHttpApiConfig = LambdaConfig & {
   readonly httpApi: EmHttpApi
   readonly route: {
     path: string

@@ -1,6 +1,6 @@
 import { Duration } from 'aws-cdk-lib'
 import { Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
-import { IRole } from 'aws-cdk-lib/aws-iam'
+import { IRole, IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
 import { LambdaConfig } from '../types'
@@ -8,12 +8,9 @@ import { generateLambdaName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
-import {
-  buildRecapDevEnvironment,
-  getLambdaEnvironmentVariables,
-  resolveRecapDevEndpoint
-} from '../utils/config'
+import { buildBaseEnvironment, buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
+import { resolveHandlerPath } from '../utils/handler-path'
 
 export class EmLambdaFunction extends Construct {
   public readonly function: LambdaFunction
@@ -21,16 +18,35 @@ export class EmLambdaFunction extends Construct {
   constructor(scope: Construct, id: string, config: LambdaConfig) {
     super(scope, id)
 
-    const functionName = generateLambdaName(config.stage, config.serviceName, config.functionName)
+    const resolved = resolveHandlerPath(config)
+    const functionName =
+      config.physicalName ??
+      generateLambdaName(config.stage, config.serviceName, resolved.functionName)
+
+    const extraPolicies: IManagedPolicy[] = []
+    if (config.vpcConfig) {
+      extraPolicies.push(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
+    }
+    if (config.enableTracing) {
+      extraPolicies.push(ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'))
+    }
 
     const role: IRole =
       config.role ??
       createLambdaExecutionRole(this, 'Role', {
-        roleName: config.functionName,
+        roleName: resolved.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
-        managedPolicies: config.vpcConfig ? ['AWSLambdaVPCAccessExecutionRole'] : undefined
+        managedPolicies: extraPolicies.length ? extraPolicies : undefined
       })
+
+    // When the caller supplies a role (typically EmStack's sharedRole during
+    // Serverless migration) createLambdaExecutionRole is bypassed and the
+    // VPC/X-Ray policies above are not attached. Attach them here so
+    // vpcConfig/enableTracing produce a working role regardless of source.
+    if (config.role) {
+      extraPolicies.forEach(policy => role.addManagedPolicy(policy))
+    }
 
     const logGroup: ILogGroup = config.importExistingLogGroup
       ? LogGroup.fromLogGroupName(this, `${id}LogGroup`, `/aws/lambda/${functionName}`)
@@ -41,15 +57,23 @@ export class EmLambdaFunction extends Construct {
           removalPolicy: getRemovalPolicy(config.stage)
         })
 
+    const handler = resolved.handler ?? config.handler
+    const codePath = resolved.codePath ?? config.codePath
+    if (!handler || !codePath) {
+      throw new Error(
+        `EmLambdaFunction requires either \`handlerPath\` or both \`handler\` and \`codePath\` for "${resolved.functionName}".`
+      )
+    }
+
     this.function = new LambdaFunction(this, 'Function', {
       functionName,
       runtime: config.runtime ?? DEFAULT_LAMBDA_RUNTIME,
-      handler: config.handler,
-      code: Code.fromAsset(config.codePath),
+      handler,
+      code: Code.fromAsset(codePath),
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {
-        ...getLambdaEnvironmentVariables(config.stage),
+        ...buildBaseEnvironment(config.stage, this),
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
@@ -60,7 +84,7 @@ export class EmLambdaFunction extends Construct {
       retryAttempts: config.retryAttempts,
       logGroup,
       layers: config.layers,
-      description: `${config.serviceName} - ${config.functionName}`,
+      description: `${config.serviceName} - ${resolved.functionName}`,
       ...(config.vpcConfig && {
         vpc: config.vpcConfig.vpc,
         vpcSubnets: config.vpcConfig.vpcSubnets,

@@ -1,6 +1,7 @@
 import * as path from 'path'
 import * as esbuild from 'esbuild'
 import * as fs from 'fs'
+import { findEntryPoints } from './find-entry-points'
 
 const { recapDevHandlerWrapper, defaultPlugins } = require('./esbuild-plugins')
 
@@ -8,6 +9,11 @@ const args = process.argv.slice(2)
 const handlersDirIndex = args.indexOf('--handlers-dir')
 const outDirIndex = args.indexOf('--out-dir')
 const targetIndex = args.indexOf('--target')
+// --allow-empty: exit 0 instead of 1 when no handlers are found. Used by
+// services that may legitimately have zero Lambda handlers (libraries,
+// infra-only packages) so a shared `em-commons build-handlers` step can be
+// run unconditionally in their CI without breaking the pipeline.
+const allowEmpty = args.includes('--allow-empty')
 
 function resolveArg(index: number, flag: string, fallback: string): string {
   if (index === -1) {
@@ -44,24 +50,26 @@ if (!fs.existsSync(absoluteHandlersDir)) {
   process.exit(1)
 }
 
-const entryPoints = (fs.readdirSync(absoluteHandlersDir, { recursive: true } as any) as string[])
-  .filter(
-    f => f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.includes('.test.') && !f.includes('.spec.')
-  )
-  .map(f => ({
-    in: path.join(absoluteHandlersDir, f),
-    out: path.join(path.dirname(f), path.basename(f, '.ts'), 'index')
-  }))
+async function main(): Promise<void> {
+  const entryPoints = await findEntryPoints(absoluteHandlersDir)
 
-if (entryPoints.length === 0) {
-  console.log(`No handlers found in ${handlersDir}`)
-  process.exit(0)
-}
+  if (entryPoints.length === 0) {
+    if (allowEmpty) {
+      // Log the resolved absolute path so a misrouted --handlers-dir (typo'd
+      // to a real-but-empty sibling directory) is visible in CI output.
+      console.warn(
+        `No handlers found in ${handlersDir} (resolved: ${absoluteHandlersDir}), `
+        + 'skipping build (--allow-empty)'
+      )
+      return
+    }
+    console.error(`No handlers found in ${handlersDir}. Pass --allow-empty to suppress this error.`)
+    process.exit(1)
+  }
 
-console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)
+  console.log(`Building ${entryPoints.length} handler(s) from ${handlersDir}...`)
 
-esbuild
-  .build({
+  await esbuild.build({
     entryPoints,
     outdir: absoluteOutDir,
     bundle: true,
@@ -89,19 +97,22 @@ esbuild
     ],
     plugins: [recapDevHandlerWrapper, ...defaultPlugins]
   })
-  .then(() => {
-    entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
-  })
-  .catch(err => {
-    if (err?.errors?.length) {
-      err.errors.forEach((e: any) => {
-        const loc = e.location
-          ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
-          : ''
-        console.error(`  esbuild error${loc}: ${e.text}`)
-      })
-    } else {
-      console.error(err)
-    }
-    process.exit(1)
-  })
+
+  entryPoints.forEach(({ out }) => console.log(`  ${outDir}/${out}.js`))
+}
+
+main().catch(err => {
+  if (err?.errors?.length) {
+    err.errors.forEach((e: { text?: string; location?: { file: string; line: number; column: number } }) => {
+      const loc = e.location
+        ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
+        : ''
+      console.error(`  esbuild error${loc}: ${e.text}`)
+    })
+  } else {
+    // Print the full stack (and `cause` chain) so non-esbuild errors are
+    // diagnosable in CI output rather than being collapsed to the message.
+    console.error(err instanceof Error ? (err.stack ?? err) : err)
+  }
+  process.exit(1)
+})

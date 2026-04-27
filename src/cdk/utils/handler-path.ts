@@ -3,15 +3,39 @@ import * as path from 'path'
 const DEFAULT_HANDLERS_DIR = 'src/handlers'
 const DEFAULT_OUT_DIR = 'dist/handlers'
 
-export interface HandlerPathConfig {
-  readonly handlerPath?: string
-  readonly functionName?: string
+/**
+ * Public type for constructing handler path config. Enforces at compile time
+ * that either `handlerPath` or `functionName` is provided — the runtime throw
+ * in `resolveHandlerPath` is a safety net for internal callers that widen the type.
+ */
+export type HandlerPathConfig =
+  | {
+      readonly handlerPath: string
+      readonly functionName?: string
+      readonly handler?: string
+      readonly codePath?: string
+    }
+  | {
+      readonly handlerPath?: undefined
+      readonly functionName: string
+      readonly handler?: string
+      readonly codePath?: string
+    }
+
+export interface ResolvedHandlerPath {
+  readonly functionName: string
   readonly handler?: string
   readonly codePath?: string
 }
 
-export interface ResolvedHandlerPath {
-  readonly functionName: string
+/**
+ * Internal flat type accepted by `resolveHandlerPath`. Wider than `HandlerPathConfig`
+ * so that internal call sites passing objects with both fields optional still compile.
+ * The invariant is enforced at public API boundaries via `HandlerPathConfig`.
+ */
+interface HandlerPathInput {
+  readonly handlerPath?: string
+  readonly functionName?: string
   readonly handler?: string
   readonly codePath?: string
 }
@@ -27,12 +51,26 @@ export interface ResolvedHandlerPath {
  * When `handlerPath` is not provided, `functionName` is required.
  * `handler` and `codePath` may remain undefined if the caller has its own defaults.
  */
-export function resolveHandlerPath(config: HandlerPathConfig): ResolvedHandlerPath {
+export function resolveHandlerPath(config: HandlerPathInput): ResolvedHandlerPath {
   const { handlerPath } = config
 
   if (handlerPath) {
     const normalised = handlerPath.replace(/\.ts$/, '')
-    const relative = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
+    const startsWithHandlersDir = normalised.startsWith(DEFAULT_HANDLERS_DIR + '/')
+    const containsSeparator = normalised.includes('/') || normalised.includes(path.sep)
+
+    if (!startsWithHandlersDir && (path.isAbsolute(normalised) || containsSeparator)) {
+      // A bare basename like 'get-data' is fine (treated as relative to
+      // src/handlers). Anything with directory components must be rooted at
+      // DEFAULT_HANDLERS_DIR — otherwise we'd silently produce e.g.
+      // 'dist/handlers/src/lambdas/foo' and fail at synth with an opaque
+      // Code.fromAsset error far from the call site.
+      throw new Error(
+        `resolveHandlerPath: handlerPath "${handlerPath}" must either be a bare basename or start with "${DEFAULT_HANDLERS_DIR}/".`
+      )
+    }
+
+    const relative = startsWithHandlersDir
       ? normalised.slice(DEFAULT_HANDLERS_DIR.length + 1)
       : normalised
 

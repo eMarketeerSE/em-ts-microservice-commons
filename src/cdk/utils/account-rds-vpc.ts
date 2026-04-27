@@ -39,8 +39,6 @@ export function getAccountRdsVpcConfig(stage: Stage): AccountRdsVpcConfig {
         dbSecurityGroupId: 'sg-427bda39'
       }
     default:
-      throw new Error(
-        `Unsupported RDS VPC stage: ${stage as string}. Only 'dev' and 'prod' are supported.`
-      )
+      throw new Error(`getAccountRdsVpcConfig: unsupported stage "${stage}". Only 'dev' and 'prod' are supported.`)
   }
 }

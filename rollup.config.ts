@@ -22,10 +22,11 @@ export default [{
   ],
   plugins: [
     json(),
-    resolve({ preferBuiltins: true }),
+    resolve({ preferBuiltins: true, extensions: ['.ts', '.tsx', '.js', '.json'] }),
     commonjs(),
     typescript({
       useTsconfigDeclarationDir: true,
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
       tsconfigOverride: {
         compilerOptions: {
           target: 'ES2020'
@@ -42,14 +43,14 @@ export default [{
   plugins: [
     // Allow json resolution
     json(),
+    resolve({ extensions: ['.ts', '.tsx', '.js', '.json'] }),
     // Compile TypeScript files
-    typescript({ useTsconfigDeclarationDir: true }),
+    typescript({
+      useTsconfigDeclarationDir: true,
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+    }),
     // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
     commonjs(),
-    // Allow node_modules resolution, so you can use 'external' to control
-    // which external modules to include in the bundle
-    // https://github.com/rollup/rollup-plugin-node-resolve#usage
-    resolve(),
 
     // Resolve source maps to the original source
     sourceMaps()
@@ -61,16 +62,17 @@ export default [{
   ],
   external: ['path', 'fs', 'esbuild', './esbuild-plugins'],
   plugins: [
+    resolve({ preferBuiltins: true, extensions: ['.ts', '.tsx', '.js', '.json'] }),
+    commonjs(),
     typescript({
       useTsconfigDeclarationDir: true,
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
       tsconfigOverride: {
         compilerOptions: {
           target: 'ES2020'
         }
       }
     }),
-    resolve({ preferBuiltins: true }),
-    commonjs(),
     sourceMaps(),
   ],
 }, {
@@ -94,13 +96,12 @@ export default [{
     }),
     // Allow json resolution
     json(),
-    typescript({ useTsconfigDeclarationDir: true }),
-    // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
-    resolve(),
+    resolve({ extensions: ['.ts', '.tsx', '.js', '.json'] }),
     commonjs({ transformMixedEsModules: true }),
-    // Allow node_modules resolution, so you can use 'external' to control
-    // which external modules to include in the bundle
-    // https://github.com/rollup/rollup-plugin-node-resolve#usage
+    typescript({
+      useTsconfigDeclarationDir: true,
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+    }),
     // Resolve source maps to the original source
     sourceMaps(),
     shebang(),
