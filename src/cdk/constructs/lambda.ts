@@ -34,9 +34,7 @@ export class EmLambdaFunction extends Construct {
     const role: IRole =
       config.role ??
       createLambdaExecutionRole(this, 'Role', {
-        // resolved.functionName is always defined here — resolveHandlerPath throws when
-        // neither handlerPath nor functionName is provided. The ?? fallback is a safety net.
-        roleName: resolved.functionName ?? config.functionName,
+        roleName: resolved.functionName,
         stage: config.stage,
         serviceName: config.serviceName,
         managedPolicies: extraPolicies.length ? extraPolicies : undefined
@@ -72,7 +70,7 @@ export class EmLambdaFunction extends Construct {
       retryAttempts: config.retryAttempts,
       logGroup,
       layers: config.layers,
-      description: `${config.serviceName} - ${resolved.functionName ?? config.functionName}`,
+      description: `${config.serviceName} - ${resolved.functionName}`,
       ...(config.vpcConfig && {
         vpc: config.vpcConfig.vpc,
         vpcSubnets: config.vpcConfig.vpcSubnets,

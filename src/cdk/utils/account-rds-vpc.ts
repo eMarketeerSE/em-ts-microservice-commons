@@ -11,10 +11,12 @@
  * Designed to compose with `createRdsVpcConfig()` in `./rds-vpc`:
  *
  * ```typescript
- * const account = getAccountRdsVpcConfig(rdsStage)
+ * const account = getAccountRdsVpcConfig(this.stage)
  * const vpcConfig = createRdsVpcConfig(this, this.stage, { ...account })
  * ```
  */
+
+import { Stage } from '../types'
 
 export interface AccountRdsVpcConfig {
   readonly vpcId: string
@@ -22,7 +24,7 @@ export interface AccountRdsVpcConfig {
   readonly dbSecurityGroupId: string
 }
 
-export function getAccountRdsVpcConfig(stage: 'dev' | 'prod'): AccountRdsVpcConfig {
+export function getAccountRdsVpcConfig(stage: Stage): AccountRdsVpcConfig {
   switch (stage) {
     case 'dev':
       return {
