@@ -43,7 +43,8 @@ function containsHandlerExport(content: string): boolean {
  * Throws if a file cannot be read, with the full path included in the error message.
  */
 export async function findEntryPoints(handlersDir: string): Promise<EntryPoint[]> {
-  const files = (fs.readdirSync(handlersDir, { recursive: true } as any) as string[]).filter(
+  // Node ≥18.17: readdirSync with { recursive: true, encoding: 'utf8' } returns string[]
+  const files = fs.readdirSync(handlersDir, { recursive: true, encoding: 'utf8' }).filter(
     f => f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.includes('.test.') && !f.includes('.spec.')
   )
 

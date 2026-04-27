@@ -10,7 +10,10 @@ export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
   readonly subscriptionOptions?: Omit<SqsSubscriptionProps, 'rawMessageDelivery'> & {
     rawMessageDelivery?: boolean
   }
-  /** Migration only: pins SNS subscription logical ID to prevent recreation and in-flight message loss during Serverless→CDK deploy. */
+  /**
+   * Migration only: pins SNS subscription logical ID to prevent recreation
+   * and in-flight message loss during Serverless→CDK deploy.
+   */
   readonly serverlessSubscriptionLogicalId?: string
 }
 

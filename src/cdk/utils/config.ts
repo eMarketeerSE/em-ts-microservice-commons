@@ -1,11 +1,22 @@
 import { Stack, Token } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { StringParameter } from 'aws-cdk-lib/aws-ssm'
+import { Stage } from '../types'
 
 const RECAP_DEV_SSM_KEY = 'recap-dev-sync-endpoint'
 const recapDevEndpointCache = new WeakMap<Stack, string>()
 
 export const RECAP_DEV_TIMEOUT_WINDOW_SECONDS = 300
+
+/**
+ * Returns the standard base environment variables injected into every Lambda.
+ * Centralised here so both EmLambdaFunction and LambdaWithQueue stay in sync.
+ */
+export const buildBaseEnvironment = (stage: Stage, scope: Construct): Record<string, string> => ({
+  STAGE: stage,
+  NODE_ENV: stage === 'prod' ? 'production' : 'development',
+  REGION: Stack.of(scope).region,
+})
 
 /**
  * Returns the env var block to inject for recap.dev, or an empty object.

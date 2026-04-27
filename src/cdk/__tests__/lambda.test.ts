@@ -1,5 +1,5 @@
 import { App, Duration, Stack } from 'aws-cdk-lib'
-import { Template } from 'aws-cdk-lib/assertions'
+import { Match, Template } from 'aws-cdk-lib/assertions'
 import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda'
 import { EmLambdaFunction } from '../constructs/lambda'
 import { LambdaConfig } from '../types'
@@ -194,6 +194,56 @@ describe('EmLambdaFunction', () => {
       new EmLambdaFunction(stack, 'Subject', defaultConfig())
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
         Description: 'test-service - my-handler'
+      })
+    })
+  })
+
+  describe('base environment variables', () => {
+    it('injects STAGE, NODE_ENV=development, and REGION for non-prod stage', () => {
+      const stack = makeStack()
+      new EmLambdaFunction(stack, 'Subject', defaultConfig())
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({
+            STAGE: 'dev',
+            NODE_ENV: 'development',
+            REGION: 'eu-west-1'
+          })
+        }
+      })
+    })
+
+    it('injects NODE_ENV=production for prod stage', () => {
+      const stack = makeStack()
+      new EmLambdaFunction(stack, 'Subject', { ...defaultConfig(), stage: 'prod' })
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ NODE_ENV: 'production' })
+        }
+      })
+    })
+  })
+
+  describe('physicalName', () => {
+    it('uses physicalName as the exact Lambda function name', () => {
+      const stack = makeStack()
+      new EmLambdaFunction(stack, 'Subject', {
+        ...defaultConfig(),
+        physicalName: 'my-service-dev-my-handler'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        FunctionName: 'my-service-dev-my-handler'
+      })
+    })
+
+    it('uses physicalName for the log group path', () => {
+      const stack = makeStack()
+      new EmLambdaFunction(stack, 'Subject', {
+        ...defaultConfig(),
+        physicalName: 'my-service-dev-my-handler'
+      })
+      Template.fromStack(stack).hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: '/aws/lambda/my-service-dev-my-handler'
       })
     })
   })

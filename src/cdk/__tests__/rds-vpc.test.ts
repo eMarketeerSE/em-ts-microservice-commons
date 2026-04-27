@@ -45,6 +45,15 @@ describe('createRdsVpcConfig', () => {
     expect(sg.Properties).not.toHaveProperty('SecurityGroupEgress')
   })
 
+  it('keeps SecurityGroupEgress when manageSgEgress is omitted (default)', () => {
+    const stack = makeStack()
+    createRdsVpcConfig(stack, 'dev', BASE_CONFIG)
+    const template = Template.fromStack(stack)
+    const sgs = template.findResources('AWS::EC2::SecurityGroup')
+    const sg = Object.values(sgs)[0] as any
+    expect(sg.Properties).toHaveProperty('SecurityGroupEgress')
+  })
+
   it('creates an ingress rule on the DB security group', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', BASE_CONFIG)

@@ -851,6 +851,28 @@ describe('EmStack', () => {
         RawMessageDelivery: true
       })
     })
+
+    it('pins SNS subscription logical ID end-to-end via serverlessSubscriptionLogicalId', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      const sourceTopic = new Topic(stack, 'SourceTopic')
+      stack.createTopicQueueConsumer('ProcessInvoices', {
+        topic: sourceTopic,
+        handlerPath: 'src/handlers/process-invoices',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-invoice-queue',
+        memorySize: 512,
+        timeout: Duration.seconds(30),
+        enableTracing: false,
+        alarmTopic,
+        roleName: 'process-invoices-role',
+        serverlessSubscriptionLogicalId: 'ProcessInvoicesSnsSubscription'
+      })
+
+      expect(Template.fromStack(stack).findResources('AWS::SNS::Subscription')).toHaveProperty(
+        'ProcessInvoicesSnsSubscription'
+      )
+    })
   })
 
   describe('createScheduledFunction', () => {

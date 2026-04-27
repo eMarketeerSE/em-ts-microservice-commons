@@ -140,6 +140,30 @@ describe('LambdaWithQueue', () => {
         Environment: { Variables: { MY_VAR: 'my-value' } }
       })
     })
+
+    it('injects STAGE, NODE_ENV=development, and REGION for non-prod stage', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({
+            STAGE: 'dev',
+            NODE_ENV: 'development',
+            REGION: 'eu-west-1'
+          })
+        }
+      })
+    })
+
+    it('injects NODE_ENV=production for prod stage', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), stage: 'prod' })
+      Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: Match.objectLike({ NODE_ENV: 'production' })
+        }
+      })
+    })
   })
 
   describe('SQS queue', () => {
@@ -263,6 +287,21 @@ describe('LambdaWithQueue', () => {
             ]
           }
         ]
+      })
+    })
+
+    it('attaches AWSXRayDaemonWriteAccess to the role when enableTracing is true', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), enableTracing: true })
+      Template.fromStack(stack).hasResourceProperties('AWS::IAM::Role', {
+        ManagedPolicyArns: Match.arrayWith([
+          Match.objectLike({
+            'Fn::Join': [
+              '',
+              Match.arrayWith([Match.stringLikeRegexp('AWSXRayDaemonWriteAccess')])
+            ]
+          })
+        ])
       })
     })
   })
@@ -533,6 +572,29 @@ describe('LambdaWithQueue', () => {
         '/TestStack/Subject',
         Match.stringLikeRegexp('SNS delivery will fail silently')
       )
+    })
+
+    it('throws when serverlessSubscriptionLogicalId is an empty string', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      expect(() => lq.subscribeToTopic(topic, {}, '')).toThrow('must not be an empty string')
+    })
+
+    it('throws when serverlessSubscriptionLogicalId is whitespace only', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      expect(() => lq.subscribeToTopic(topic, {}, '   ')).toThrow('must not be an empty string')
+    })
+
+    it('throws when filterPolicy is combined with serverlessSubscriptionLogicalId', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      expect(() =>
+        lq.subscribeToTopic(topic, { filterPolicy: { type: { conditions: [] } as any } }, 'MySub')
+      ).toThrow('filterPolicy')
     })
   })
 })

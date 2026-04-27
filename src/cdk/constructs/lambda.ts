@@ -1,4 +1,4 @@
-import { Duration, Stack } from 'aws-cdk-lib'
+import { Duration } from 'aws-cdk-lib'
 import { Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
 import { IRole, IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
@@ -8,7 +8,7 @@ import { generateLambdaName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
 import { convertRetentionDays, getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
 import { createLambdaExecutionRole } from '../utils/iam'
-import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
+import { buildBaseEnvironment, buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { resolveHandlerPath } from '../utils/handler-path'
 
@@ -65,9 +65,7 @@ export class EmLambdaFunction extends Construct {
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {
-        STAGE: config.stage,
-        NODE_ENV: config.stage === 'prod' ? 'production' : 'development',
-        REGION: Stack.of(this).region,
+        ...buildBaseEnvironment(config.stage, this),
         ...(config.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },

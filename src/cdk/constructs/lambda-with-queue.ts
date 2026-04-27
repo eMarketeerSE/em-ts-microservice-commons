@@ -1,4 +1,4 @@
-import { Annotations, Duration, Stack } from 'aws-cdk-lib'
+import { Annotations, Duration } from 'aws-cdk-lib'
 import { CfnQueue, Queue, IQueue } from 'aws-cdk-lib/aws-sqs'
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 import {
@@ -10,14 +10,13 @@ import {
 } from 'aws-cdk-lib/aws-lambda'
 import { IRole, Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs'
-import { CfnAlarm } from 'aws-cdk-lib/aws-cloudwatch'
 import { ITopic } from 'aws-cdk-lib/aws-sns'
 import { SqsSubscription, SqsSubscriptionProps } from 'aws-cdk-lib/aws-sns-subscriptions'
 import { Construct } from 'constructs'
 import { Stage, VpcConfig } from '../types'
 import { applyStandardTags } from '../utils/tagging'
 import { getLogRetentionDays, getRemovalPolicy } from '../utils/logs'
-import { buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
+import { buildBaseEnvironment, buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { generateLambdaName } from '../utils/naming'
 import { resolveHandlerPath } from '../utils/handler-path'
@@ -170,9 +169,7 @@ export class LambdaWithQueue extends Construct {
       memorySize,
       timeout,
       environment: {
-        STAGE: props.stage,
-        NODE_ENV: props.stage === 'prod' ? 'production' : 'development',
-        REGION: Stack.of(this).region,
+        ...buildBaseEnvironment(props.stage, this),
         ...(props.environment ?? {}),
         ...buildRecapDevEnvironment(resolveRecapDevEndpoint(this))
       },
@@ -217,7 +214,8 @@ export class LambdaWithQueue extends Construct {
     this.dlqAlarm = new DlqAlarm(this, 'DLQAlarm', {
       dlq: this.dlq,
       alarmName: props.alarmName ?? `${props.stage}-${props.serviceName}-${resourceName}-dlq-alarm`,
-      alarmTopic: props.alarmTopic
+      alarmTopic: props.alarmTopic,
+      alarmLogicalId: props.overrideLogicalIds?.alarm
     })
 
     additionalQueues.forEach(queue => {
@@ -248,16 +246,6 @@ export class LambdaWithQueue extends Construct {
         )
       }
       cfnDlq.overrideLogicalId(props.overrideLogicalIds.dlq)
-    }
-
-    if (props.overrideLogicalIds?.alarm) {
-      const cfnAlarm = this.dlqAlarm.alarm.node.defaultChild
-      if (!(cfnAlarm instanceof CfnAlarm)) {
-        throw new Error(
-          `Cannot override alarm logical ID to "${props.overrideLogicalIds.alarm}": alarm does not have a CfnAlarm default child.`
-        )
-      }
-      cfnAlarm.overrideLogicalId(props.overrideLogicalIds.alarm)
     }
   }
 
@@ -296,20 +284,28 @@ export class LambdaWithQueue extends Construct {
     options?: SqsSubscriptionProps,
     serverlessSubscriptionLogicalId?: string
   ): void {
-    if (serverlessSubscriptionLogicalId !== undefined && serverlessSubscriptionLogicalId.trim() === '') {
-      throw new Error(
-        'subscribeToTopic: serverlessSubscriptionLogicalId must not be an empty string — ' +
-          'omit the argument to use the standard CDK subscription path.'
-      )
-    }
-    if (serverlessSubscriptionLogicalId) {
+    if (serverlessSubscriptionLogicalId !== undefined) {
+      const trimmed = serverlessSubscriptionLogicalId.trim()
+      if (!trimmed) {
+        throw new Error(
+          'subscribeToTopic: serverlessSubscriptionLogicalId must not be an empty string — ' +
+            'omit the argument to use the standard CDK subscription path.'
+        )
+      }
+      if (options?.filterPolicy || options?.filterPolicyWithMessageBody || options?.deadLetterQueue) {
+        throw new Error(
+          'subscribeToTopic: filterPolicy, filterPolicyWithMessageBody, and deadLetterQueue are not ' +
+            'supported with serverlessSubscriptionLogicalId. Use the standard CDK subscription path instead.'
+        )
+      }
       Annotations.of(this).addWarning(
-        `subscribeToTopic with serverlessSubscriptionLogicalId="${serverlessSubscriptionLogicalId}" ` +
+        `subscribeToTopic with serverlessSubscriptionLogicalId="${trimmed}" ` +
           'creates only the SNS subscription — no SQS queue policy is created. ' +
-          'On migrated stacks the queue policy already exists in CloudFormation; preserve it with makeServerlessQueuePolicy(). ' +
+          'On migrated stacks the queue policy already exists in CloudFormation; ' +
+          'preserve it with makeServerlessQueuePolicy(). ' +
           'On new queues you must also call makeServerlessQueuePolicy() or SNS delivery will fail silently.'
       )
-      makeSnsToSqsSubscription(this, serverlessSubscriptionLogicalId, {
+      makeSnsToSqsSubscription(this, trimmed, {
         topicArn: topic.topicArn,
         endpoint: this.queue.queueArn,
         protocol: 'sqs',

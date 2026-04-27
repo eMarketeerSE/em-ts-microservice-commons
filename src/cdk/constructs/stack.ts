@@ -228,16 +228,19 @@ export class EmStack extends cdk.Stack {
     }
   }
 
-  private mergeConfig<T extends { environment?: Record<string, string> }>(config: T): T {
+  private mergeConfig<T extends { environment?: Record<string, string> }>(
+    config: T
+  ): Partial<CreateFunctionConfig> & T {
     const defaultEnv = this.defaultFunctionConfig.environment
     const configEnv = config.environment
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     return {
       ...this.defaultFunctionConfig,
       ...config,
       ...(defaultEnv || configEnv
         ? { environment: { ...(defaultEnv ?? {}), ...(configEnv ?? {}) } }
         : {})
-    } as T
+    } as Partial<CreateFunctionConfig> & T
   }
 
   /**
@@ -383,13 +386,12 @@ export class EmStack extends cdk.Stack {
     config: CreateScheduledFunctionConfig
   ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
-    const merged = this.mergeConfig(functionConfig)
-    const { functionName } = resolveHandlerPath(merged)
-    const fn = this.createFunction(id, merged)
+    const fn = this.createFunction(id, functionConfig)
+    const { functionName } = resolveHandlerPath(functionConfig)
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
-      stage: merged.stage ?? this.stage,
-      serviceName: merged.serviceName ?? this.serviceName,
+      stage: functionConfig.stage ?? this.stage,
+      serviceName: functionConfig.serviceName ?? this.serviceName,
       ruleName: ruleName ?? functionName,
       description: ruleDescription,
       schedule
