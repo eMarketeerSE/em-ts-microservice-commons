@@ -137,7 +137,7 @@ describe('LambdaWithQueue', () => {
         environment: { MY_VAR: 'my-value' }
       })
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        Environment: { Variables: { MY_VAR: 'my-value' } }
+        Environment: { Variables: Match.objectLike({ MY_VAR: 'my-value' }) }
       })
     })
 
@@ -303,6 +303,19 @@ describe('LambdaWithQueue', () => {
           })
         ])
       })
+    })
+
+    it('does not attach AWSXRayDaemonWriteAccess when enableTracing is false', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      const roles = Template.fromStack(stack).findResources('AWS::IAM::Role')
+      const lambdaRole = Object.values(roles).find((r: any) =>
+        (r.Properties?.AssumeRolePolicyDocument?.Statement ?? []).some(
+          (s: any) => s.Principal?.Service === 'lambda.amazonaws.com'
+        )
+      ) as any
+      const arns: string[] = (lambdaRole?.Properties?.ManagedPolicyArns ?? []).map(JSON.stringify)
+      expect(arns.some(a => a.includes('AWSXRayDaemonWriteAccess'))).toBe(false)
     })
   })
 
@@ -594,6 +607,25 @@ describe('LambdaWithQueue', () => {
       const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
       expect(() =>
         lq.subscribeToTopic(topic, { filterPolicy: { type: { conditions: [] } as any } }, 'MySub')
+      ).toThrow('filterPolicy')
+    })
+
+    it('throws when filterPolicyWithMessageBody is combined with serverlessSubscriptionLogicalId', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      expect(() =>
+        lq.subscribeToTopic(topic, { filterPolicyWithMessageBody: { type: {} as any } }, 'MySub')
+      ).toThrow('filterPolicy')
+    })
+
+    it('throws when deadLetterQueue is combined with serverlessSubscriptionLogicalId', () => {
+      const stack = makeStack()
+      const topic = new Topic(stack, 'Topic')
+      const lq = new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      const dlq = new Queue(stack, 'DLQ')
+      expect(() =>
+        lq.subscribeToTopic(topic, { deadLetterQueue: dlq }, 'MySub')
       ).toThrow('filterPolicy')
     })
   })

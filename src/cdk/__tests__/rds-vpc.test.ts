@@ -74,6 +74,16 @@ describe('createRdsVpcConfig', () => {
     })
   })
 
+  it('uses a custom dbPort when specified', () => {
+    const stack = makeStack()
+    createRdsVpcConfig(stack, 'dev', { ...BASE_CONFIG, dbPort: 5432 })
+    const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::EC2::SecurityGroupIngress', {
+      FromPort: 5432,
+      ToPort: 5432
+    })
+  })
+
   it('overrides security group logical ID', () => {
     const stack = makeStack()
     createRdsVpcConfig(stack, 'dev', {

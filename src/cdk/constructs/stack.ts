@@ -386,8 +386,9 @@ export class EmStack extends cdk.Stack {
     config: CreateScheduledFunctionConfig
   ): { function: EmLambdaFunction; rule: EmEventBridgeRule } {
     const { schedule, ruleName, ruleDescription, ...functionConfig } = config
+    const merged = this.mergeConfig(functionConfig)
     const fn = this.createFunction(id, functionConfig)
-    const { functionName } = resolveHandlerPath(functionConfig)
+    const { functionName } = resolveHandlerPath(merged)
 
     const rule = new EmEventBridgeRule(this, `${id}Rule`, {
       stage: functionConfig.stage ?? this.stage,

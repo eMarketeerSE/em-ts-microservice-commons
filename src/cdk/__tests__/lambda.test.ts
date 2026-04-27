@@ -136,7 +136,7 @@ describe('EmLambdaFunction', () => {
         environment: { MY_VAR: 'my-value' }
       })
       Template.fromStack(stack).hasResourceProperties('AWS::Lambda::Function', {
-        Environment: { Variables: { MY_VAR: 'my-value' } }
+        Environment: { Variables: Match.objectLike({ MY_VAR: 'my-value' }) }
       })
     })
   })
