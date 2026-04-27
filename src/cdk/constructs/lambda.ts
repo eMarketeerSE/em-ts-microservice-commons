@@ -49,11 +49,19 @@ export class EmLambdaFunction extends Construct {
           removalPolicy: getRemovalPolicy(config.stage)
         })
 
+    const handler = resolved.handler ?? config.handler
+    const codePath = resolved.codePath ?? config.codePath
+    if (!handler || !codePath) {
+      throw new Error(
+        `EmLambdaFunction requires either \`handlerPath\` or both \`handler\` and \`codePath\` for "${resolved.functionName}".`
+      )
+    }
+
     this.function = new LambdaFunction(this, 'Function', {
       functionName,
       runtime: config.runtime ?? DEFAULT_LAMBDA_RUNTIME,
-      handler: resolved.handler ?? config.handler,
-      code: Code.fromAsset(resolved.codePath ?? config.codePath),
+      handler,
+      code: Code.fromAsset(codePath),
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {

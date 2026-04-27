@@ -16,7 +16,8 @@ function defaultProps(): EmStackProps {
 
 function makeStack(props?: Partial<EmStackProps>) {
   const app = new App()
-  return new EmStack(app, 'TestStack', { ...defaultProps(), ...props })
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return new EmStack(app, 'TestStack', { ...defaultProps(), ...props } as EmStackProps)
 }
 
 describe('EmStack', () => {

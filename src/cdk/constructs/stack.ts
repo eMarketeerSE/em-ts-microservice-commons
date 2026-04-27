@@ -16,7 +16,7 @@ import { Construct } from 'constructs'
 import { LambdaConfig, Stage } from '../types'
 import { generateStackName } from '../utils/naming'
 import { applyStandardTags } from '../utils/tagging'
-import { HandlerPathConfig, resolveHandlerPath } from '../utils/handler-path'
+import { resolveHandlerPath } from '../utils/handler-path'
 import { EmLambdaFunction } from './lambda'
 import { EmEventBridgeRule } from './eventbridge'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
@@ -28,35 +28,12 @@ import {
 } from '../utils/serverless-migration'
 import { createXRayTracingPolicy } from '../utils/iam'
 
-export interface EmStackProps extends cdk.StackProps {
+type BaseEmStackProps = cdk.StackProps & {
   readonly stage: Stage
   readonly serviceName: string
   readonly tags?: Record<string, string>
   readonly owner?: string
   readonly costCenter?: string
-  /**
-   * When true, creates a shared IAM role for all functions — matching the
-   * Serverless Framework pattern where one role is shared across all Lambdas.
-   *
-   * The role is pinned to logical ID `IamRoleLambdaExecution` so existing
-   * Serverless stacks are migrated in-place without resource replacement.
-   *
-   * `createFunction()` will use this role by default unless a specific role
-   * is passed in the function config.
-   */
-  readonly useSharedRole?: boolean
-  /**
-   * Replaces the default managed policies on the shared role.
-   * Only used when `useSharedRole` is true.
-   *
-   * Defaults to `[AWSLambdaBasicExecutionRole, CloudWatchLambdaInsightsExecutionRolePolicy]`.
-   * Providing this option replaces that entire list — include `AWSLambdaBasicExecutionRole`
-   * explicitly if it is still needed.
-   *
-   * For VPC services, prefer passing `sharedRole` to `createRdsVpcConfig` instead.
-   * That appends `AWSLambdaVPCAccessExecutionRole` without replacing the defaults.
-   */
-  readonly sharedRoleManagedPolicies?: IManagedPolicy[]
   /**
    * Default config applied to every function created via `createFunction()`.
    * Per-function config takes precedence over these defaults.
@@ -76,6 +53,39 @@ export interface EmStackProps extends cdk.StackProps {
    */
   readonly defaultFunctionConfig?: Partial<CreateFunctionConfig>
 }
+
+export type EmStackProps = BaseEmStackProps & (
+  | {
+      /**
+       * When true, creates a shared IAM role for all functions — matching the
+       * Serverless Framework pattern where one role is shared across all Lambdas.
+       *
+       * The role is pinned to logical ID `IamRoleLambdaExecution` so existing
+       * Serverless stacks are migrated in-place without resource replacement.
+       *
+       * `createFunction()` will use this role by default unless a specific role
+       * is passed in the function config.
+       */
+      readonly useSharedRole: true
+      /**
+       * Replaces the default managed policies on the shared role.
+       * Only valid when `useSharedRole: true`.
+       *
+       * Defaults to `[AWSLambdaBasicExecutionRole, CloudWatchLambdaInsightsExecutionRolePolicy]`.
+       * Providing this option replaces that entire list — include `AWSLambdaBasicExecutionRole`
+       * explicitly if it is still needed.
+       *
+       * For VPC services, prefer passing `sharedRole` to `createRdsVpcConfig` instead.
+       * That appends `AWSLambdaVPCAccessExecutionRole` without replacing the defaults.
+       */
+      readonly sharedRoleManagedPolicies?: IManagedPolicy[]
+    }
+  | {
+      readonly useSharedRole?: false
+      /** Not valid when `useSharedRole` is false or omitted. */
+      readonly sharedRoleManagedPolicies?: never
+    }
+)
 
 /**
  * Config for `EmStack.createFunction()`. Stage and serviceName are optional —
@@ -100,11 +110,11 @@ export interface EmStackProps extends cdk.StackProps {
  */
 export type CreateFunctionConfig = Omit<
   LambdaConfig,
-  'stage' | 'serviceName' | 'handler' | 'codePath' | 'functionName' | 'handlerPath'
+  'stage' | 'serviceName'
 > & {
   readonly stage?: LambdaConfig['stage']
   readonly serviceName?: LambdaConfig['serviceName']
-} & HandlerPathConfig
+}
 
 /**
  * Base stack class for eMarketeer microservices.

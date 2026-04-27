@@ -8,6 +8,7 @@ import { IRole, IManagedPolicy, PolicyDocument } from 'aws-cdk-lib/aws-iam'
 import { AttributeType, BillingMode, ProjectionType } from 'aws-cdk-lib/aws-dynamodb'
 import { IVpc, ISecurityGroup, SubnetSelection } from 'aws-cdk-lib/aws-ec2'
 import { EventPattern } from 'aws-cdk-lib/aws-events'
+import { HandlerPathConfig } from '../utils/handler-path'
 
 /**
  * Supported deployment stages
@@ -43,28 +44,13 @@ export interface VpcConfig {
 }
 
 /**
- * Lambda function configuration
+ * Lambda function configuration.
+ *
+ * Either `handlerPath` or `functionName` must be provided — see `HandlerPathConfig`
+ * for the discriminated union. `handler` and `codePath` are derived automatically
+ * when `handlerPath` is given; they must be supplied explicitly otherwise.
  */
-export interface LambdaConfig extends BaseConstructConfig {
-  readonly functionName: string
-  readonly handler: string
-  readonly codePath: string
-  /**
-   * Source handler path relative to the project root, e.g.
-   * `'src/handlers/capture-screenshot/capture-screenshot-from-url'`.
-   *
-   * When provided on `CreateFunctionConfig`, `codePath` and `handler`
-   * are derived automatically:
-   * - `codePath` → `dist/handlers/<relative-path>`
-   * - `handler` → `'index.handler'`
-   *
-   * If `functionName` is omitted it defaults to the last segment of
-   * the path (e.g. `'capture-screenshot-from-url'`).
-   *
-   * NOTE: Both `EmStack.createFunction()` and `EmLambdaFunction` support this
-   * field. `EmLambdaFunction` resolves it internally via `resolveHandlerPath()`.
-   */
-  readonly handlerPath?: string
+export type LambdaConfig = BaseConstructConfig & HandlerPathConfig & {
   readonly runtime?: Runtime
   readonly memorySize?: number
   readonly timeout?: Duration
@@ -78,12 +64,12 @@ export interface LambdaConfig extends BaseConstructConfig {
   readonly enableTracing?: boolean
   /** Provide an existing role instead of creating a per-function one. */
   readonly role?: IRole
-  /** When true, imports the log group by name instead of creating a managed resource. 
-   * Use when migrating existing functions where the log group was auto-created by Lambda. 
+  /** When true, imports the log group by name instead of creating a managed resource.
+   * Use when migrating existing functions where the log group was auto-created by Lambda.
    */
   readonly importExistingLogGroup?: boolean
-  /** Migration-only: overrides the auto-generated name to match the legacy Serverless Framework `{service}-{stage}-{fn}` convention; 
-   * also controls the log group name. 
+  /** Migration-only: overrides the auto-generated name to match the legacy Serverless Framework `{service}-{stage}-{fn}` convention;
+   * also controls the log group name.
    */
   readonly physicalName?: string
 }
