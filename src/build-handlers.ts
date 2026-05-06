@@ -50,6 +50,18 @@ if (!fs.existsSync(absoluteHandlersDir)) {
   process.exit(1)
 }
 
+// Packages that some services use and others don't. When a consuming service
+// declares them in package.json we bundle them; otherwise we mark them external
+// so esbuild doesn't fail trying to resolve a transitive import that will never
+// run. Extend this list as new conditional deps surface.
+const optionalDependencies: string[] = ['chromium-bidi']
+
+function resolveExternalOptionalDeps(): string[] {
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'))
+  const deps = pkg.dependencies ?? {}
+  return optionalDependencies.filter(dep => !(dep in deps))
+}
+
 async function main(): Promise<void> {
   const entryPoints = await findEntryPoints(absoluteHandlersDir)
 
@@ -58,8 +70,8 @@ async function main(): Promise<void> {
       // Log the resolved absolute path so a misrouted --handlers-dir (typo'd
       // to a real-but-empty sibling directory) is visible in CI output.
       console.warn(
-        `No handlers found in ${handlersDir} (resolved: ${absoluteHandlersDir}), `
-        + 'skipping build (--allow-empty)'
+        `No handlers found in ${handlersDir} (resolved: ${absoluteHandlersDir}), ` +
+          'skipping build (--allow-empty)'
       )
       return
     }
@@ -93,7 +105,8 @@ async function main(): Promise<void> {
       'tedious',
       'pg-query-stream',
       'libsql',
-      'mariadb'
+      'mariadb',
+      ...resolveExternalOptionalDeps()
     ],
     plugins: [recapDevHandlerWrapper, ...defaultPlugins]
   })
@@ -103,16 +116,18 @@ async function main(): Promise<void> {
 
 main().catch(err => {
   if (err?.errors?.length) {
-    err.errors.forEach((e: { text?: string; location?: { file: string; line: number; column: number } }) => {
-      const loc = e.location
-        ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
-        : ''
-      console.error(`  esbuild error${loc}: ${e.text}`)
-    })
+    err.errors.forEach(
+      (e: { text?: string; location?: { file: string; line: number; column: number } }) => {
+        const loc = e.location
+          ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
+          : ''
+        console.error(`  esbuild error${loc}: ${e.text}`)
+      }
+    )
   } else {
     // Print the full stack (and `cause` chain) so non-esbuild errors are
     // diagnosable in CI output rather than being collapsed to the message.
-    console.error(err instanceof Error ? (err.stack ?? err) : err)
+    console.error(err instanceof Error ? err.stack ?? err : err)
   }
   process.exit(1)
 })
