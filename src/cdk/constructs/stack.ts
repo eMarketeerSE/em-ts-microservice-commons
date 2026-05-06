@@ -263,20 +263,10 @@ export class EmStack extends cdk.Stack {
     const merged = this.mergeConfig(config)
     const resolved = resolveHandlerPath(merged)
     const functionName = resolved.functionName
-    const handler = resolved.handler ?? merged.handler
-    const codePath = resolved.codePath ?? merged.codePath
-
-    if (!handler || !codePath) {
-      throw new Error(
-        `createFunction() requires either \`handlerPath\` or all of \`functionName\`, \`handler\`, and \`codePath\` for "${functionName}".`
-      )
-    }
 
     const fn = new EmLambdaFunction(this, id, {
       ...merged,
       functionName,
-      handler,
-      codePath,
       stage: merged.stage ?? this.stage,
       serviceName: merged.serviceName ?? this.serviceName,
       role: merged.role ?? this.sharedRole

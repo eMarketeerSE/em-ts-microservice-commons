@@ -2,13 +2,20 @@ import { resolveHandlerPath } from '../utils/handler-path'
 
 describe('resolveHandlerPath', () => {
   describe('with handlerPath', () => {
-    it('derives codePath as dist/handlers/<relative>', () => {
+    it('derives entryFile as src/handlers/<relative>.ts', () => {
       const result = resolveHandlerPath({
         handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url'
       })
-      expect(result.codePath).toBe(
-        'dist/handlers/capture-screenshot/capture-screenshot-from-url'
+      expect(result.entryFile).toBe(
+        'src/handlers/capture-screenshot/capture-screenshot-from-url.ts'
       )
+    })
+
+    it('does not set codePath when only handlerPath is provided', () => {
+      const result = resolveHandlerPath({
+        handlerPath: 'src/handlers/capture-screenshot/capture-screenshot-from-url'
+      })
+      expect(result.codePath).toBeUndefined()
     })
 
     it('derives functionName from the last path segment', () => {
@@ -29,13 +36,13 @@ describe('resolveHandlerPath', () => {
       const result = resolveHandlerPath({
         handlerPath: 'src/handlers/get-data.ts'
       })
-      expect(result.codePath).toBe('dist/handlers/get-data')
+      expect(result.entryFile).toBe('src/handlers/get-data.ts')
       expect(result.functionName).toBe('get-data')
     })
 
     it('works without the src/handlers/ prefix', () => {
       const result = resolveHandlerPath({ handlerPath: 'get-data' })
-      expect(result.codePath).toBe('dist/handlers/get-data')
+      expect(result.entryFile).toBe('src/handlers/get-data.ts')
       expect(result.functionName).toBe('get-data')
     })
 
@@ -45,8 +52,8 @@ describe('resolveHandlerPath', () => {
         functionName: 'custom-name'
       })
       expect(result.functionName).toBe('custom-name')
-      expect(result.codePath).toBe(
-        'dist/handlers/capture-screenshot/capture-screenshot-from-url'
+      expect(result.entryFile).toBe(
+        'src/handlers/capture-screenshot/capture-screenshot-from-url.ts'
       )
     })
 
@@ -58,12 +65,13 @@ describe('resolveHandlerPath', () => {
       expect(result.handler).toBe('main.handle')
     })
 
-    it('respects explicit codePath override', () => {
+    it('passes codePath through and skips entryFile derivation when codePath is provided', () => {
       const result = resolveHandlerPath({
         handlerPath: 'src/handlers/get-data',
         codePath: './custom/path'
       })
       expect(result.codePath).toBe('./custom/path')
+      expect(result.entryFile).toBeUndefined()
     })
 
     it('throws when handlerPath has directory components but does not start with src/handlers/', () => {
@@ -89,6 +97,7 @@ describe('resolveHandlerPath', () => {
       expect(result.functionName).toBe('my-fn')
       expect(result.handler).toBe('index.handler')
       expect(result.codePath).toBe('./dist/handlers/my-fn')
+      expect(result.entryFile).toBeUndefined()
     })
 
     it('throws when neither handlerPath nor functionName are provided', () => {

@@ -155,13 +155,13 @@ const { app, stage } = createEmApp({
 ### CLI commands
 
 ```bash
-em-commons cdk-test                     # Build handlers + run CDK tests
+em-commons cdk-test                     # Run CDK tests
 em-commons cdk-lint                     # Lint CDK code
-em-commons cdk-synth -- -c stage=dev    # Build handlers + generate template
-em-commons cdk-deploy -- -c stage=dev   # Build handlers + deploy
+em-commons cdk-synth -- -c stage=dev    # Generate template
+em-commons cdk-deploy -- -c stage=dev   # Deploy
 ```
 
-`cdk-test`, `cdk-synth`, and `cdk-deploy` automatically run `build-handlers` first. Typical `package.json` scripts:
+Lambda code is bundled inline by the construct at synth time — no separate build step. Typical `package.json` scripts:
 
 ```json
 {
@@ -169,14 +169,6 @@ em-commons cdk-deploy -- -c stage=dev   # Build handlers + deploy
   "lint:cdk": "em-commons cdk-lint",
   "deploy:cdk": "em-commons cdk-deploy"
 }
-```
-
-You can also run the steps manually:
-
-```bash
-em-commons build-handlers
-cdk diff -c stage=dev
-cdk deploy -c stage=dev
 ```
 
 ## EmStack
@@ -258,11 +250,26 @@ this.createFunction('CaptureScreenshot', {
 ```
 
 `handlerPath` resolves:
-- `codePath` to `dist/handlers/<relative-path>` (matching build-handlers output)
+- the source entry to `src/handlers/<relative-path>.ts` — esbuild bundles it into the asset at synth time
 - `handler` to `index.handler`
 - `functionName` to the last segment of the path
 
-All three can still be overridden explicitly alongside `handlerPath`.
+`handler` and `functionName` can still be overridden explicitly alongside `handlerPath`. Setting `codePath` alongside `handlerPath` is the escape hatch — the directory is packaged as-is, bundling is skipped.
+
+### Per-function bundling overrides
+
+Pass `bundling` to override esbuild defaults for a single handler. `external` is appended to the built-in externals list; other fields replace their default. Plugins, entry, output, and bundle/platform/format are fixed.
+
+```typescript
+this.createFunction('CaptureScreenshot', {
+  handlerPath: 'src/handlers/capture-screenshot',
+  bundling: {
+    external: ['puppeteer-core'],
+    minify: false,
+    sourcemap: true,
+  },
+})
+```
 
 ### Auto-injected environment variables
 

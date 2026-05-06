@@ -9,6 +9,7 @@ import { AttributeType, BillingMode, ProjectionType } from 'aws-cdk-lib/aws-dyna
 import { IVpc, ISecurityGroup, SubnetSelection } from 'aws-cdk-lib/aws-ec2'
 import { EventPattern } from 'aws-cdk-lib/aws-events'
 import { HandlerPathConfig } from '../utils/handler-path'
+import { BundlingOverrides } from '../utils/bundling'
 
 /**
  * Supported deployment stages
@@ -72,6 +73,14 @@ export type LambdaConfig = BaseConstructConfig & HandlerPathConfig & {
    * also controls the log group name.
    */
   readonly physicalName?: string
+  /**
+   * Per-handler esbuild overrides applied on top of the defaults.
+   *
+   * Ignored when `codePath` is set (escape hatch — code is packaged as-is).
+   * `external` is appended to the default externals; other fields replace the
+   * default. Plugins, entry, output, and bundle/platform/format are fixed.
+   */
+  readonly bundling?: BundlingOverrides
 }
 
 /**

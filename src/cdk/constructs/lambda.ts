@@ -1,5 +1,5 @@
 import { Duration } from 'aws-cdk-lib'
-import { Function as LambdaFunction, Code, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
+import { Function as LambdaFunction, Tracing, Architecture } from 'aws-cdk-lib/aws-lambda'
 import { IRole, IManagedPolicy, ManagedPolicy } from 'aws-cdk-lib/aws-iam'
 import { ILogGroup, LogGroup } from 'aws-cdk-lib/aws-logs'
 import { Construct } from 'constructs'
@@ -11,6 +11,7 @@ import { createLambdaExecutionRole } from '../utils/iam'
 import { buildBaseEnvironment, buildRecapDevEnvironment, resolveRecapDevEndpoint } from '../utils/config'
 import { DEFAULT_LAMBDA_RUNTIME } from '../utils/constants'
 import { resolveHandlerPath } from '../utils/handler-path'
+import { resolveLambdaCode } from '../utils/bundling'
 
 export class EmLambdaFunction extends Construct {
   public readonly function: LambdaFunction
@@ -59,17 +60,28 @@ export class EmLambdaFunction extends Construct {
 
     const handler = resolved.handler ?? config.handler
     const codePath = resolved.codePath ?? config.codePath
-    if (!handler || !codePath) {
+    if (!handler) {
       throw new Error(
-        `EmLambdaFunction requires either \`handlerPath\` or both \`handler\` and \`codePath\` for "${resolved.functionName}".`
+        `EmLambdaFunction requires either \`handlerPath\` or \`handler\` for "${resolved.functionName}".`
       )
     }
+    if (!resolved.entryFile && !codePath) {
+      throw new Error(
+        `EmLambdaFunction requires either \`handlerPath\` or \`codePath\` for "${resolved.functionName}".`
+      )
+    }
+
+    const code = resolveLambdaCode({
+      entryFile: resolved.entryFile,
+      codePath,
+      bundling: config.bundling
+    })
 
     this.function = new LambdaFunction(this, 'Function', {
       functionName,
       runtime: config.runtime ?? DEFAULT_LAMBDA_RUNTIME,
       handler,
-      code: Code.fromAsset(codePath),
+      code,
       memorySize: config.memorySize ?? 1024,
       timeout: config.timeout ?? Duration.seconds(15),
       environment: {

@@ -56,11 +56,11 @@ export default [{
     sourceMaps()
   ],
 }, {
-  input: `src/build-handlers.ts`,
+  input: `src/handler-bundler.ts`,
   output: [
-    { file: 'dist/build-handlers.js', format: 'commonjs' },
+    { file: 'dist/handler-bundler.js', format: 'commonjs' },
   ],
-  external: ['path', 'fs', 'esbuild', './esbuild-plugins'],
+  external: ['path', 'fs', 'esbuild', '@emarketeer/esbuild-plugin-tsc'],
   plugins: [
     resolve({ preferBuiltins: true, extensions: ['.ts', '.tsx', '.js', '.json'] }),
     commonjs(),
@@ -88,7 +88,6 @@ export default [{
         { src: 'src/.eslintrc', dest: 'dist/' },
         { src: 'src/tsconfig.json', dest: 'dist/' },
         { src: 'src/jest.config.json', dest: 'dist/' },
-        { src: 'src/esbuild-plugins.js', dest: 'dist/' },
         { src: 'src/cdk/tsconfig.json', dest: 'dist/cdk/' },
         { src: 'src/cdk/.eslintrc', dest: 'dist/cdk/' },
         { src: 'src/cdk/jest.config.js', dest: 'dist/cdk/' },

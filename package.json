@@ -23,8 +23,6 @@
     "./dist/lib/jest.config.js": "./dist/lib/jest.config.js",
     "./.eslintrc": "./dist/.eslintrc",
     "./tsconfig.json": "./dist/tsconfig.json",
-    "./esbuild-plugins": "./dist/esbuild-plugins.js",
-    "./build-handlers": "./dist/build-handlers.js",
     "./dist/lib/*": "./dist/lib/*",
     "./dist/cdk/*": "./dist/cdk/*",
     "./dist/*": "./dist/*",
@@ -89,9 +87,8 @@
     "coveragePathIgnorePatterns": [
       "/node_modules/",
       "/test/",
-      "src/build-handlers.ts",
+      "src/handler-bundler.ts",
       "src/em-commons.ts",
-      "src/esbuild-plugins.js",
       "src/jest.config.ts",
       "src/webpack.config.ts",
       "src/utils.ts"

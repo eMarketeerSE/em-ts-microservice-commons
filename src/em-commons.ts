@@ -1,6 +1,6 @@
 import { runCommand } from './utils'
 
-process.on('unhandledRejection', err => {
+process.on('unhandledRejection', (err) => {
   throw err
 })
 
@@ -10,24 +10,13 @@ const supportedCommands = [
   'lint',
   'tsc',
   'jest',
-  'build-handlers',
   'cdk-deploy',
   'cdk-synth',
   'cdk-test',
-  'cdk-lint'
+  'cdk-lint',
 ]
 
-const BUILD_HANDLERS_CMD =
-  'node node_modules/@emarketeer/ts-microservice-commons/dist/build-handlers.js'
-
-function buildHandlersOrExit() {
-  const buildResult = runCommand(BUILD_HANDLERS_CMD, [])
-  if (!buildResult || buildResult.status !== 0) {
-    process.exit(buildResult?.status ?? 1)
-  }
-}
-
-const scriptIndex = args.findIndex(x => supportedCommands.indexOf(x) !== -1)
+const scriptIndex = args.findIndex((x) => supportedCommands.indexOf(x) !== -1)
 
 const script = scriptIndex === -1 ? args[0] : args[scriptIndex]
 
@@ -38,7 +27,7 @@ let result
 if (script === 'lint') {
   result = runCommand(
     'npx eslint -c node_modules/@emarketeer/ts-microservice-commons/dist/.eslintrc',
-    scriptArgs
+    scriptArgs,
   )
 }
 
@@ -46,22 +35,15 @@ if (script === 'tsc') {
   result = runCommand('npx tsc --noEmit', scriptArgs)
 }
 
-if (script === 'build-handlers') {
-  result = runCommand(BUILD_HANDLERS_CMD, scriptArgs)
-}
-
 if (script === 'cdk-deploy') {
-  buildHandlersOrExit()
   result = runCommand('npx cdk deploy --require-approval never', scriptArgs)
 }
 
 if (script === 'cdk-synth') {
-  buildHandlersOrExit()
   result = runCommand('npx cdk synth', scriptArgs)
 }
 
 if (script === 'cdk-test') {
-  buildHandlersOrExit()
   result = runCommand(
     'npx jest --config node_modules/@emarketeer/ts-microservice-commons/dist/cdk/jest.config.js --rootDir cdk',
     scriptArgs
@@ -94,15 +76,15 @@ if (!supportedCommands.includes(script)) {
 if (result && result.signal) {
   if (result.signal === 'SIGKILL') {
     console.log(
-      'The build failed because the process exited too early. ' +
-        'This probably means the system ran out of memory or someone called ' +
-        '`kill -9` on the process.'
+      'The build failed because the process exited too early. '
+        + 'This probably means the system ran out of memory or someone called '
+        + '`kill -9` on the process.',
     )
   } else if (result.signal === 'SIGTERM') {
     console.log(
-      'The build failed because the process exited too early. ' +
-        'Someone might have called `kill` or `killall`, or the system could ' +
-        'be shutting down.'
+      'The build failed because the process exited too early. '
+        + 'Someone might have called `kill` or `killall`, or the system could '
+        + 'be shutting down.',
     )
   }
 
