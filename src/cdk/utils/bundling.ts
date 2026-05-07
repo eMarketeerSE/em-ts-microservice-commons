@@ -95,11 +95,13 @@ function getHandlerBundlerPath(): string {
  * - Otherwise bundles `entryFile` via the project handler bundler at synth
  *   time, with overrides applied on top of the defaults.
  *
- * An explicit `assetHash` is derived from the entry path + bundling overrides.
- * Without it, multiple handlers under the same source directory (the common
- * `src/handlers/` layout) would share an asset — CDK would run `tryBundle`
- * once and reuse that asset for every other lambda, silently dropping
- * per-function overrides. The explicit hash gives each handler a unique asset.
+ * An explicit `assetHash` is derived per call from the entry path, bundling
+ * overrides, and a synth-time timestamp. The entry path is required so that
+ * multiple handlers under the same source directory (the common
+ * `src/handlers/` layout) don't collapse into one asset — without it, CDK
+ * would run `tryBundle` once and silently reuse the same code for every
+ * lambda. The timestamp forces a fresh asset on every synth so each deploy
+ * uploads a clean rebuild rather than reusing a cached upload.
  */
 export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   if (options.codePath) {
@@ -120,6 +122,7 @@ export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   const hash = createHash('sha256')
     .update(entry)
     .update(JSON.stringify(overrides ?? {}))
+    .update(String(Date.now()))
     .digest('hex')
   const assetHash = `${handlerName}-${hash}`
 
