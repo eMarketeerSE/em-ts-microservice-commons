@@ -14,6 +14,7 @@ export const RECAP_DEV_TIMEOUT_WINDOW_SECONDS = 300
  */
 export const buildBaseEnvironment = (stage: Stage, scope: Construct): Record<string, string> => ({
   STAGE: stage,
+  stage,
   NODE_ENV: stage === 'prod' ? 'production' : 'development',
   REGION: Stack.of(scope).region,
 })
