@@ -1,7 +1,8 @@
 import * as path from 'path'
 import * as fs from 'fs'
+import { createHash } from 'crypto'
 import { execFileSync } from 'child_process'
-import { AssetHashType, DockerImage } from 'aws-cdk-lib'
+import { DockerImage } from 'aws-cdk-lib'
 import { Code } from 'aws-cdk-lib/aws-lambda'
 
 /**
@@ -73,7 +74,7 @@ function getHandlerBundlerPath(): string {
   const cwd = process.cwd()
   const candidates = [
     path.join(cwd, 'node_modules', PACKAGE_NAME, HANDLER_BUNDLER_RELATIVE_PATH),
-    path.join(cwd, HANDLER_BUNDLER_RELATIVE_PATH)
+    path.join(cwd, HANDLER_BUNDLER_RELATIVE_PATH),
   ]
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
@@ -83,7 +84,7 @@ function getHandlerBundlerPath(): string {
   }
   throw new Error(
     `Could not locate the handler bundler. Searched:\n${candidates.map((c) => `  - ${c}`).join('\n')}\n`
-      + `Ensure ${PACKAGE_NAME} is installed.`
+      + `Ensure ${PACKAGE_NAME} is installed.`,
   )
 }
 
@@ -94,8 +95,11 @@ function getHandlerBundlerPath(): string {
  * - Otherwise bundles `entryFile` via the project handler bundler at synth
  *   time, with overrides applied on top of the defaults.
  *
- * Bundling uses `assetHashType: OUTPUT` so the asset hash is computed from
- * the bundled output rather than from the (transitive) source tree.
+ * An explicit `assetHash` is derived from the entry path + bundling overrides.
+ * Without it, multiple handlers under the same source directory (the common
+ * `src/handlers/` layout) would share an asset — CDK would run `tryBundle`
+ * once and reuse that asset for every other lambda, silently dropping
+ * per-function overrides. The explicit hash gives each handler a unique asset.
  */
 export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   if (options.codePath) {
@@ -112,8 +116,15 @@ export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   const overrides = options.bundling
   const bundlerPath = getHandlerBundlerPath()
 
+  const handlerName = path.basename(entry, path.extname(entry))
+  const hash = createHash('sha256')
+    .update(entry)
+    .update(JSON.stringify(overrides ?? {}))
+    .digest('hex')
+  const assetHash = `${handlerName}-${hash}`
+
   return Code.fromAsset(path.dirname(entry), {
-    assetHashType: AssetHashType.OUTPUT,
+    assetHash,
     bundling: {
       // CDK requires `image` even when local bundling succeeds. We never use
       // the Docker fallback — `tryBundle` always returns true.
@@ -123,11 +134,11 @@ export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
           const stdin = JSON.stringify({ entry, outDir: outputDir, overrides })
           execFileSync('node', [bundlerPath], {
             input: stdin,
-            stdio: ['pipe', 'inherit', 'inherit']
+            stdio: ['pipe', 'inherit', 'inherit'],
           })
           return true
-        }
-      }
-    }
+        },
+      },
+    },
   })
 }
