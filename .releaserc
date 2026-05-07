@@ -1,3 +1,7 @@
 {
-  "branches": ["master", { name: "beta", prerelease: true }]
+  "branches": [
+    { name: "6.x", range: "6.x", channel: "6.x" },
+    "master",
+    { name: "beta", prerelease: true }
+  ]
 }
