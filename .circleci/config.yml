@@ -39,6 +39,7 @@ workflows:
             branches:
               only:
                 - master
+                - 6.x
 
   beta-release:
     jobs:
