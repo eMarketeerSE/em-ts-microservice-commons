@@ -1,5 +1,6 @@
 import * as path from 'path'
 import * as fs from 'fs'
+import { createRequire } from 'module'
 import * as esbuild from 'esbuild'
 import esbuildPluginTsc from '@emarketeer/esbuild-plugin-tsc'
 
@@ -19,6 +20,7 @@ interface BundlingOverrides {
   legalComments?: 'none' | 'inline' | 'eof' | 'linked' | 'external'
   charset?: 'ascii' | 'utf8'
   pure?: string[]
+  nodeModules?: string[]
 }
 
 interface BundlerInput {
@@ -43,7 +45,7 @@ const DEFAULT_EXTERNALS: string[] = [
   'tedious',
   'pg-query-stream',
   'libsql',
-  'mariadb'
+  'mariadb',
 ]
 
 const OPTIONAL_DEPENDENCIES: string[] = ['chromium-bidi']
@@ -58,6 +60,41 @@ function resolveOptionalExternals(): string[] {
   return OPTIONAL_DEPENDENCIES.filter((dep) => !(dep in deps))
 }
 
+function copyNodeModulesIntoAsset(roots: string[], outDir: string): void {
+  // Resolve from the consuming project's cwd to honour pnpm / non-hoisted layouts.
+  const projectRequire = createRequire(path.join(process.cwd(), 'package.json'))
+  const seen = new Set<string>()
+  const queue = [...roots]
+
+  while (queue.length) {
+    const pkg = queue.shift()!
+    if (seen.has(pkg)) {
+      // eslint-disable-next-line no-continue
+      continue
+    }
+    seen.add(pkg)
+
+    let pkgJsonPath: string
+    try {
+      pkgJsonPath = projectRequire.resolve(`${pkg}/package.json`)
+    } catch {
+      throw new Error(
+        `bundling.nodeModules: cannot resolve "${pkg}" from ${process.cwd()}. `
+          + 'Ensure it is installed in the consuming project\'s dependencies.',
+      )
+    }
+
+    const pkgDir = path.dirname(pkgJsonPath)
+    const dest = path.join(outDir, 'node_modules', pkg)
+    fs.cpSync(pkgDir, dest, { recursive: true, dereference: true })
+
+    const meta = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'))
+    for (const dep of Object.keys(meta.dependencies ?? {})) {
+      queue.push(dep)
+    }
+  }
+}
+
 const recapDevHandlerWrapper: esbuild.Plugin = {
   name: 'recap-dev-handler-wrapper',
   setup(build) {
@@ -67,7 +104,7 @@ const recapDevHandlerWrapper: esbuild.Plugin = {
       }
       return {
         path: path.resolve(args.resolveDir, args.path),
-        namespace: 'recap-dev-wrapper'
+        namespace: 'recap-dev-wrapper',
       }
     })
 
@@ -77,13 +114,13 @@ const recapDevHandlerWrapper: esbuild.Plugin = {
         contents: [
           'import { wrapLambdaHandler } from \'@recap.dev/client\'',
           `import * as unwrappedHandler from '${originalFile}'`,
-          'export const handler = wrapLambdaHandler(unwrappedHandler.handler)'
+          'export const handler = wrapLambdaHandler(unwrappedHandler.handler)',
         ].join('\n'),
         loader: 'ts',
-        resolveDir: path.dirname(args.path)
+        resolveDir: path.dirname(args.path),
       }
     })
-  }
+  },
 }
 
 const recapDevAutoWrapper: esbuild.Plugin = {
@@ -107,10 +144,10 @@ const recapDevAutoWrapper: esbuild.Plugin = {
   }
   module.exports = mod;
   }
-  `
+  `,
       }
     })
-  }
+  },
 }
 
 async function readStdin(): Promise<string> {
@@ -145,7 +182,8 @@ async function main(): Promise<void> {
     external: [
       ...DEFAULT_EXTERNALS,
       ...resolveOptionalExternals(),
-      ...(overrides.external ?? [])
+      ...(overrides.external ?? []),
+      ...(overrides.nodeModules ?? []),
     ],
     define: overrides.define,
     banner: overrides.banner,
@@ -158,8 +196,12 @@ async function main(): Promise<void> {
     legalComments: overrides.legalComments,
     charset: overrides.charset,
     pure: overrides.pure,
-    plugins: [recapDevHandlerWrapper, recapDevAutoWrapper, esbuildPluginTsc()]
+    plugins: [recapDevHandlerWrapper, recapDevAutoWrapper, esbuildPluginTsc()],
   })
+
+  if (overrides.nodeModules?.length) {
+    copyNodeModulesIntoAsset(overrides.nodeModules, input.outDir)
+  }
 }
 
 main().catch((err) => {
@@ -170,7 +212,7 @@ main().catch((err) => {
           ? ` (${e.location.file}:${e.location.line}:${e.location.column})`
           : ''
         console.error(`  esbuild error${loc}: ${e.text}`)
-      }
+      },
     )
   } else {
     console.error(err instanceof Error ? err.stack ?? err : err)

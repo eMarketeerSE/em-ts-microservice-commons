@@ -28,6 +28,23 @@ export interface BundlingOverrides {
   readonly legalComments?: 'none' | 'inline' | 'eof' | 'linked' | 'external'
   readonly charset?: 'ascii' | 'utf8'
   readonly pure?: string[]
+  /**
+   * Packages copied verbatim from the consuming project's `node_modules/` into
+   * the lambda asset directory (alongside the bundled `index.js`), and added to
+   * the esbuild `external` list. Use for packages that can't be bundled because
+   * they perform `require.resolve()` against their own files at runtime
+   * (`playwright-core`, `puppeteer-core`, `sharp`, etc.).
+   *
+   * Each listed package is resolved from the consuming project's CWD. Its
+   * declared `dependencies` are walked transitively and copied as well.
+   * `peerDependencies` and `optionalDependencies` are NOT auto-included — list
+   * them explicitly if needed.
+   *
+   * Symlinked packages (yarn workspaces, pnpm) are dereferenced so the lambda
+   * zip contains real files. Native binaries are NOT recompiled — packages with
+   * prebuilds must already match the lambda's runtime architecture.
+   */
+  readonly nodeModules?: string[]
 }
 
 export interface ResolveLambdaCodeOptions {
