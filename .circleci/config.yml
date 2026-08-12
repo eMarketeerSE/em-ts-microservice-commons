@@ -13,7 +13,7 @@ jobs:
           command: yarn build
       - run:
           name: release
-          command: yarn semantic-release || true
+          command: yarn semantic-release
 
   beta-release:
     docker:
@@ -28,7 +28,7 @@ jobs:
           command: yarn build
       - run:
           name: release
-          command: yarn semantic-release || true
+          command: yarn semantic-release
 
 workflows:
   version: 2
