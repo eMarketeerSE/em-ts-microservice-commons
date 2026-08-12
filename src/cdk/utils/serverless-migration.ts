@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy, Token } from 'aws-cdk-lib'
+import { CfnOutput, Duration, Token } from 'aws-cdk-lib'
 import {
   Function as LambdaFunction,
   CfnFunction,
@@ -51,7 +51,7 @@ const overrideLambdaLogicalId = (fn: LambdaFunction, serverlessFunctionName: str
 
 /**
  * Override the logical ID of a log group to match Serverless Framework naming: {prefix}LogGroup.
- * Sets removal policy to RETAIN to prevent CloudFormation from deleting existing log data.
+ * The removal policy set by whoever created the log group is left untouched.
  */
 const overrideLogGroupLogicalId = (logGroup: Construct, serverlessFunctionName: string): void => {
   const prefix = toServerlessLogicalIdPrefix(serverlessFunctionName)
@@ -66,7 +66,6 @@ const overrideLogGroupLogicalId = (logGroup: Construct, serverlessFunctionName: 
   }
 
   defaultChild.overrideLogicalId(`${prefix}LogGroup`)
-  defaultChild.applyRemovalPolicy(RemovalPolicy.RETAIN)
 }
 
 /**
@@ -76,7 +75,7 @@ const overrideLogGroupLogicalId = (logGroup: Construct, serverlessFunctionName: 
  *
  * - Sets the function logical ID to {prefix}LambdaFunction
  * - Sets the log group logical ID to {prefix}LogGroup
- * - Sets the log group removal policy to RETAIN (prevents log deletion during migration)
+ * - Leaves the log group removal policy as set by its creator (RETAIN on prod via getRemovalPolicy)
  *
  * Only works with functions that have explicit (non-imported) log groups.
  *

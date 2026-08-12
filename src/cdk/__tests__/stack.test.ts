@@ -221,8 +221,23 @@ describe('EmStack', () => {
         expect(logGroups).toHaveProperty('CaptureDashscreenshotDashfromDashurlLogGroup')
       })
 
-      it('sets log group deletion policy to Retain', () => {
-        const stack = makeStack({ useSharedRole: true })
+      it('sets log group deletion policy to Delete on dev', () => {
+        const stack = makeStack({ useSharedRole: true, stage: 'dev' })
+        stack.createFunction('CaptureScreenshot', {
+          functionName: 'capture-screenshot-from-url',
+          handler: 'index.handler',
+          codePath: CODE_PATH
+        })
+
+        const template = Template.fromStack(stack)
+        const logGroups = template.findResources('AWS::Logs::LogGroup')
+        expect(logGroups['CaptureDashscreenshotDashfromDashurlLogGroup'].DeletionPolicy).toBe(
+          'Delete'
+        )
+      })
+
+      it('sets log group deletion policy to Retain on prod', () => {
+        const stack = makeStack({ useSharedRole: true, stage: 'prod' })
         stack.createFunction('CaptureScreenshot', {
           functionName: 'capture-screenshot-from-url',
           handler: 'index.handler',
