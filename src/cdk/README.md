@@ -288,7 +288,7 @@ export class ScreenshotServiceStack extends EmStack {
 
     // createFunction() auto-overrides logical IDs:
     //   Lambda:   CaptureDashscreenshotDashfromDashurlLambdaFunction
-    //   LogGroup: CaptureDashscreenshotDashfromDashurlLogGroup (RETAIN)
+    //   LogGroup: CaptureDashscreenshotDashfromDashurlLogGroup
     const captureScreenshot = this.createFunction('CaptureScreenshot', {
       handlerPath: 'src/handlers/capture-screenshot-from-url',
     })
@@ -303,7 +303,7 @@ export class ScreenshotServiceStack extends EmStack {
 |---|---|
 | Shared IAM role | `useSharedRole: true` — pinned to `IamRoleLambdaExecution` |
 | Lambda logical IDs | Auto-overridden by `createFunction()` |
-| Log group logical IDs | Auto-overridden, removal policy RETAIN |
+| Log group logical IDs | Auto-overridden; removal policy stays stage-based (`getRemovalPolicy`) |
 | Layer logical IDs | `overrideLayerLogicalId(layer, logicalId)` |
 | Cross-stack exports | `this.addOutput(id, value)` |
 
@@ -364,9 +364,12 @@ const cfnTable = table.table.node.defaultChild as CfnTable
 cfnTable.overrideLogicalId('ContactsDynamoDbTable')
 ```
 
-**Log groups** — `createFunction()` automatically sets RETAIN.
+**Log groups** — `createFunction()` sets the removal policy from the stage: RETAIN on prod, DESTROY
+elsewhere. Do not force RETAIN on non-prod stages: a retained log group survives its own stack
+resource, and the next deploy that re-adds the function fails early validation with
+`Resource of type 'AWS::Logs::LogGroup' ... already exists`.
 
-**Rollback** — CloudFormation rolls back on failure. RETAIN policies protect data even on stack deletion.
+**Rollback** — CloudFormation rolls back on failure. RETAIN policies protect prod data even on stack deletion.
 
 ### Low-level utilities
 

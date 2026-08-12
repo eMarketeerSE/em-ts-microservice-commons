@@ -1,4 +1,4 @@
-import { App, Stack } from 'aws-cdk-lib'
+import { App, RemovalPolicy, Stack } from 'aws-cdk-lib'
 import { Template } from 'aws-cdk-lib/assertions'
 import { Code, Runtime, LayerVersion, Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
@@ -293,13 +293,29 @@ describe('overrideFunctionLogicalIds', () => {
     expect(logGroups).toHaveProperty('MyDashhandlerLogGroup')
   })
 
-  it('applies RETAIN removal policy to the log group', () => {
+  it('keeps a DESTROY removal policy set by the log group creator', () => {
     const stack = makeStack()
     const fn = new LambdaFunction(stack, 'TestFn', {
       code: Code.fromInline('exports.handler = async () => {}'),
       runtime: Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      logGroup: new LogGroup(stack, 'TestLogGroup')
+      logGroup: new LogGroup(stack, 'TestLogGroup', { removalPolicy: RemovalPolicy.DESTROY })
+    })
+
+    overrideFunctionLogicalIds(fn, 'my-handler')
+
+    const template = Template.fromStack(stack)
+    const logGroups = template.findResources('AWS::Logs::LogGroup')
+    expect(logGroups.MyDashhandlerLogGroup.DeletionPolicy).toBe('Delete')
+  })
+
+  it('keeps a RETAIN removal policy set by the log group creator', () => {
+    const stack = makeStack()
+    const fn = new LambdaFunction(stack, 'TestFn', {
+      code: Code.fromInline('exports.handler = async () => {}'),
+      runtime: Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      logGroup: new LogGroup(stack, 'TestLogGroup', { removalPolicy: RemovalPolicy.RETAIN })
     })
 
     overrideFunctionLogicalIds(fn, 'my-handler')
