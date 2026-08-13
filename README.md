@@ -30,6 +30,41 @@ Following commands are available:
 
 #### jest ####
 
+Usage:
+
+```
+em-commons jest <tier?> <pattern...> [jest flags...]
+```
+
+The first argument may be a tier: `unit`, `func`, or `full-cycle`. It selects that tier's
+files precisely — `func` means `*.func.test.ts`, not "any path containing func".
+
+Every positional argument after the tier narrows the run further. Terms are combined with
+AND, so adding an argument can only ever shrink the selected set:
+
+```
+em-commons jest func              # every *.func.test.ts
+em-commons jest func contacts     # only *.func.test.ts files whose path contains contacts
+em-commons jest func contacts sendout
+em-commons jest func 'contacts|billing'
+```
+
+Arguments from the first `-`-prefixed one onward are forwarded to jest verbatim, so
+`em-commons jest func contacts -t 'creates'` filters by test name as usual. Patterns after a
+flag are not supported. `--testPathPattern` is rejected, because jest joins it with the tier
+pattern using OR and would widen the run.
+
+Use `--listTests` to preview exactly which files a run will execute before starting it —
+useful for `func` and `full-cycle`, which run against real dev AWS:
+
+```
+em-commons jest func contacts --listTests
+```
+
+Matching is case-insensitive against the absolute path, which is jest's own behaviour. In a
+repo checked out at `~/dev/contacts-service` the term `contacts` therefore matches every
+file.
+
 Please note that test will run in parallel. If you need to do a global setup/teardown before/after running your tests, the default configuration is like this:
 
 ```json
