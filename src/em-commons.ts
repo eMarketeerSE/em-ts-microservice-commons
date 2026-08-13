@@ -1,5 +1,6 @@
 import { existsSync } from 'fs'
 import { runCommand } from './utils'
+import { buildJestArgs } from './jest-args'
 
 process.on('unhandledRejection', (err) => {
   throw err
@@ -66,7 +67,13 @@ if (script === 'jest') {
   const configFlag = existsSync('jest.config.js')
     ? ''
     : ' --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js'
-  result = runCommand(baseCommand + configFlag, scriptArgs)
+  const { tier, args: jestArgs } = buildJestArgs(scriptArgs)
+
+  if (tier) {
+    process.env.EM_JEST_TIER = tier
+  }
+
+  result = runCommand(baseCommand + configFlag, jestArgs)
 }
 
 if (!supportedCommands.includes(script)) {

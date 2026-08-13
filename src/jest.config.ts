@@ -67,7 +67,7 @@ if (esmFriendly) {
   //   import { getMikroOrmMySqlConnection } from '@eMarketeerSE/runtime-commons/mikroorm-esm'
 }
 
-const shouldAddSetup = !process.argv.includes('unit')
+const shouldAddSetup = process.env.EM_JEST_TIER !== 'unit'
 
 if (shouldAddSetup) {
   config.globalSetup = '<rootDir>/src/utils/func-test-setup.ts'
