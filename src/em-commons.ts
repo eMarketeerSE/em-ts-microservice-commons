@@ -71,6 +71,8 @@ if (script === 'jest') {
 
   if (tier) {
     process.env.EM_JEST_TIER = tier
+  } else {
+    delete process.env.EM_JEST_TIER
   }
 
   result = runCommand(baseCommand + configFlag, jestArgs)

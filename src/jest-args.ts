@@ -1,8 +1,8 @@
-const TIER_PATTERNS: Record<string, string> = {
-  unit: '\\.unit\\.test\\.',
-  func: '\\.func\\.test\\.',
-  'full-cycle': '\\.full-cycle\\.test\\.',
-}
+const TIER_PATTERNS = new Map([
+  ['unit', '[.-]unit\\.test\\.'],
+  ['func', '[.-]func\\.test\\.'],
+  ['full-cycle', '[.-]full-cycle\\.test\\.'],
+])
 
 export interface JestArgs {
   tier?: string
@@ -26,8 +26,9 @@ export const buildJestArgs = (scriptArgs: string[]): JestArgs => {
     )
   }
 
-  const tier = terms.length > 0 && TIER_PATTERNS[terms[0]] ? terms[0] : undefined
-  const patterns = tier ? [TIER_PATTERNS[tier], ...terms.slice(1)] : terms
+  const tierPattern = terms.length > 0 ? TIER_PATTERNS.get(terms[0]) : undefined
+  const tier = tierPattern ? terms[0] : undefined
+  const patterns = tierPattern ? [tierPattern, ...terms.slice(1)] : terms
 
   if (patterns.length === 0) {
     return { args: flags }
