@@ -130,5 +130,19 @@
         "tsx": "never"
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/entities/mysql/*.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "PropertyDefinition[optional=true][computed=false][decorators.length>0]",
+            "message": "A nullable column hydrates as null, never undefined — declare it `T | null = null`, not `?: T` (DV-4523)."
+          }
+        ]
+      }
+    }
+  ]
 }
