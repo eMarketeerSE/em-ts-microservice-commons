@@ -7,7 +7,7 @@ A common config for eMarketeer TypeScript microservice
 - Common `ts.config.json`
 - Common webpack config
 - Common parts of `serverless.yml` including Epsagon configuration
-- Common eslint config. Files under `src/entities/mysql/` additionally reject decorated `?: T` properties — a nullable MikroORM column hydrates as `null`, so declare it `T | null = null` (DV-4596)
+- Common eslint config. A property whose decorator says `nullable: true` must have `null` in its type — a nullable column hydrates as `null`, so write `T | null`, never `?: T` or plain `T`. Applies to MikroORM and TypeORM columns anywhere in a service; relations are exempt (DV-4596)
 - Common jest config
 - **AWS CDK v2 constructs and utilities** (see [CDK README](src/cdk/README.md))
 

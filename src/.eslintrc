@@ -75,7 +75,13 @@
       }
     ],
     "no-console": "off",
-    "no-restricted-syntax": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "PropertyDefinition[computed=false]:has(Decorator CallExpression ObjectExpression > Property[key.name=\"nullable\"][value.value=true]):not(:has(TSNullKeyword)):not(:has(Decorator > CallExpression > Identifier.callee[name=/^(ManyToOne|OneToOne|OneToMany|ManyToMany)$/]))",
+        "message": "This column is nullable, so the property type has to include null. Write `T | null`, not `?: T` and not plain `T` (DV-4523)."
+      }
+    ],
     "import/prefer-default-export": "off",
     "object-curly-newline": [
       "error",
@@ -130,19 +136,5 @@
         "tsx": "never"
       }
     ]
-  },
-  "overrides": [
-    {
-      "files": ["src/entities/mysql/*.ts"],
-      "rules": {
-        "no-restricted-syntax": [
-          "error",
-          {
-            "selector": "PropertyDefinition[optional=true][computed=false][decorators.length>0]",
-            "message": "A nullable column hydrates as null, never undefined — declare it `T | null = null`, not `?: T` (DV-4523)."
-          }
-        ]
-      }
-    }
-  ]
+  }
 }
