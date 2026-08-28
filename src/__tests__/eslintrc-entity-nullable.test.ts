@@ -160,4 +160,48 @@ describe('shared eslintrc: nullable columns must include null in the property ty
 
     expect(messages).toEqual([NULLABLE_MESSAGE])
   })
+  it('should ignore a non-ORM decorator that happens to take `nullable: true`', async () => {
+    const messages = await lintEntity('src/models/thing.ts', [
+      '  @ApiProperty({ nullable: true })',
+      '  public foo?: string',
+    ])
+
+    expect(messages).toEqual([])
+  })
+
+  it('should fail when null is only nested inside a generic type argument', async () => {
+    const messages = await lintEntity(entity, [
+      "  @Property({ name: 'foo', type: 'json', nullable: true })",
+      '  public foo: Array<string | null>',
+    ])
+
+    expect(messages).toEqual([NULLABLE_MESSAGE])
+  })
+
+  it('should fail when null is only nested inside an array element type', async () => {
+    const messages = await lintEntity(entity, [
+      "  @Property({ name: 'foo', type: 'json', nullable: true })",
+      '  public foo: (string | null)[]',
+    ])
+
+    expect(messages).toEqual([NULLABLE_MESSAGE])
+  })
+
+  it('should pass on a nullable array column typed `T[] | null`', async () => {
+    const messages = await lintEntity(entity, [
+      "  @Property({ name: 'foo', type: 'json', nullable: true })",
+      '  public foo: string[] | null = null',
+    ])
+
+    expect(messages).toEqual([])
+  })
+
+  it('should catch a nullable enum column', async () => {
+    const messages = await lintEntity(entity, [
+      '  @Enum({ name: \'kind\', items: () => Kind, nullable: true })',
+      '  public kind?: Kind',
+    ])
+
+    expect(messages).toEqual([NULLABLE_MESSAGE])
+  })
 })

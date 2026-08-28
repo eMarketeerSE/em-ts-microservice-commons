@@ -78,7 +78,7 @@
     "no-restricted-syntax": [
       "error",
       {
-        "selector": "PropertyDefinition[computed=false]:has(Decorator CallExpression ObjectExpression > Property[key.name=\"nullable\"][value.value=true]):not(:has(TSNullKeyword)):not(:has(Decorator > CallExpression > Identifier.callee[name=/^(ManyToOne|OneToOne|OneToMany|ManyToMany)$/]))",
+        "selector": "PropertyDefinition[computed=false]:has(Decorator > CallExpression[callee.name=/^(Property|Enum|Embedded|Formula|Column|PrimaryColumn)$/] > ObjectExpression > Property[key.name=\"nullable\"][value.value=true]):not(:has(PropertyDefinition > TSTypeAnnotation > TSUnionType > TSNullKeyword)):not(:has(PropertyDefinition > TSTypeAnnotation > TSNullKeyword))",
         "message": "This column is nullable, so the property type has to include null. Write `T | null`, not `?: T` and not plain `T` (DV-4523)."
       }
     ],
