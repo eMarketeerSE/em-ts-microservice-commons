@@ -50,6 +50,12 @@ if (esmFriendly) {
   // Must match the set of TS extensions transformed above (^.+\.tsx?$), or Jest
   // will load .tsx as CJS while ts-jest emits ESM for it and blow up at import.
   config.extensionsToTreatAsEsm = ['.ts', '.tsx']
+  // tsyringe reads Reflect.getMetadata at module load. Under
+  // --experimental-vm-modules a worker can evaluate a test file's module graph
+  // before reflect-metadata's global patch lands in that file's VM context, and
+  // the suite dies at import before any test runs (DV-4676). setupFiles runs per
+  // test file in that same context, and loading the polyfill twice is a no-op.
+  config.setupFiles = ['reflect-metadata']
   // Do not preload runtime-commons' MikroORM loaders via `setupFiles`.
   // That preload still goes through a dynamic `import()`, which Jest routes
   // through its `importModuleDynamically` handler — the handler re-asserts
