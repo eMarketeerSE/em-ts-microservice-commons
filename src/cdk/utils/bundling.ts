@@ -1,8 +1,7 @@
 import * as path from 'path'
 import * as fs from 'fs'
-import { createHash } from 'crypto'
 import { execFileSync } from 'child_process'
-import { DockerImage } from 'aws-cdk-lib'
+import { AssetHashType, DockerImage } from 'aws-cdk-lib'
 import { Code } from 'aws-cdk-lib/aws-lambda'
 
 /**
@@ -82,8 +81,9 @@ function getHandlerBundlerPath(): string {
       return candidate
     }
   }
+  const searchedPaths = candidates.map((candidate) => `  - ${candidate}`).join('\n')
   throw new Error(
-    `Could not locate the handler bundler. Searched:\n${candidates.map((c) => `  - ${c}`).join('\n')}\n`
+    `Could not locate the handler bundler. Searched:\n${searchedPaths}\n`
       + `Ensure ${PACKAGE_NAME} is installed.`,
   )
 }
@@ -95,13 +95,10 @@ function getHandlerBundlerPath(): string {
  * - Otherwise bundles `entryFile` via the project handler bundler at synth
  *   time, with overrides applied on top of the defaults.
  *
- * An explicit `assetHash` is derived per call from the entry path, bundling
- * overrides, and a synth-time timestamp. The entry path is required so that
- * multiple handlers under the same source directory (the common
- * `src/handlers/` layout) don't collapse into one asset — without it, CDK
- * would run `tryBundle` once and silently reuse the same code for every
- * lambda. The timestamp forces a fresh asset on every synth so each deploy
- * uploads a clean rebuild rather than reusing a cached upload.
+ * Hash the completed bundle, so unchanged deployable files reuse their asset.
+ * Keep the entry and options in the serialized bundling configuration as well:
+ * CDK's staging cache cannot distinguish values captured only by tryBundle's
+ * closure, and handlers in the same source directory must build independently.
  */
 export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   if (options.codePath) {
@@ -118,20 +115,20 @@ export function resolveLambdaCode(options: ResolveLambdaCodeOptions): Code {
   const overrides = options.bundling
   const bundlerPath = getHandlerBundlerPath()
 
-  const handlerName = path.basename(entry, path.extname(entry))
-  const hash = createHash('sha256')
-    .update(entry)
-    .update(JSON.stringify(overrides ?? {}))
-    .update(String(Date.now()))
-    .digest('hex')
-  const assetHash = `${handlerName}-${hash}`
-
   return Code.fromAsset(path.dirname(entry), {
-    assetHash,
+    assetHashType: AssetHashType.OUTPUT,
     bundling: {
       // CDK requires `image` even when local bundling succeeds. We never use
       // the Docker fallback — `tryBundle` always returns true.
       image: DockerImage.fromRegistry('node:24'),
+      // This identifies the build for CDK's staging cache, not the output hash.
+      // The local bundler receives its actual input through stdin below.
+      environment: {
+        EM_HANDLER_BUILD: JSON.stringify({
+          entry: path.relative(process.cwd(), entry).split(path.sep).join('/'),
+          overrides: overrides ?? {},
+        }),
+      },
       local: {
         tryBundle(outputDir: string): boolean {
           const stdin = JSON.stringify({ entry, outDir: outputDir, overrides })
