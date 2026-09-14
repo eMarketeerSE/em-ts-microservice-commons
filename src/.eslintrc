@@ -145,7 +145,10 @@
         "tsx": "never"
       }
     ],
-    "eslint-comments/require-description": "error",
+    "eslint-comments/require-description": [
+      "error",
+      { "ignore": ["eslint-enable", "eslint-env", "exported", "global", "globals"] }
+    ],
     "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
     "import/no-default-export": "error"
   },

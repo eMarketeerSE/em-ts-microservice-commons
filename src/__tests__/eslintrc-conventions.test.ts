@@ -200,6 +200,27 @@ describe('shared eslintrc: eslint-disable needs a reason', () => {
 
     expect(messages).toEqual([])
   })
+
+  it('should pass on a block disable with a description and its matching enable', async () => {
+    const messages = await lint(serviceFile, [
+      '/* eslint-disable no-console -- the vendor CLI reads stdout */',
+      "console.log('x')",
+      '/* eslint-enable no-console */',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([])
+  })
+
+  it('should not ask for a description on a globals directive', async () => {
+    const messages = await lint(serviceFile, [
+      '/* global vendorHook */',
+      'export const load = (): unknown => vendorHook',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([])
+  })
 })
 
 describe('shared eslintrc: interfaces over type aliases', () => {
