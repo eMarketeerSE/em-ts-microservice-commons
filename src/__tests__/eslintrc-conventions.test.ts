@@ -72,6 +72,33 @@ describe('shared eslintrc: no parametrized tests', () => {
     expect(messages).toEqual([`no-restricted-syntax: ${EACH_MESSAGE}`])
   })
 
+  it('should fail on it.concurrent.only.each', async () => {
+    const messages = await lint(testFile, [
+      "it.concurrent.only.each([1])('should handle %s', async (value) => {",
+      '  expect(value).toBeDefined()',
+      '})',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([`no-restricted-syntax: ${EACH_MESSAGE}`])
+  })
+
+  it('should fail on describe.skip.each as a tagged template', async () => {
+    const messages = await lint(testFile, [
+      'describe.skip.each`',
+      '  a',
+      '  ${1}',
+      "`('thing $a', ({ a }) => {",
+      "  it('should work', () => {",
+      '    expect(a).toBe(1)',
+      '  })',
+      '})',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([`no-restricted-syntax: ${EACH_MESSAGE}`])
+  })
+
   it('should pass on separate it() blocks', async () => {
     const messages = await lint(testFile, [
       "describe('thing', () => {",
@@ -107,6 +134,17 @@ describe('shared eslintrc: no Error subtypes', () => {
       "import { AssertionError } from 'assert'",
       '',
       'export class NotFoundError extends AssertionError {}',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([`no-restricted-syntax: ${ERROR_SUBTYPE_MESSAGE}`])
+  })
+
+  it('should fail on a class extending a namespace-qualified Error subtype', async () => {
+    const messages = await lint(serviceFile, [
+      "import assert from 'assert'",
+      '',
+      'export class NotFoundError extends assert.AssertionError {}',
       '',
     ].join('\n'))
 

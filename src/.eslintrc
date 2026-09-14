@@ -83,11 +83,11 @@
         "message": "This column is nullable, so the property type has to include null. Write `T | null`, not `?: T` and not plain `T` (DV-4523)."
       },
       {
-        "selector": ":matches(CallExpression[callee.property.name=\"each\"], TaggedTemplateExpression[tag.property.name=\"each\"]):matches([callee.object.name=/^(it|test|describe)$/], [callee.object.object.name=/^(it|test|describe)$/], [tag.object.name=/^(it|test|describe)$/], [tag.object.object.name=/^(it|test|describe)$/])",
+        "selector": ":matches(CallExpression[callee.property.name=\"each\"], TaggedTemplateExpression[tag.property.name=\"each\"]):matches([callee.object.name=/^(it|test|describe)$/], [callee.object.object.name=/^(it|test|describe)$/], [callee.object.object.object.name=/^(it|test|describe)$/], [tag.object.name=/^(it|test|describe)$/], [tag.object.object.name=/^(it|test|describe)$/], [tag.object.object.object.name=/^(it|test|describe)$/])",
         "message": "Parametrized tests are not allowed. Write a separate it() block per case with inline assertions."
       },
       {
-        "selector": ":matches(ClassDeclaration, ClassExpression)[superClass.name=/Error$/]",
+        "selector": ":matches(ClassDeclaration, ClassExpression):matches([superClass.name=/Error$/], [superClass.property.name=/Error$/])",
         "message": "Do not subclass Error. Throw a plain Error and put any distinguishing data in a property on it."
       }
     ],
