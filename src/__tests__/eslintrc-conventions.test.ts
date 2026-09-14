@@ -113,6 +113,15 @@ describe('shared eslintrc: no Error subtypes', () => {
     expect(messages).toEqual([`no-restricted-syntax: ${ERROR_SUBTYPE_MESSAGE}`])
   })
 
+  it('should fail on a class expression extending Error', async () => {
+    const messages = await lint(serviceFile, [
+      'export const NotFoundError = class extends Error {}',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([`no-restricted-syntax: ${ERROR_SUBTYPE_MESSAGE}`])
+  })
+
   it('should pass on a plain Error with a property', async () => {
     const messages = await lint(serviceFile, [
       'export const notFound = (id: string): Error => {',
@@ -318,6 +327,10 @@ describe('shared eslintrc: test files carry a tier suffix', () => {
 
   it('should pass on a SuperOffice test', async () => {
     expect(await lint('src/services/thing-service.so.test.ts', emptySuite)).toEqual([])
+  })
+
+  it('should pass on a hyphenated tier suffix, which em-commons jest also selects', async () => {
+    expect(await lint('src/services/thing-service-func.test.ts', emptySuite)).toEqual([])
   })
 
   it('should pass on a test file nested in a tests directory', async () => {

@@ -87,7 +87,7 @@
         "message": "Parametrized tests are not allowed. Write a separate it() block per case with inline assertions."
       },
       {
-        "selector": "ClassDeclaration[superClass.name=/Error$/]",
+        "selector": ":matches(ClassDeclaration, ClassExpression)[superClass.name=/Error$/]",
         "message": "Do not subclass Error. Throw a plain Error and put any distinguishing data in a property on it."
       }
     ],
@@ -163,7 +163,7 @@
     },
     {
       "files": ["**/*.test.ts", "**/*.spec.ts"],
-      "excludedFiles": ["**/*.unit.test.ts", "**/*.func.test.ts", "**/*.full-cycle.test.ts", "**/*.so.test.ts"],
+      "excludedFiles": ["**/*[.-]unit.test.ts", "**/*[.-]func.test.ts", "**/*[.-]full-cycle.test.ts", "**/*.so.test.ts"],
       "rules": {
         "no-restricted-syntax": [
           "error",
