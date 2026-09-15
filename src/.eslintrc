@@ -158,7 +158,8 @@
         "src/db/migrations/**",
         "src/migrations/**",
         "src/utils/func-test-setup.ts",
-        "src/utils/func-test-teardown.ts"
+        "src/utils/func-test-teardown.ts",
+        "**/*.d.ts"
       ],
       "rules": {
         "import/no-default-export": "off"
@@ -166,13 +167,32 @@
     },
     {
       "files": ["**/*.test.ts", "**/*.spec.ts"],
-      "excludedFiles": ["**/*[.-]unit.test.ts", "**/*[.-]func.test.ts", "**/*[.-]full-cycle.test.ts", "**/*.so.test.ts"],
+      "excludedFiles": [
+        "**/*[.-]unit.test.ts",
+        "**/*[.-]func.test.ts",
+        "**/*[.-]full-cycle.test.ts",
+        "**/*.so.test.ts",
+        "**/*.dynamics-e2e.test.ts",
+        "**/*.sweep.test.ts"
+      ],
       "rules": {
         "no-restricted-syntax": [
           "error",
           {
+            "selector": "PropertyDefinition[computed=false]:has(Decorator > CallExpression[callee.name=/^(Property|Enum|Embedded|Formula|Column|PrimaryColumn)$/] > ObjectExpression > Property[key.name=\"nullable\"][value.value=true]):not(:has(PropertyDefinition > TSTypeAnnotation > TSUnionType > TSNullKeyword)):not(:has(PropertyDefinition > TSTypeAnnotation > TSNullKeyword))",
+            "message": "This column is nullable, so the property type has to include null. Write `T | null`, not `?: T` and not plain `T` (DV-4523)."
+          },
+          {
+            "selector": ":matches(CallExpression[callee.property.name=\"each\"], TaggedTemplateExpression[tag.property.name=\"each\"]):matches([callee.object.name=/^(it|test|describe)$/], [callee.object.object.name=/^(it|test|describe)$/], [callee.object.object.object.name=/^(it|test|describe)$/], [tag.object.name=/^(it|test|describe)$/], [tag.object.object.name=/^(it|test|describe)$/], [tag.object.object.object.name=/^(it|test|describe)$/])",
+            "message": "Parametrized tests are not allowed. Write a separate it() block per case with inline assertions."
+          },
+          {
+            "selector": ":matches(ClassDeclaration, ClassExpression):matches([superClass.name=/Error$/], [superClass.property.name=/Error$/])",
+            "message": "Do not subclass Error. Throw a plain Error and put any distinguishing data in a property on it."
+          },
+          {
             "selector": "Program",
-            "message": "Test files are named *.unit.test.ts, *.func.test.ts, *.full-cycle.test.ts or *.so.test.ts, so em-commons jest runs them in the right tier."
+            "message": "Test files are named *.unit.test.ts, *.func.test.ts or *.full-cycle.test.ts, so em-commons jest runs them in the right tier."
           }
         ]
       }

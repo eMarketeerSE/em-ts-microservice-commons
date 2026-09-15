@@ -6,7 +6,7 @@ const EACH_MESSAGE =
 const ERROR_SUBTYPE_MESSAGE =
   'Do not subclass Error. Throw a plain Error and put any distinguishing data in a property on it.'
 const TEST_NAME_MESSAGE =
-  'Test files are named *.unit.test.ts, *.func.test.ts, *.full-cycle.test.ts or *.so.test.ts, '
+  'Test files are named *.unit.test.ts, *.func.test.ts or *.full-cycle.test.ts, '
   + 'so em-commons jest runs them in the right tier.'
 
 const lint = async (filePath: string, code: string): Promise<string[]> => {
@@ -318,6 +318,18 @@ describe('shared eslintrc: named exports only', () => {
     expect(messages).toEqual([])
   })
 
+  it('should allow the default export an ambient module declaration requires', async () => {
+    const messages = await lint('src/types/json.d.ts', [
+      "declare module '*.json' {",
+      '  const value: unknown',
+      '  export default value',
+      '}',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([])
+  })
+
   it('should allow the default export jest requires in the func-test teardown', async () => {
     const messages = await lint('src/utils/func-test-teardown.ts', [
       'export default async (): Promise<void> => {',
@@ -394,5 +406,32 @@ describe('shared eslintrc: test files carry a tier suffix', () => {
 
   it('should pass on a test file nested in a tests directory', async () => {
     expect(await lint('src/services/thing-service-tests/thing.unit.test.ts', emptySuite)).toEqual([])
+  })
+
+  it('should pass on a Dynamics e2e test, which crm-service-v2 runs outside the tiers', async () => {
+    const file = 'src/services/subscription-sync-v2/thing.dynamics-e2e.test.ts'
+
+    expect(await lint(file, emptySuite)).toEqual([])
+  })
+
+  it('should pass on a sweep test, which content-generation-service runs weekly on its own', async () => {
+    expect(await lint('src/handlers/logo-quality.sweep.test.ts', emptySuite)).toEqual([])
+  })
+
+  it('should still report the other conventions in a mis-named test file', async () => {
+    const messages = await lint('src/services/thing-service.test.ts', [
+      'export class BadError extends Error {}',
+      '',
+      "it.each([1, 2])('should handle %s', (value) => {",
+      '  expect(value).toBeDefined()',
+      '})',
+      '',
+    ].join('\n'))
+
+    expect(messages).toEqual([
+      `no-restricted-syntax: ${TEST_NAME_MESSAGE}`,
+      `no-restricted-syntax: ${ERROR_SUBTYPE_MESSAGE}`,
+      `no-restricted-syntax: ${EACH_MESSAGE}`,
+    ])
   })
 })
