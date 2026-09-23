@@ -344,6 +344,13 @@ this.createQueueConsumer('ProcessFormSubmit', {
 
 Defaults: memorySize=1024, timeout=15s, enableTracing=true, batchSize=10, maxReceiveCount=3.
 
+Pass `fifo: true` to `createQueueConsumer` (or `LambdaWithQueue`) for a FIFO queue: the queue and its
+DLQ get `FifoQueue: true` and the mandatory `.fifo` suffix, so give `queueName` and `dlqName` without it.
+Producers send with `MessageGroupId` and `MessageDeduplicationId`; the consumer's queue does not enable
+content-based deduplication. With `reportBatchItemFailures` (the default), a handler that fails a message
+must also report every later message of the same `MessageGroupId` in the batch as failed, or ordering breaks.
+Topic consumers do not take `fifo`.
+
 New services omit `useSharedRole` — each function gets its own role and CDK default logical IDs.
 
 ### Migration checklist

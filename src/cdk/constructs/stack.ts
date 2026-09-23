@@ -867,7 +867,7 @@ export type CreateScheduledFunctionConfig = CreateFunctionConfig & {
  * Config for `EmStack.createTopicQueueConsumer()`. Adds the SNS topic and
  * subscription options on top of `CreateQueueConsumerConfig`.
  */
-export type CreateTopicQueueConsumerConfig = CreateQueueConsumerConfig & {
+export type CreateTopicQueueConsumerConfig = Omit<CreateQueueConsumerConfig, 'fifo'> & {
   /** The SNS topic to subscribe to. Can be an ITopic or a topic ARN string. */
   readonly topic: ITopic | string
   /** Options for the SQS subscription (e.g. rawMessageDelivery, filterPolicy). */

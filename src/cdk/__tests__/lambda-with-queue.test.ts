@@ -253,6 +253,47 @@ describe('LambdaWithQueue', () => {
     })
   })
 
+  describe('fifo', () => {
+    it('creates a FIFO queue and a FIFO DLQ, both with the mandatory .fifo suffix', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true })
+      const template = Template.fromStack(stack)
+      template.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'my-queue.fifo', FifoQueue: true })
+      template.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'my-queue-dlq.fifo', FifoQueue: true })
+    })
+
+    it('appends .fifo to an explicit dlqName', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true, dlqName: 'my-dead-letters' })
+      Template.fromStack(stack).hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'my-dead-letters.fifo',
+        FifoQueue: true
+      })
+    })
+
+    it('throws when queueName already ends in .fifo', () => {
+      const stack = makeStack()
+      expect(
+        () => new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true, queueName: 'my-queue.fifo' })
+      ).toThrow('fifo: true appends the .fifo suffix itself')
+    })
+
+    it('throws when dlqName already ends in .fifo', () => {
+      const stack = makeStack()
+      expect(
+        () => new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true, dlqName: 'my-dead-letters.fifo' })
+      ).toThrow('fifo: true appends the .fifo suffix itself')
+    })
+
+    it('leaves standard queues unchanged when fifo is not set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
+      const template = Template.fromStack(stack)
+      template.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'my-queue', FifoQueue: Match.absent() })
+      template.hasResourceProperties('AWS::SQS::Queue', { QueueName: 'my-queue-dlq', FifoQueue: Match.absent() })
+    })
+  })
+
   describe('IAM role', () => {
     it('creates a Lambda execution role', () => {
       const stack = makeStack()

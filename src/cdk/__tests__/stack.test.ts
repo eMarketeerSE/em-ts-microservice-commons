@@ -582,6 +582,30 @@ describe('EmStack', () => {
       template.resourceCountIs('AWS::CloudWatch::Alarm', 1)
     })
 
+    it('passes fifo through to a FIFO queue and DLQ', () => {
+      const stack = makeStack()
+      const alarmTopic = new Topic(stack, 'AlarmTopic')
+      stack.createQueueConsumer('ProcessJobs', {
+        functionName: 'process-jobs',
+        handler: 'index.handler',
+        codePath: CODE_PATH,
+        queueName: 'dev-test-service-queue-jobs',
+        fifo: true,
+        alarmTopic,
+        roleName: 'process-jobs-role'
+      })
+
+      const template = Template.fromStack(stack)
+      template.hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'dev-test-service-queue-jobs.fifo',
+        FifoQueue: true
+      })
+      template.hasResourceProperties('AWS::SQS::Queue', {
+        QueueName: 'dev-test-service-queue-jobs-dlq.fifo',
+        FifoQueue: true
+      })
+    })
+
     it('defaults stage and serviceName from the stack', () => {
       const stack = makeStack()
       const alarmTopic = new Topic(stack, 'AlarmTopic')
