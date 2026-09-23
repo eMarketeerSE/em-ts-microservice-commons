@@ -1,5 +1,6 @@
 import { App, Stack } from 'aws-cdk-lib'
-import { EmSqsQueue } from '../constructs/sqs'
+import { Match, Template } from 'aws-cdk-lib/assertions'
+import { EmSqsQueue, createFifoQueue } from '../constructs/sqs'
 
 function makeStack() {
   const app = new App()
@@ -23,6 +24,27 @@ describe('EmSqsQueue.urlFromName', () => {
           '/dev-em-contacts-service-contact-source'
         ]
       ]
+    })
+  })
+})
+
+describe('createFifoQueue', () => {
+  it('with enableDLQ names the dead-letter queue with the .fifo suffix', () => {
+    const stack = makeStack()
+    createFifoQueue(stack, 'Subject', {
+      stage: 'dev',
+      serviceName: 'test-service',
+      queueName: 'jobs',
+      enableDLQ: true
+    })
+    const template = Template.fromStack(stack)
+    template.hasResourceProperties('AWS::SQS::Queue', {
+      QueueName: Match.stringLikeRegexp('-jobs-dlq\\.fifo$'),
+      FifoQueue: true
+    })
+    template.hasResourceProperties('AWS::SQS::Queue', {
+      QueueName: Match.stringLikeRegexp('-jobs\\.fifo$'),
+      FifoQueue: true
     })
   })
 })

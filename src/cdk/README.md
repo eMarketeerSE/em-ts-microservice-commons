@@ -344,6 +344,11 @@ this.createQueueConsumer('ProcessFormSubmit', {
 
 Defaults: memorySize=1024, timeout=15s, enableTracing=true, batchSize=10, maxReceiveCount=3.
 
+Pass `fifo: true` to `createQueueConsumer` (or `LambdaWithQueue`) for a FIFO queue: the queue and its
+DLQ get the mandatory `.fifo` suffix and `FifoQueue: true`. Producers send with `MessageGroupId` and a
+`MessageDeduplicationId` (content-based deduplication is not enabled). `createFifoQueue` with
+`enableDLQ` now names the DLQ `…-dlq.fifo` as well.
+
 New services omit `useSharedRole` — each function gets its own role and CDK default logical IDs.
 
 ### Migration checklist

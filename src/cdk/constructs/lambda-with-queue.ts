@@ -37,6 +37,12 @@ export interface LambdaWithQueueProps {
   /** Lambda function name. Required when `handlerPath` is not provided. */
   readonly functionName?: string
   readonly queueName: string
+  /**
+   * Create a FIFO queue (and a FIFO DLQ). Both names receive the mandatory
+   * `.fifo` suffix. Producers must set MessageGroupId (and a deduplication id
+   * unless contentBasedDeduplication is wanted — this construct does not enable it).
+   */
+  readonly fifo?: boolean
   /** Short name used for codePath default and alarm naming. Defaults to functionName. */
   readonly resourceName?: string
   readonly handler?: string
@@ -155,14 +161,17 @@ export class LambdaWithQueue extends Construct {
     const timeout = props.timeout ?? Duration.seconds(15)
     const enableTracing = props.enableTracing ?? true
 
+    const dlqBaseName = props.dlqName ?? `${props.queueName}-dlq`
     this.dlq = new Queue(this, 'DLQ', {
-      queueName: props.dlqName ?? `${props.queueName}-dlq`,
+      queueName: props.fifo ? `${dlqBaseName}.fifo` : dlqBaseName,
+      fifo: props.fifo,
       retentionPeriod: Duration.days(14),
       removalPolicy: getRemovalPolicy(props.stage)
     })
 
     this.queue = new Queue(this, 'Queue', {
-      queueName: props.queueName,
+      queueName: props.fifo ? `${props.queueName}.fifo` : props.queueName,
+      fifo: props.fifo,
       visibilityTimeout:
         props.visibilityTimeout ?? Duration.seconds(Math.max(30, timeout.toSeconds() * 3)),
       retentionPeriod: Duration.days(4),
