@@ -38,9 +38,8 @@ export interface LambdaWithQueueProps {
   readonly functionName?: string
   readonly queueName: string
   /**
-   * Create a FIFO queue (and a FIFO DLQ). Both names receive the mandatory
-   * `.fifo` suffix. Producers must set MessageGroupId (and a deduplication id
-   * unless contentBasedDeduplication is wanted — this construct does not enable it).
+   * Create a FIFO queue and DLQ; `.fifo` is appended to `queueName` and the DLQ name, so pass them without it.
+   * Producers must set `MessageGroupId` and `MessageDeduplicationId` (content-based deduplication is not enabled).
    */
   readonly fifo?: boolean
   /** Short name used for codePath default and alarm naming. Defaults to functionName. */
@@ -162,6 +161,11 @@ export class LambdaWithQueue extends Construct {
     const enableTracing = props.enableTracing ?? true
 
     const dlqBaseName = props.dlqName ?? `${props.queueName}-dlq`
+    if (props.fifo && (props.queueName.endsWith('.fifo') || dlqBaseName.endsWith('.fifo'))) {
+      throw new Error(
+        `fifo: true appends the .fifo suffix itself — pass queueName "${props.queueName}" and dlqName "${dlqBaseName}" without it.`
+      )
+    }
     this.dlq = new Queue(this, 'DLQ', {
       queueName: props.fifo ? `${dlqBaseName}.fifo` : dlqBaseName,
       fifo: props.fifo,

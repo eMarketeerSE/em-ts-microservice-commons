@@ -3,7 +3,7 @@ import { SqsSubscription, SqsSubscriptionProps } from 'aws-cdk-lib/aws-sns-subsc
 import { Construct } from 'constructs'
 import { LambdaWithQueue, LambdaWithQueueProps } from './lambda-with-queue'
 
-export interface TopicQueueConsumerProps extends LambdaWithQueueProps {
+export interface TopicQueueConsumerProps extends Omit<LambdaWithQueueProps, 'fifo'> {
   /** The SNS topic to subscribe to. Can be an ITopic or a topic ARN string. */
   readonly topic: ITopic | string
   /** Options for the SQS subscription (e.g. rawMessageDelivery, filterPolicy). */

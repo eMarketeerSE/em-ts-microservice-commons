@@ -1,5 +1,5 @@
 import { App, Stack } from 'aws-cdk-lib'
-import { Match, Template } from 'aws-cdk-lib/assertions'
+import { Template } from 'aws-cdk-lib/assertions'
 import { EmSqsQueue, createFifoQueue } from '../constructs/sqs'
 
 function makeStack() {
@@ -39,11 +39,11 @@ describe('createFifoQueue', () => {
     })
     const template = Template.fromStack(stack)
     template.hasResourceProperties('AWS::SQS::Queue', {
-      QueueName: Match.stringLikeRegexp('-jobs-dlq\\.fifo$'),
+      QueueName: 'dev-test-service-queue-jobs-dlq.fifo',
       FifoQueue: true
     })
     template.hasResourceProperties('AWS::SQS::Queue', {
-      QueueName: Match.stringLikeRegexp('-jobs\\.fifo$'),
+      QueueName: 'dev-test-service-queue-jobs.fifo',
       FifoQueue: true
     })
   })

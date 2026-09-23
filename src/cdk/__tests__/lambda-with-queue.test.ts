@@ -271,6 +271,20 @@ describe('LambdaWithQueue', () => {
       })
     })
 
+    it('throws when queueName already ends in .fifo', () => {
+      const stack = makeStack()
+      expect(
+        () => new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true, queueName: 'my-queue.fifo' })
+      ).toThrow('fifo: true appends the .fifo suffix itself')
+    })
+
+    it('throws when dlqName already ends in .fifo', () => {
+      const stack = makeStack()
+      expect(
+        () => new LambdaWithQueue(stack, 'Subject', { ...defaultProps(stack), fifo: true, dlqName: 'my-dead-letters.fifo' })
+      ).toThrow('fifo: true appends the .fifo suffix itself')
+    })
+
     it('leaves standard queues unchanged when fifo is not set', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', defaultProps(stack))
