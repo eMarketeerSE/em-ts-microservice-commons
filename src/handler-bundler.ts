@@ -74,10 +74,11 @@ function copyNodeModulesIntoAsset(roots: string[], outDir: string): void {
     }
     seen.add(pkg)
 
-    let pkgJsonPath: string
-    try {
-      pkgJsonPath = projectRequire.resolve(`${pkg}/package.json`)
-    } catch {
+    // Not require.resolve(`${pkg}/package.json`): an exports map that leaves out package.json (survey-core) makes it throw
+    const pkgJsonPath = (projectRequire.resolve.paths(pkg) ?? [])
+      .map((dir) => path.join(dir, pkg, 'package.json'))
+      .find((candidate) => fs.existsSync(candidate))
+    if (!pkgJsonPath) {
       throw new Error(
         `bundling.nodeModules: cannot resolve "${pkg}" from ${process.cwd()}. `
           + 'Ensure it is installed in the consuming project\'s dependencies.',
