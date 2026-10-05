@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
   release:
     docker:
@@ -31,7 +31,6 @@ jobs:
           command: yarn semantic-release
 
 workflows:
-  version: 2
   release:
     jobs:
       - release:
