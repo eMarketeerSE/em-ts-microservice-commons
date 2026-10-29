@@ -4,6 +4,8 @@ import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 import {
   Function as LambdaFunction,
   Architecture,
+  CfnEventSourceMapping,
+  EventSourceMapping,
   Runtime,
   Tracing
 } from 'aws-cdk-lib/aws-lambda'
@@ -111,6 +113,7 @@ export interface LambdaWithQueueProps {
     readonly queue?: string
     readonly dlq?: string
     readonly alarm?: string
+    readonly eventSourceMapping?: string
   }
 }
 
@@ -280,6 +283,17 @@ export class LambdaWithQueue extends Construct {
         )
       }
       cfnDlq.overrideLogicalId(props.overrideLogicalIds.dlq)
+    }
+
+    if (props.overrideLogicalIds?.eventSourceMapping) {
+      const mapping = this.function.node.children.find(child => child instanceof EventSourceMapping)
+      const cfnMapping = mapping?.node.defaultChild
+      if (!(cfnMapping instanceof CfnEventSourceMapping)) {
+        throw new Error(
+          `Cannot override event source mapping logical ID to "${props.overrideLogicalIds.eventSourceMapping}": the function has no SQS event source mapping.`
+        )
+      }
+      cfnMapping.overrideLogicalId(props.overrideLogicalIds.eventSourceMapping)
     }
   }
 

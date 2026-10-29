@@ -558,6 +558,32 @@ describe('LambdaWithQueue', () => {
       expect(alarms).toHaveProperty('ProcessJobsDLQAlarm')
     })
 
+    it('overrides event source mapping logical ID when overrideLogicalIds.eventSourceMapping is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        overrideLogicalIds: { eventSourceMapping: 'ProcessDashjobsEventSourceMappingSQSProcessJobsQueue' }
+      })
+      const mappings = Template.fromStack(stack).findResources('AWS::Lambda::EventSourceMapping')
+      expect(Object.keys(mappings)).toEqual(['ProcessDashjobsEventSourceMappingSQSProcessJobsQueue'])
+    })
+
+    it('keeps the overridden event source mapping wired to the overridden queue and function', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        serverlessFunctionName: 'process-jobs',
+        overrideLogicalIds: {
+          queue: 'ProcessJobsQueue',
+          eventSourceMapping: 'ProcessDashjobsEventSourceMappingSQSProcessJobsQueue'
+        }
+      })
+      const mappings = Template.fromStack(stack).findResources('AWS::Lambda::EventSourceMapping')
+      const mapping = mappings.ProcessDashjobsEventSourceMappingSQSProcessJobsQueue
+      expect(mapping.Properties.EventSourceArn).toEqual({ 'Fn::GetAtt': ['ProcessJobsQueue', 'Arn'] })
+      expect(mapping.Properties.FunctionName).toEqual({ Ref: 'ProcessDashjobsLambdaFunction' })
+    })
+
     it('uses physicalName as the exact Lambda function name', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', {
