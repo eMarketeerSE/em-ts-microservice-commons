@@ -320,7 +320,7 @@ const consumer = this.createQueueConsumer('ProcessJobs', {
 })
 ```
 
-In migration mode (`useSharedRole: true`), Lambda and log group logical IDs are overridden automatically. Queue/DLQ/alarm logical IDs can be overridden explicitly:
+In migration mode (`useSharedRole: true`), Lambda and log group logical IDs are overridden automatically. Queue, DLQ, alarm and event source mapping logical IDs can be overridden explicitly:
 
 ```typescript
 this.createQueueConsumer('ProcessFormSubmit', {
@@ -338,6 +338,7 @@ this.createQueueConsumer('ProcessFormSubmit', {
     queue: 'FormSubmitQueue',
     dlq: 'FormSubmitDeadLetterQueue',
     alarm: 'FormSubmitDeadLetterQueueAlarm',
+    eventSourceMapping: 'ProcessDashformDashsubmitEventSourceMappingSQSFormSubmitQueue',
   },
 })
 ```

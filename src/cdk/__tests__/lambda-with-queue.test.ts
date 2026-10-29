@@ -558,6 +558,16 @@ describe('LambdaWithQueue', () => {
       expect(alarms).toHaveProperty('ProcessJobsDLQAlarm')
     })
 
+    it('overrides event source mapping logical ID when overrideLogicalIds.eventSourceMapping is set', () => {
+      const stack = makeStack()
+      new LambdaWithQueue(stack, 'Subject', {
+        ...defaultProps(stack),
+        overrideLogicalIds: { eventSourceMapping: 'ProcessDashjobsEventSourceMappingSQSProcessJobsQueue' }
+      })
+      const mappings = Template.fromStack(stack).findResources('AWS::Lambda::EventSourceMapping')
+      expect(Object.keys(mappings)).toEqual(['ProcessDashjobsEventSourceMappingSQSProcessJobsQueue'])
+    })
+
     it('uses physicalName as the exact Lambda function name', () => {
       const stack = makeStack()
       new LambdaWithQueue(stack, 'Subject', {
