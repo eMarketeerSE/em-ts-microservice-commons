@@ -63,7 +63,7 @@ if (script === 'jest') {
   // --experimental-vm-modules is required so Jest can execute ES-module files
   // in its VM — used by AWS SDK v3's dynamic credential-provider imports and
   // by @mikro-orm/* (and other ESM-only packages) under EM_JEST_ESM_FRIENDLY=true.
-  const baseCommand = 'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest -w 4 --ci --forceExit'
+  const baseCommand = 'npx cross-env NODE_OPTIONS="--max_old_space_size=4096 --experimental-vm-modules" jest --ci --forceExit'
   const configFlag = existsSync('jest.config.js')
     ? ''
     : ' --config node_modules/@emarketeer/ts-microservice-commons/dist/lib/jest.config.js'

@@ -4,14 +4,14 @@ describe('buildJestArgs', () => {
   it('should resolve a bare tier to its own lookahead', () => {
     expect(buildJestArgs(['func'])).toEqual({
       tier: 'func',
-      args: ['--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))'],
     })
   })
 
   it('should narrow a tier with a pattern instead of widening it', () => {
     expect(buildJestArgs(['func', 'contacts'])).toEqual({
       tier: 'func',
-      args: ['--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts))'],
     })
   })
 
@@ -19,6 +19,8 @@ describe('buildJestArgs', () => {
     expect(buildJestArgs(['func', 'contacts', 'sendout'])).toEqual({
       tier: 'func',
       args: [
+        '-w',
+        '4',
         '--testPathPattern',
         '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts))(?=.*(?:sendout))',
       ],
@@ -28,24 +30,26 @@ describe('buildJestArgs', () => {
   it('should group each pattern so alternation stays inside its own term', () => {
     expect(buildJestArgs(['func', 'contacts|billing'])).toEqual({
       tier: 'func',
-      args: ['--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts|billing))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts|billing))'],
     })
   })
 
   it('should treat a non-tier first argument as a plain pattern', () => {
     expect(buildJestArgs(['contacts'])).toEqual({
-      args: ['--testPathPattern', '(?=.*(?:contacts))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:contacts))'],
     })
   })
 
   it('should not add a test path pattern when there are no arguments', () => {
-    expect(buildJestArgs([])).toEqual({ args: [] })
+    expect(buildJestArgs([])).toEqual({ args: ['-w', '4'] })
   })
 
   it('should forward a flag and its value without treating the value as a pattern', () => {
     expect(buildJestArgs(['func', 'contacts', '-t', 'creates'])).toEqual({
       tier: 'func',
       args: [
+        '-w',
+        '4',
         '--testPathPattern',
         '(?=.*(?:[.-]func\\.test\\.))(?=.*(?:contacts))',
         '-t',
@@ -57,27 +61,27 @@ describe('buildJestArgs', () => {
   it('should forward positionals that follow a flag verbatim', () => {
     expect(buildJestArgs(['func', '--coverage', 'contacts'])).toEqual({
       tier: 'func',
-      args: ['--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))', '--coverage', 'contacts'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))', '--coverage', 'contacts'],
     })
   })
 
   it('should resolve the unit tier', () => {
     expect(buildJestArgs(['unit'])).toEqual({
       tier: 'unit',
-      args: ['--testPathPattern', '(?=.*(?:[.-]unit\\.test\\.))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]unit\\.test\\.))'],
     })
   })
 
   it('should not treat a word merely containing a tier name as a tier', () => {
     expect(buildJestArgs(['unit-of-work'])).toEqual({
-      args: ['--testPathPattern', '(?=.*(?:unit-of-work))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:unit-of-work))'],
     })
   })
 
   it('should resolve the full-cycle tier with a pattern', () => {
     expect(buildJestArgs(['full-cycle', 'billing'])).toEqual({
       tier: 'full-cycle',
-      args: ['--testPathPattern', '(?=.*(?:[.-]full-cycle\\.test\\.))(?=.*(?:billing))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:[.-]full-cycle\\.test\\.))(?=.*(?:billing))'],
     })
   })
 
@@ -91,16 +95,30 @@ describe('buildJestArgs', () => {
 
   it('should treat a prototype property name as a plain pattern term, not a tier', () => {
     expect(buildJestArgs(['constructor'])).toEqual({
-      args: ['--testPathPattern', '(?=.*(?:constructor))'],
+      args: ['-w', '4', '--testPathPattern', '(?=.*(?:constructor))'],
     })
   })
 
   it('should match both hyphen- and dot-named func test files but not a functions directory', () => {
     const { args } = buildJestArgs(['func'])
-    const testPathPattern = new RegExp(args[1], 'i')
+    const testPathPattern = new RegExp(args[3], 'i')
 
     expect(testPathPattern.test('/repo/src/handlers/contact-notes-func.test.ts')).toBe(true)
     expect(testPathPattern.test('/repo/src/handlers/get-contact.func.test.ts')).toBe(true)
     expect(testPathPattern.test('/repo/src/functions/helper.test.ts')).toBe(false)
+  })
+
+  it.each([
+    [['-w', '1']],
+    [['-w=1']],
+    [['--maxWorkers', '1']],
+    [['--maxWorkers=1']],
+    [['-i']],
+    [['--runInBand']],
+  ])('should let the caller worker flag %j replace the default of 4 workers', (workerFlags) => {
+    expect(buildJestArgs(['func', ...workerFlags])).toEqual({
+      tier: 'func',
+      args: ['--testPathPattern', '(?=.*(?:[.-]func\\.test\\.))', ...workerFlags],
+    })
   })
 })
