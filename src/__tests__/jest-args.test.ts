@@ -115,6 +115,12 @@ describe('buildJestArgs', () => {
     [['--maxWorkers=1']],
     [['-i']],
     [['--runInBand']],
+    [['-w1']],
+    [['--max-workers', '1']],
+    [['--max-workers=1']],
+    [['--runInBand=true']],
+    [['--run-in-band']],
+    [['-bi']],
   ])('should let the caller worker flag %j replace the default of 4 workers', (workerFlags) => {
     expect(buildJestArgs(['func', ...workerFlags])).toEqual({
       tier: 'func',

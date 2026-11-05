@@ -6,7 +6,7 @@ const TIER_PATTERNS = new Map([
 
 const DEFAULT_WORKER_ARGS = ['-w', '4']
 
-const WORKER_FLAGS = ['-w', '--maxWorkers', '-i', '--runInBand']
+const WORKER_FLAG = /^(-[a-zA-Z]*[wi]|--(maxWorkers|max-workers|runInBand|run-in-band)(=|$))/
 
 export interface JestArgs {
   tier?: string
@@ -30,9 +30,7 @@ export const buildJestArgs = (scriptArgs: string[]): JestArgs => {
     )
   }
 
-  const setsWorkers = flags.some(
-    (arg) => WORKER_FLAGS.includes(arg) || arg.startsWith('-w=') || arg.startsWith('--maxWorkers='),
-  )
+  const setsWorkers = flags.some((arg) => WORKER_FLAG.test(arg))
   const workerArgs = setsWorkers ? [] : DEFAULT_WORKER_ARGS
 
   const tierPattern = terms.length > 0 ? TIER_PATTERNS.get(terms[0]) : undefined
