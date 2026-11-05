@@ -58,6 +58,10 @@ to jest, which ORs it back into the same pattern space and widens the run — fo
 `contacts`, unit and full-cycle files included, against dev AWS. `--testPathPattern` itself is
 rejected outright for the same reason.
 
+Jest runs with 4 workers by default. A worker flag from the caller replaces the default, in
+any form jest accepts: `-w 1`, `-w1`, `--maxWorkers=1`, `--max-workers 1`, `-i`, `--runInBand`.
+For example, `em-commons jest func -w 1` runs the func tier serially.
+
 Use `--listTests` to preview exactly which files a run will execute before starting it —
 useful for `func` and `full-cycle`, which run against real dev AWS:
 
