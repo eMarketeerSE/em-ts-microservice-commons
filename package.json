@@ -135,6 +135,7 @@
     "typescript": "5.9.3"
   },
   "devDependencies": {
+    "@recap.dev/client": "4.4.3",
     "@robmarr/rollup-plugin-shebang": "^1.0.1",
     "@rollup/plugin-commonjs": "^15.1.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
