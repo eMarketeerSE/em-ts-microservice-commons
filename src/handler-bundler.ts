@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import { createRequire } from 'module'
 import * as esbuild from 'esbuild'
 import esbuildPluginTsc from '@emarketeer/esbuild-plugin-tsc'
+import { recapHandlerSource } from './recap-handler-source'
 
 interface BundlingOverrides {
   external?: string[]
@@ -112,11 +113,7 @@ const recapDevHandlerWrapper: esbuild.Plugin = {
     build.onLoad({ filter: /.*/, namespace: 'recap-dev-wrapper' }, (args) => {
       const originalFile = `./${path.basename(args.path, path.extname(args.path))}`
       return {
-        contents: [
-          'import { wrapLambdaHandler } from \'@recap.dev/client\'',
-          `import * as unwrappedHandler from '${originalFile}'`,
-          'export const handler = wrapLambdaHandler(unwrappedHandler.handler)',
-        ].join('\n'),
+        contents: recapHandlerSource(originalFile),
         loader: 'ts',
         resolveDir: path.dirname(args.path),
       }
