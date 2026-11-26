@@ -2,25 +2,7 @@ version: 2.1
 jobs:
   release:
     docker:
-      - image: "cimg/node:lts"
-    steps:
-      - checkout
-      - run:
-          name: yarn
-          command: yarn
-      - run:
-          name: build
-          command: yarn build
-      - run:
-          name: release
-          command: |
-            NPM_ID_TOKEN=$(circleci run oidc get --claims '{"aud": "npm:registry.npmjs.org"}')
-            export NPM_ID_TOKEN
-            yarn semantic-release
-
-  beta-release:
-    docker:
-      - image: "cimg/node:lts"
+      - image: "cimg/node:24"
     steps:
       - checkout
       - run:
@@ -47,7 +29,7 @@ workflows:
 
   beta-release:
     jobs:
-      - beta-release:
+      - release:
           filters:
             branches:
               only:
