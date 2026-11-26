@@ -5,8 +5,13 @@ import * as esbuild from 'esbuild'
 import { recapHandlerSource } from '../recap-handler-source'
 
 describe('recapHandlerSource', () => {
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'recap-handler-'))
+
+  afterAll(() => {
+    fs.rmSync(workDir, { recursive: true })
+  })
+
   it('should send the event to recap.dev without the api key and give the handler the full event', async () => {
-    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'recap-handler-'))
     fs.writeFileSync(path.join(workDir, 'handler.ts'), [
       'import { tracer } from \'@recap.dev/client\'',
       'export const handler = async (event: any) => ({',
@@ -39,6 +44,5 @@ describe('recapHandlerSource', () => {
         requestContext: { identity: { apiKey: '[removed]', apiKeyId: 'key-id-1' } },
       },
     })
-    fs.rmSync(workDir, { recursive: true })
   })
 })
