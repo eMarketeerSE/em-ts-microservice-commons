@@ -13,7 +13,10 @@ jobs:
           command: yarn build
       - run:
           name: release
-          command: yarn semantic-release
+          command: |
+            NPM_ID_TOKEN=$(circleci run oidc get --claims '{"aud": "npm:registry.npmjs.org"}')
+            export NPM_ID_TOKEN
+            yarn semantic-release
 
   beta-release:
     docker:
@@ -28,7 +31,10 @@ jobs:
           command: yarn build
       - run:
           name: release
-          command: yarn semantic-release
+          command: |
+            NPM_ID_TOKEN=$(circleci run oidc get --claims '{"aud": "npm:registry.npmjs.org"}')
+            export NPM_ID_TOKEN
+            yarn semantic-release
 
 workflows:
   release:
